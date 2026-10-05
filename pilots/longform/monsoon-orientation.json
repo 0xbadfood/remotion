@@ -1,0 +1,207 @@
+{
+  "title": "The Indian Monsoon: Mechanisms, Systems, and Variability",
+  "sources": [
+    {
+      "id": "S1",
+      "url": "https://mausam.imd.gov.in/imd_latest/monsoonfaq.pdf",
+      "title": "[PDF] Frequently asked Questions (FAQs) on Monsoon - IMD",
+      "excerpts": [
+        "nd standard deviation is 9cm (about 10% of mean value).Therefore, when the rainfall averaged over the country as a whole is within ±10% from its long period average (LPA) or 90% to 110% of LPA, the rainfall is said to be “normal” and when the rainfall is <90% (>110%) of LPA, the rainfall is said to be “below (above) normal”. 5. What is the role of monsoon trough? Monsoon Trough is an elongated low-pressure area which extends from heat low over Pakistan to Head Bay of Bengal. This is one of semi-permanent feature of monsoon circulation. Monsoon trough may be a characteristic of east west orientation of Himalayan ranges and north south orientation of Khasi-Jaintia Hills. Generally eastern side of monsoon trough oscillates, sometimes southwards and sometimes northwards. Southward migration results in active/vigorous monsoon over major part of India. In contrast, the northward migration of this trough leads to break monsoon condition over major part of India and heavy rains along foothills of Himalayas and sometimes floods in Brahmaputra river. 6. What is heat low? What are its impacts on monsoon rainfall? During the northward march of sun in northern hemisphere, the continent surrounding the Arabian Sea begin to receive large amounts of heat; not only in the form of radiation from sun, but also flux of heat from the earth’s surface into atmosphere (160 Watts/m2 for month of June over the arid z",
+        "averaged over the country as a whole is within ±10% from its long period average (LPA) or 90% to 110% of LPA, the rainfall is said to be “normal” and when the rainfall is <90% (>110%) of LPA, the rainfall is said to be “below (above) normal”. 5. What is the role of monsoon trough? Monsoon Trough is an elongated low-pressure area which extends from heat low over Pakistan to Head Bay of Bengal. This is one of semi-permanent feature of monsoon circulation. Monsoon trough may be a characteristic of east west orientation of Himalayan ranges and north south orientation of Khasi-Jaintia Hills. Generally eastern side of monsoon trough oscillates, sometimes southwards and sometimes northwards. Southward migration results in active/vigorous monsoon over major part of India. In contrast, the northward migration of this trough leads to break monsoon condition over major part of India and heavy rains along foothills of Himalayas and sometimes floods in Brahmaputra river. 6. What is heat low? What are its impacts on monsoon rainfall? During the northward march of sun in northern hemisphere, the continent surrounding the Arabian Sea begin to receive large amounts of heat; not only in the form of radiation from sun, but also flux of heat from the earth’s surface into atmosphere (160 Watts/m2 for month of June over the arid zones of northwest India, Pakistan and middle eastern countries). As a result o",
+        "rene Islands (in south Indian Ocean) during monsoon period. This is responsible for cross-equatorial flow through south Arabian Sea and it acts as southern hemispheric linkage. The variation in the intensity of High Pressure causes monsoon surges across equatorial flow. These surges are responsible for heavy rains along the west coast. 10. What is Somali jet? Somali jet is low level (1 to 1.5 km asl) inter hemispheric cross equatorial flow of air, attains Jet speed at the west end of monsoon regime along the east coast of Africa. This Jet originates near Mauritius and northern part of Madagascar in the southern Hemisphere. This jet reaches Kenya coast (at about 3ºS) covers the plains of Kenya, Ethiopia and to Somali Coast at about 9ºN) During May, it moves further into eastern Africa, then into Arabian sea and reaches west coast of India in June. It attains maximum strength in July. Short period (8-10 days) fluctuations are observed in Low Level Jet stream. Its strengthening gives rise to strong monsoon over peninsular India. 11. What is Tropical easterly Jet? How does it influence the rainfall? South of the sub-tropical ridge over Asia, the easterly flow concentrates into jet stream centred near about the latitude of Chennai at 150 hPa in July. This is Tropical easterly jet. The jet stream runs from the east coast of Vietnam to the west coast of Africa. Over Africa, the location is at 1",
+        "ite frequently develops off the west coast of India, anywhere from north Kerala to south Gujarat, during the period of southwest monsoon, and is responsible for the strengthening of the monsoon in terms of rainfall, in the adjacent parts of the coastal belt. 15. What is off shore vortex? West coast of India has an orographic barrier in the form of Western Ghats. These mountains are oriented in north south direction and approximately 1000 km in length and 200 km in breadth. When monsoon winds strikes the mountains, on many occasions they do not have enough energy to climb over Western Ghats. On such occasions they tend to be deflected round the mountains and return current forms the off-shore vortex. These vortices are responsible for the occurrence of heavy to very heavy rainfall over west coast during monsoon season. 16. How does rainfall vary during monsoon season? Is there any periodicity. During monsoon, considerable variability in rainfall is seen with space and time. The following are reasons which contribute to this. Onset, Advancement and Withdrawal of monsoon. They decide the duration, period of monsoon current at different places. Position of monsoon trough: It can oscillate 5º to north and 5º to south within 24 hours. If this trough is in south of normal position, strong monsoon conditions are observed over India. If this trough is in north of normal position or if it runs to foo",
+        " In contrast, the northward migration of this trough leads to break monsoon condition over major part of India and heavy rains along foothills of Himalayas and sometimes floods in Brahmaputra river. 6. What is heat low? What are its impacts on monsoon rainfall? During the northward march of sun in northern hemisphere, the continent surrounding the Arabian Sea begin to receive large amounts of heat; not only in the form of radiation from sun, but also flux of heat from the earth’s surface into atmosphere (160 Watts/m2 for month of June over the arid zones of northwest India, Pakistan and middle eastern countries). As a result of this large input of power, trough of low pressure forms over this region. It is a semi-permanent feature of monsoon over India. The heat low is very shallow (extending up to 850 hPa (1.5 KM) level and there exist a well-marked ridge above heat low. In spite of occurrence of cloudiness, the precipitation is very small. Intense heat low (pressure departure is below normal) acts as suction devise for moist air along the monsoon trough and to some extend related to good monsoon over India. During weak heat low (pressure departure is above normal) monsoon rainfall over India is greatly affected and results in deficient or scanty rainfall over vast area of country (eg. In 1987, central pressure over heat low area was mostly above normal, which proved to be drought year)."
+      ],
+      "archive": "artifacts/monsoon/sources.json",
+      "excerpt_spans": [
+        {
+          "offset_start": 2384,
+          "offset_end": 3798
+        },
+        {
+          "offset_start": 2468,
+          "offset_end": 3876
+        },
+        {
+          "offset_start": 7294,
+          "offset_end": 8704
+        },
+        {
+          "offset_start": 12119,
+          "offset_end": 13532
+        },
+        {
+          "offset_start": 3242,
+          "offset_end": 4653
+        }
+      ]
+    },
+    {
+      "id": "S2",
+      "url": "https://scied.ucar.edu/learning-zone/storms/monsoons",
+      "title": "What Are Monsoons and Why Do They Happen? | Center for Science Education",
+      "excerpts": [
+        "the monsoon rains that will end the winter dryness even though they might also cause disastrous floods. There is often too little water or too much.\n\n---\n\n## Where Monsoons Are Found\n\nIf you are looking for monsoons, you’ll need to head to the tropics. That’s where rain is produced as warm and humid air rises in the Intertropical Convergence Zone (ITCZ), which swings north and south in a seasonal cycle, causing patterns of distinctly wet and dry seasons (explore the *Why Monsoons Happen* section below to learn more about how this works).\n\nHowever, monsoons are not the same throughout the tropics, because the specific locations of continents and oceans influence the regional patterns of winds and rain. Classic conditions for strong monsoons are found where the Indian Ocean and the Pacific Ocean meet. This region includes India and South Asia to the north of the equator and Australia south of the equator. Strong swings between wet summers and dry winters are found in those places as the ITCZ moves back and forth across the equator. The South Asian monsoon, which includes the Indian monsoon, is especially strong because the Himalayas and other mountains block dry air in the north from getting to the humid monsoon region. The seasonally wet and dry region just south of the Sahara Desert in West Africa and the Sahel is another classic monsoon region. Monsoons occur in the Americas too, ",
+        "and regions. In regions where continents lie north or south of the equator, as in Asia and Australia, this causes the ITCZ to shift farther off the equator during the summer season.\n\n### What affects the amount of rain?\n\nThere is year-to-year variation in the amount of monsoon rainfall during summer. For example, researchers have found that during El Niño conditions, when the Pacific Ocean is particularly warm near the equator, there is typically less rainfall during the summer monsoon in India. During La Niña conditions, when the Pacific Ocean is cool, there is more rain during the summer monsoon in India. While this is a general pattern, it cannot be used to indicate exactly how much rain will fall in India in any particular summer. In fact, the strongest El Niño event in the 20th century (1997 - 1998) had little effect on the Indian monsoon. So, there must be other influences on the amount of rainfall, too. This is an area of active research.\n\n### Climate change may be changing monsoons.\n\nAccording to most computer simulations of Earth’s climate over the next 50 to 100 years, there will be an increase in rainfall in most monsoon regions as climate warms due to the rising levels of atmospheric greenhouse gases such as carbon dioxide. Rains will likely increase in wet regions as the climate warms if the wind patterns do not change, because warm air can hold more water and more water ",
+        "s (6-9 miles) above the Earth’s surface. As it flows toward the poles, this air cools and drops down toward the surface of the Earth in the subtropics, near 30 degrees latitude north or south of the equator. As air rises near the equator and then flows poleward, it leaves an area of fewer air molecules at the equator. This is the ITCZ, a region of low pressure because there is a smaller mass of air left over the equator. Air from the subtopics north and south of the equator flows in to fill the space, completing the loop of Hadley Circulation. Water vapor condenses as air rises and cools in the ITCZ, forming clouds and falling as rain. The ITCZ can be seen from space as a band of clouds around the planet. This is where monsoon rainfall occurs.\n\nIf the Earth was not rotating, winds would blow directly towards the Intertropical Convergence Zone from the north and south. But the Earth is rotating — making a full turn on its axis each day — which turns the wind to the right in the Northern Hemisphere and to the left in the Southern Hemisphere. This means that air flowing toward the equator near Earth’s surface also flows toward the west, and makes up what we call the trade winds, which were important for global trade back in the days when goods were transported between continents by sailing ships. The effect of Earth’s rotation on the winds is called the Coriolis effect or Coriolis force. It a",
+        "amine over large parts of Africa in the 1970s and 1980s, but the West African monsoon rains have recovered somewhat since then. So there is evidence that monsoons are changing, but researchers are still investigating how the amount of monsoon rainfall will be affected by climate change in the future.\n\n---\n\n## Monsoons Impact People\n\n### Impacts on agriculture and economy\n\nFarmers in monsoon regions rely on the wet summer months to grow crops. However the summer monsoon does not always bring the same amount of rainfall, and variations in rain have implications for agriculture and the economy.\n\nFor example, in 2009, very little rain fell during the summer monsoon in India. In some areas rainfall was half of what is typical during the wet season and farmers could not plant their crops. Farm animals starved; many were sold for a fraction of what they would have normally been worth because farmers were desperate.\n\n![Generally, more grain is produced in India during years that have more rainfall (blue) while less grain is produced during years when there is less rainfall (yellow). (Image: UCAR)](/sites/default/files/media/images/india-rainfall-grain.png)\n\nFrom wheat and rice to vegetables, cotton, and tea, Indian farmers grow a wide range of crops and the country uses more land for crops than any other country in the world (215 million acres, or 87 million hectares). Crops depend on rain and, ",
+        "edu/alerts)\n\n\n\n# What Are Monsoons and Why Do They Happen?\n\nOn the evening of June 11, 2015, it began to rain in Mumbai, India, and it did not stop until the next day. Trains were delayed. A wall collapsed with the added weight of water. Notices were posted about the risk of landslides in hilly areas of the city. Two people died as a result of the rainfall. Yet there was a feeling of relief in the city. As a news article in the New Indian Express put it, “Mumbai smiled as heavy showers lashed the city.”\n\nThe city was smiling, so to speak, because this storm ended a long heat wave. Before the rain began, it was so hot during May that asphalt roads were melting. In many places in India, humid conditions made the heat feel much hotter. In one location, the heat index, which takes both heat and humidity into account to describe how hot it feels, was over 140°F (60°C). After the rain started, temperatures dropped as clouds shaded Mumbai from the sweltering sun. It was still warm — with high temperatures above 80°F (27°C) — but was much cooler than during the heat wave. The start of rains in early June marked the end of the dry winter and the onset of the wet summer monsoon.\n\n![People walking in a flooded street in Mumbai, India in the rain](/sites/default/files/styles/extra_large/public/2021-10/mumbai-monsoon.jpeg.webp?itok=zoENYvai)\n\nMumbai, India, during monsoon rainfall.\n\n*Indrani911basu",
+        "th heat and humidity into account to describe how hot it feels, was over 140°F (60°C). After the rain started, temperatures dropped as clouds shaded Mumbai from the sweltering sun. It was still warm — with high temperatures above 80°F (27°C) — but was much cooler than during the heat wave. The start of rains in early June marked the end of the dry winter and the onset of the wet summer monsoon.\n\n![People walking in a flooded street in Mumbai, India in the rain](/sites/default/files/styles/extra_large/public/2021-10/mumbai-monsoon.jpeg.webp?itok=zoENYvai)\n\nMumbai, India, during monsoon rainfall.\n\n*Indrani911basu*\n\n \n\nMonsoons produce the very wet summers and dry winters that occur on nearly all of the tropical continents. A monsoon is not a storm like a hurricane or a summer thunderstorm, but a much larger pattern of winds and rain that spans a large geographic area like a continent, or even the entire globe.\n\nWeather and climate are very different in the tropics and mid-latitudes, and it is not just a matter of the tropics being warmer. In Europe, North America, and other mid-latitude regions, temperatures undergo large changes over the seasonal cycle, and weather events in these regions last a few days as high- and low-pressure systems drift slowly eastward, rearranging the locations of warmer and colder air masses as they go. This might make it cool and rainy one day and warm and s"
+      ],
+      "archive": "artifacts/monsoon/sources.json",
+      "excerpt_spans": [
+        {
+          "offset_start": 2844,
+          "offset_end": 4248
+        },
+        {
+          "offset_start": 15757,
+          "offset_end": 17164
+        },
+        {
+          "offset_start": 8857,
+          "offset_end": 10269
+        },
+        {
+          "offset_start": 18240,
+          "offset_end": 19650
+        },
+        {
+          "offset_start": 162,
+          "offset_end": 1570
+        },
+        {
+          "offset_start": 952,
+          "offset_end": 2358
+        }
+      ]
+    },
+    {
+      "id": "S3",
+      "url": "https://mausam.imd.gov.in/responsive/pdf_viewer_css/met1/Chapter-1%20page%205-9/Chapter-1%20page%205-9.pdf",
+      "title": "https://mausam.imd.gov.in/responsive/pdf_viewer_css/met1/Chapter-1%20page%205-9/Chapter-1%20page%205-9.pdf",
+      "excerpts": [
+        "5 Chapter-1 Introduction South Asia experiences two monsoons, Southwest monsoon or summer monsoon during June to September and the Northeast (NE) Monsoon or winter monsoon during October to December. While the boreal summer monsoon (June to Sept) is responsible for a major portion of annual rainfall over India, rainfall received during the NE monsoon season (Oct-Dec) is also important, especially for the south peninsula, Sri Lanka and Maldives. During the southwest monsoon season, the southeastern parts of India remain in the rain-shadow region and receive moderate rains. NE monsoon is associated with the seasonal reversal of surface and lower tropospheric winds, which starts by October. During the southwest monsoon season, surface pressure gradient is directed from the Indian ocean to land with southwesterly monsoon winds in the lower troposphere. During the NE monsoon season, the pressure gradient reverses (from land to the Indian ocean) resulting in northeasterly trade winds, which is the basic state of the system. This change in surface pressure gradient and lower tropospheric winds is associated with the southward movement of the continental tropical convergence zone (CTCZ) and the subtropical anticyclone in the upper troposphere. Therefore, the NE monsoon is often described as the retreating phase of the southwest monsoon. In a broader perspective, it is also associated with the northern hemispheric winter circulation dominated by a strong surface high pressure region over Siberia, a primary low over eastern equatorial Pacific region and secondary shallow lows over the north Indian ocean (Geetha, 2011, Raj 2012). A salient feature of the seasonal circulation during the winter monsoon is the low-level northeasterly flow over the Indian subcontinent and southeast Asia. There are similarities in circulation and rainfall patterns of southeastern peninsular India and other South / Southeast Asian regions and also the established roles of Siberian High, sub-tropical westerly jet stream and the 6 teleconnection influences of global parameters such as ENSO on the NE Monsoon rainfall (Geetha 2011). There is an asynhronicity in the establishment of northeasterlies over the Bay of Bengal and the South China Sea; the northeasterlies appear over the Bay of Bengal in late October, a month later than over the South China Sea (Sengupta and Nigam, 2019). NE monsoon is relatively dry, stable and has less vertical extend compared to the southwest monsoon. The India Meteorological Department (IMD) refers to the October to December period as the northeast monsoon, which is a part of the northeast trades (Dhar et al., 1982, Dhar and Rakhecha, 1983). Dhar and Rakhecha (1983) studied monthly rainfall data for a 100-yr period (1877-1976) to investigate the association between the northeast and southwest monsoons over Tamil Nadu, and concluded that summer rainfall is negatively correlated with NEM rainfall. NE monsoon rainfall exhibits variability from diurnal to synoptic, intra-seasonal and inter-annual time scales. The inter-annual variability of the NE monsoon rainfall influences agricultural production and water resources over south peninsular India. The NEMR affects the productivity of rice and maize in the provinces of Tamil Nadu and Andhra Pradesh (Krishna Kumar et al., 2004). During the years when the NE monsoon is deficient it has been noted that there is a considerable decrease in agricultural production over the region. The NE monsoon rainfall is highly variable both spatially and temporally. The coefficient of variation (inter-annual) of the NEMR averaged over the five subdivisions is 25%, which is more than that of the southwest monsoon rainfall averaged over the country as a whole (10%). South peninsula is well known for large year to year variability. In 2015, the city of Chennai experienced deluge in 2015, which resulted significant loss of life and property. Four years later, in 2019, Chennai city experienced severe water shortage and crisis. During the NE monsoon season, south Asia also experiences many extreme weather events like heavy precipitation, strong 7 winds and floods. Some of these extreme events are associated with the passage of tropical cyclones forming over the Bay of Bengal. In the literature, there is a controversy about using the term “Northeast” monsoon (IMD, 1973). As per the classifications given by the India Meteorological Department (IMD), the October-December period constitutes the “Post-monsoon season”. It is also known as “the Retreating Southwest Monsoon Season”, as the monsoon convergence zone shifts to lower latitudes during this season. Mr Blanford, who was the first Director General of the India Meteorological Department (IMD) in his Memoirs on “Rainfall of India” raised the question about the term “Northeast Monsoon Rains” (IMD, 1973). IMD discussed this aspect on many occasions and the IMD decided to retain the term. IMD recommends that “the term Northeast Monsoon should continue to be used for rainfall season over south peninsula during October to December”. Subbaramayya (1976) had examined meridional sea-level pressure profiles over India, the Atlantic and Pacific and of winter rainfall over India and Sri Lanka and suggested that that the so-called north-east monsoon over south-east India differs little, either in wind in weather, from the generality of the northern-hemisphere trade winds. Compared to the southwest monsoon, adequate attention was not given to address various aspects of the NE monsoon. There are only a few research papers addressing NE monsoon over south Asia. After the classic work by Srinivasan and Ramamurthy (IMD 1973), a few papers have been published on different aspects of NE Monsoon. The review article by Raj (2012) in the Monsoon Monograph edited by Ajit Tyagi et al. is an excellent documentation of various aspects of NE Monsoon season over India. The papers by Sreekala et al. (2012) and Rajeevan et al. (2012) also are good reviews on the variability of NE monsoon rainfall and its prediction aspects. Amudha (2016) using modern meteorological data analyzed the characteristics of Indian Northeast monsoon and cyclonic storms of the North Indian Ocean. The study revealed 8 many interesting aspects of the movement of clouds and other rainfall regimes associated with the NE monsoon. These publications contain all relevant references of research papers on NE monsoon published till 2012. Since then, there is growing research interest on NE Monsoon with much more papers are getting published in the recent years (Satyanarayana et al., (2020), Raj and Amudha (2022), Raj and Geetha (2008), Balachandran et al., (2006), Nair et al., (2013), Dash et al., (2019), Naidu et al., (2012), Maharana et al., (2022), Prasanna et al., (2019), Mondal and Choudhari (2022), Suneetha et al., (2018), Prasanna et al., (2021), Geetha and Balachandran (2021), Saikranthi and Chiranjeevi (2022), Mishra and Nagaraju (2021), Geetha and Raj (2014), Amudha et al., (2016), Prasanna et al., (2020), Prakash and Gairola (2013), Kiran Kumar and Singh (2021), Pattanaik and Mohapatra (2017), Parvathi et al. (2017), Sengupta and Nigam (2019), Mishra and Bharadwaj (2019)). The paleoclimate aspects of NE monsoon are recently discussed in Achyuthan (2021) and the references therein. In spite of the growing research interest, there is a lot of scope for an exhaustive compilation of research results based on recent data products and forecasting tools on different aspects of NE monsoon over south Asia. During the last one decade, our understanding on diurnal, intra-seasonal, seasonal variability, monsoon onset, synoptic weather systems during the NE monsoon season has improved substantially. At the same time, our capability to make more accurate forecasts also has improved by using the state-of-the-art dynamical models or Numerical Weather Prediction (NWP) models. The present monograph is designed accordingly to include more recent research results, which have resulted in better understanding of NE monsoon and its variability in all time scales and their prediction aspects. Such a compilation would be very useful for forecasters as reference material and also students, young researchers venturing into NE monsoon research. 9 In this monograph, the climatological features of NE monsoon are discussed using long term and updated climate data sets. Discussions on mean temperatures, sea level pressure, upper air circulation features, monthly and seasonal rainfall, heavy rainfall, extreme winds, characteristics of monsoon clouds, thunderstorm and lightning are included. The variability of NE monsoon from diurnal, synoptic, intra-seasonal and seasonal time scales is also discussed in detail with a few case studies. The details of synoptic systems affecting south peninsula and Sri Lanka during the season and forecasting aspects of these weather systems are also discussed. A brief summary of the verification of forecasts of NE monsoon rainfall over India using two different weather prediction systems is included as reference material for forecasters. A separate section of NE monsoon season over Sri Lanka is also provided to widen the scope of this book. The grey areas where more research is required are identified and discussed."
+      ],
+      "archive": "artifacts/monsoon/sources.json",
+      "excerpt_spans": [
+        {
+          "offset_start": 0,
+          "offset_end": 9299
+        }
+      ]
+    }
+  ],
+  "anchors": [
+    {
+      "id": "F01",
+      "claim": "The Indian monsoon is characterized by a seasonal reversal of winds, shifting from dry northeasterly trades in winter to moist southwesterly winds in summer.",
+      "source_ids": [
+        "S2",
+        "S3"
+      ]
+    },
+    {
+      "id": "F02",
+      "claim": "Differential heating drives the monsoon: land heats up faster than the ocean in summer, creating low pressure over the continent that pulls in moist air from the Indian Ocean.",
+      "source_ids": [
+        "S1",
+        "S2"
+      ]
+    },
+    {
+      "id": "F03",
+      "claim": "The Intertropical Convergence Zone (ITCZ), a band of rising air and clouds, moves northward in summer, bringing heavy rainfall to South Asia.",
+      "source_ids": [
+        "S2"
+      ]
+    },
+    {
+      "id": "F04",
+      "claim": "Moisture is transported to India via multiple pathways, including the Somali Jet (cross-equatorial flow from the Southern Hemisphere) and monsoon depressions forming in the Bay of Bengal.",
+      "source_ids": [
+        "S1"
+      ]
+    },
+    {
+      "id": "F05",
+      "claim": "Rainfall occurs when moist air rises, cools, and condenses; this large-scale ascent is part of the Hadley Circulation, while local rainfall is often enhanced by orographic lift over mountains.",
+      "source_ids": [
+        "S2",
+        "S1"
+      ]
+    },
+    {
+      "id": "F06",
+      "claim": "The southwest monsoon season typically spans June to September (JJAS), with onset varying by year but generally arriving in Kerala in early June.",
+      "source_ids": [
+        "S1",
+        "S2"
+      ]
+    },
+    {
+      "id": "F07",
+      "claim": "Terrain significantly influences rainfall distribution; the Western Ghats cause heavy rain on the windward coast and create a rain shadow on the leeward side.",
+      "source_ids": [
+        "S1",
+        "S3"
+      ]
+    },
+    {
+      "id": "F08",
+      "claim": "Monsoon rainfall oscillates between 'active' and 'break' periods, driven by the north-south movement of the monsoon trough.",
+      "source_ids": [
+        "S1"
+      ]
+    },
+    {
+      "id": "F09",
+      "claim": "The monsoon is critical for agriculture and water resources, supplying the majority of annual rainfall needed for crops and reservoirs.",
+      "source_ids": [
+        "S2",
+        "S3"
+      ]
+    },
+    {
+      "id": "F10",
+      "claim": "The Northeast Monsoon (October–December) brings essential rainfall to southeastern India, particularly Tamil Nadu, as northeasterly winds acquire moisture crossing the Bay of Bengal.",
+      "source_ids": [
+        "S3"
+      ]
+    },
+    {
+      "id": "F11",
+      "claim": "El Niño conditions are generally associated with reduced monsoon rainfall in India, while La Niña often correlates with increased rainfall, though this is probabilistic.",
+      "source_ids": [
+        "S2"
+      ]
+    }
+  ],
+  "required_anchor_ids": [
+    "F01",
+    "F02",
+    "F03",
+    "F04",
+    "F05",
+    "F06",
+    "F07",
+    "F08",
+    "F09",
+    "F10",
+    "F11"
+  ],
+  "coverage_requirements": [
+    "Build a causal explanation, not a list of weather facts.",
+    "Explain why a national seasonal average cannot describe every local rain day.",
+    "Differentiate the southwest and northeast monsoon and preserve variability qualifications."
+  ],
+  "cautions": [
+    "Exact onset dates and total seasonal rainfall vary significantly year-to-year and cannot be guaranteed.",
+    "The precise impact of El Niño/La Niña on specific regional rainfall amounts is probabilistic and subject to other climatic influences.",
+    "Long-term changes in monsoon patterns due to climate change are an area of active research with varying model projections.",
+    "Avoid dated rainfall totals and forecasts from the archived sources.",
+    "Land-ocean heating is a useful starting model, not the sole explanation of the monsoon circulation.",
+    "El Niño and La Niña associations are probabilistic, not annual guarantees.",
+    "Source excerpts are a bounded orientation selection; chapter research should verify detail."
+  ]
+}

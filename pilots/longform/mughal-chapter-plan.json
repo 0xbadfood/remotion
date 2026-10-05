@@ -1,0 +1,448 @@
+{
+  "schema_version": "infofilm.chapter-plan.v0",
+  "film": {
+    "title": "Mughal India: Power, Culture, and Change (1526–1857)",
+    "subject": "The Mughal era in India, 1526 to 1857",
+    "central_question": "How did the Mughal state evolve from a military conquest into a complex administrative and cultural system, and how did its political fragmentation interact with regional agency and colonial expansion to reshape the subcontinent?",
+    "narrative_arc": "From the founding of a new imperial order and its consolidation, through a period of cultural and architectural zenith, to a long process of political decentralization where regional powers and the East India Company gradually displaced Mughal sovereignty, culminating in the 1857 uprising.",
+    "advisory_seconds": 900,
+    "language": "en",
+    "orientation": "landscape",
+    "narrator_id": "default",
+    "shared_visual_style": "Coherent historical illustration style using subject-grounded palettes (ochre, indigo, marble white, sandstone red) and stable geography. All imagery is generated reconstruction or study; no archival scans, stock footage, or authentic document reproductions. Native explanatory overlays are used for maps and dates.",
+    "continuity_rules": [
+      "Same narrator and visual identity; each chapter advances the central question"
+    ]
+  },
+  "coverage": [
+    {
+      "id": "T01",
+      "question": "How was the Mughal state established and restored after initial interruptions?",
+      "priority": "essential",
+      "anchor_ids": [
+        "F01",
+        "F02"
+      ],
+      "owner_chapter_id": "C01"
+    },
+    {
+      "id": "T02",
+      "question": "How did Akbar’s administrative and cultural policies define the mature Mughal state?",
+      "priority": "essential",
+      "anchor_ids": [
+        "F03",
+        "F04"
+      ],
+      "owner_chapter_id": "C02"
+    },
+    {
+      "id": "T03",
+      "question": "What characterized the cultural and architectural zenith under Jahangir and Shah Jahan?",
+      "priority": "essential",
+      "anchor_ids": [
+        "F05"
+      ],
+      "owner_chapter_id": "C03"
+    },
+    {
+      "id": "T04",
+      "question": "How did Aurangzeb’s reign and subsequent political strains affect the empire's trajectory?",
+      "priority": "essential",
+      "anchor_ids": [
+        "F06"
+      ],
+      "owner_chapter_id": "C04"
+    },
+    {
+      "id": "T05",
+      "question": "How did regional courts and artistic communities adapt to the decline of central imperial patronage?",
+      "priority": "essential",
+      "anchor_ids": [
+        "F07",
+        "F08",
+        "F09"
+      ],
+      "owner_chapter_id": "C05"
+    },
+    {
+      "id": "T06",
+      "question": "How did the rise of the East India Company and regional autonomy alter the political landscape?",
+      "priority": "essential",
+      "anchor_ids": [
+        "F10"
+      ],
+      "owner_chapter_id": "C06"
+    },
+    {
+      "id": "T07",
+      "question": "What was the nature of Mughal legitimacy in the 19th century and how did the 1857 uprising conclude the era?",
+      "priority": "essential",
+      "anchor_ids": [
+        "F11",
+        "F12"
+      ],
+      "owner_chapter_id": "C07"
+    }
+  ],
+  "chapters": [
+    {
+      "id": "C01",
+      "title": "Foundations and Restorations",
+      "scope": {
+        "start_year": 1526,
+        "end_year": 1556,
+        "description": "The establishment of Mughal rule by Babur, the interruption by the Sur dynasty, and the restoration by Humayun, leading to Akbar's accession in 1556."
+      },
+      "advisory_seconds": 120,
+      "objective": "Establish the origin of the Mughal state and clarify that its early history involved significant political instability and restoration, not an unbroken line of power.",
+      "topic_ids": [
+        "T01"
+      ],
+      "source_ids": [
+        "S1"
+      ],
+      "research_queries": [
+        "Specifics of the Battle of Panipat 1526 and the immediate aftermath",
+        "Details of the Sur dynasty's administrative changes during 1540-1555",
+        "Circumstances of Humayun's exile and return"
+      ],
+      "opening_role": "film_intro",
+      "ending_role": "handoff",
+      "entry_context": "Viewers have general knowledge of the Indian subcontinent but may not know the specific origins of the Mughal dynasty.",
+      "exit_handoff": "With the throne restored to Humayun and subsequently passing to Akbar, how did the new ruler transform a military conquest into a stable administrative state?",
+      "exclude": [
+        "Detailed administrative reforms of Akbar (owned by C02)",
+        "Cultural synthesis details (owned by C02)"
+      ],
+      "mood": {
+        "preset": "serious",
+        "direction": "Narration begins with a tone of historical gravity, emphasizing the fragility of the early state. The delivery should be measured and factual, avoiding romanticization of the conquest. As the chapter moves from the loss of control to the restoration, the tone shifts from uncertainty to cautious stability, reflecting the political reality of a restored but not yet consolidated dynasty.",
+        "rationale": "The period involves war, exile, and political uncertainty, requiring a tone of historical gravity."
+      },
+      "music": {
+        "direction": "Low, sustained cello and deep drum pulse establish a tense, uncertain foundation. The motif is sparse and rhythmic, reflecting the instability of the early 1540s. As the restoration is described, the texture opens slightly with a subtle string swell, but remains restrained, signaling a return to order without triumph. Transition out with a fading drum pulse.",
+        "bpm": 80
+      },
+      "visual_direction": "Generated maps showing shifting control between Mughal and Sur forces; illustrated reconstructions of the Battle of Panipat; stylized portraits of Babur and Humayun. Native overlays for dates and territorial boundaries.",
+      "section_card": {
+        "title": "Foundations and Restorations",
+        "date_label": "1526–1556",
+        "image_selection_brief": "Select a generated map asset showing Babur's advance from Kabul to Delhi and the subsequent Sur interruption from the incoming chapter."
+      }
+    },
+    {
+      "id": "C02",
+      "title": "The Akbarian Synthesis",
+      "scope": {
+        "start_year": 1556,
+        "end_year": 1605,
+        "description": "Akbar's reign, focusing on administrative consolidation, religious tolerance, and the development of a distinct Mughal artistic style."
+      },
+      "advisory_seconds": 150,
+      "objective": "Explain how Akbar built the institutional and cultural foundations of the empire, integrating Persian and local Indian traditions.",
+      "topic_ids": [
+        "T02"
+      ],
+      "source_ids": [
+        "S1",
+        "S2"
+      ],
+      "research_queries": [
+        "Structure of the Mansabdari system under Akbar",
+        "Specific examples of Akbar's religious dialogues and policies",
+        "Evolution of the Mughal painting style from Persian to hybrid forms"
+      ],
+      "opening_role": "continuation",
+      "ending_role": "handoff",
+      "entry_context": "The Mughal state is restored and Akbar has ascended to the throne.",
+      "exit_handoff": "With the administrative base set, how did the court culture evolve under Akbar's successors, particularly in terms of artistic patronage?",
+      "exclude": [
+        "Jahangir's specific artistic preferences (owned by C03)",
+        "Shah Jahan's architecture (owned by C03)"
+      ],
+      "mood": {
+        "preset": "inspiring",
+        "direction": "Delivery is expansive and optimistic, reflecting the consolidation of power and cultural innovation. The narrator should convey a sense of building and integration, highlighting the synthesis of diverse traditions. The emotional arc moves from the establishment of order to the flourishing of a unique cultural identity, ending on a note of confident maturity.",
+        "rationale": "This era represents a period of consolidation, expansion, and cultural innovation, justifying an optimistic and expansive tone."
+      },
+      "music": {
+        "direction": "Brighter string ensemble with a steady, confident rhythm. The motif from C01 is developed into a more complex, harmonious structure, incorporating woodwinds to suggest cultural blending. Energy is moderate and uplifting, supporting the narrative of institutional growth. Transition out with a sustained, open chord.",
+        "bpm": 85
+      },
+      "visual_direction": "Illustrations of Akbar's court; maps of territorial expansion; examples of early Mughal miniatures showing stylistic fusion. Native overlays for administrative structures.",
+      "section_card": {
+        "title": "The Akbarian Synthesis",
+        "date_label": "1556–1605",
+        "image_selection_brief": "Select a generated diagram of the Mansabdari hierarchy or a map of the expanded empire from the incoming chapter."
+      }
+    },
+    {
+      "id": "C03",
+      "title": "Zenith of Art and Architecture",
+      "scope": {
+        "start_year": 1605,
+        "end_year": 1658,
+        "description": "The reigns of Jahangir and Shah Jahan, highlighting the peak of Mughal artistic production and monumental architecture."
+      },
+      "advisory_seconds": 150,
+      "objective": "Showcase the cultural height of the empire under Jahangir and Shah Jahan, distinguishing their distinct artistic and architectural contributions.",
+      "topic_ids": [
+        "T03"
+      ],
+      "source_ids": [
+        "S2",
+        "S3"
+      ],
+      "research_queries": [
+        "Comparison of Jahangir's and Shah Jahan's artistic commissions",
+        "Construction timeline and design details of the Taj Mahal",
+        "Development of Shahjahanabad and the Red Fort"
+      ],
+      "opening_role": "continuation",
+      "ending_role": "handoff",
+      "entry_context": "The Mughal state is stable and culturally vibrant under Akbar's successors.",
+      "exit_handoff": "As Shah Jahan's rule ends in conflict, how did the political and cultural landscape change under Aurangzeb?",
+      "exclude": [
+        "Aurangzeb's policies (owned by C04)",
+        "Regional court developments (owned by C05)"
+      ],
+      "mood": {
+        "preset": "warm",
+        "direction": "Narration is reflective and appreciative, focusing on aesthetic beauty and cultural achievement. The tone is gentle and admiring, allowing the visual descriptions of architecture and art to breathe. The emotional development is one of admiration for the zenith of Mughal culture, ending with a subtle shift towards the tension of the succession crisis.",
+        "rationale": "The focus is on cultural achievement and aesthetic beauty, creating a reflective and appreciative tone."
+      },
+      "music": {
+        "direction": "Soft, lyrical strings and gentle percussion. The motif is refined and elegant, mirroring the architectural precision of the period. Energy is low and flowing, creating a sense of grandeur and tranquility. Transition out with a slight dissonance or shift in tempo to hint at the coming political rupture.",
+        "bpm": 75
+      },
+      "visual_direction": "Generated high-resolution reconstructions of the Taj Mahal and Red Fort; detailed views of Mughal miniatures from the Shah Jahan Album; architectural plans. Native overlays for construction dates.",
+      "section_card": {
+        "title": "Zenith of Art and Architecture",
+        "date_label": "1605–1658",
+        "image_selection_brief": "Select a generated elevation of the Taj Mahal or a detailed miniature from the incoming chapter."
+      }
+    },
+    {
+      "id": "C04",
+      "title": "Aurangzeb and Political Strain",
+      "scope": {
+        "start_year": 1658,
+        "end_year": 1707,
+        "description": "Aurangzeb's reign, focusing on the succession rupture, changes in court patronage, and the multifaceted political strains of his rule."
+      },
+      "advisory_seconds": 120,
+      "objective": "Examine the complexities of Aurangzeb’s reign, including the succession rupture, changes in patronage, and the multifaceted nature of political strains, avoiding simplistic causal narratives.",
+      "topic_ids": [
+        "T04"
+      ],
+      "source_ids": [
+        "S2",
+        "S3"
+      ],
+      "research_queries": [
+        "Aurangzeb's specific policies on religious tolerance and their impact",
+        "Military campaigns in the Deccan and their cost",
+        "Evidence of the decline in Mughal court art production"
+      ],
+      "opening_role": "continuation",
+      "ending_role": "handoff",
+      "entry_context": "The empire faces a succession rupture in 1658, with Aurangzeb consolidating power amidst internal conflict and external challenges.",
+      "exit_handoff": "With the central court's influence waning, how did cultural production and political power shift to regional centers?",
+      "exclude": [
+        "Specific regional court details (owned by C05)",
+        "Nadir Shah's raid (owned by C05)"
+      ],
+      "mood": {
+        "preset": "serious",
+        "direction": "Delivery is tense and reflective, acknowledging the complexity of Aurangzeb's reign. The narrator should avoid moral judgment, instead focusing on the documented changes in patronage and the political strains of military expansion. The tone is austere, reflecting the shift in court culture and the growing challenges to central authority.",
+        "rationale": "The period is marked by increasing military commitments and shifts in court culture, requiring a tense and reflective tone that avoids simplistic decline narratives."
+      },
+      "music": {
+        "direction": "Darker, more rhythmic percussion with a lower string register. The motif becomes more fragmented and tense, reflecting the political instability and military commitments. Energy is moderate but heavy, creating a sense of strain. Transition out with a sudden stop or a shift to a more sparse texture.",
+        "bpm": 70
+      },
+      "visual_direction": "Portraits of Aurangzeb; maps showing the extent of the empire and areas of conflict; illustrations of the Deccan campaigns. Native overlays for military movements.",
+      "section_card": {
+        "title": "Aurangzeb and Political Strain",
+        "date_label": "1658–1707",
+        "image_selection_brief": "Select a generated map of the Deccan campaigns or a portrait of Aurangzeb from the incoming chapter."
+      }
+    },
+    {
+      "id": "C05",
+      "title": "Regional Resilience and Disruption",
+      "scope": {
+        "start_year": 1707,
+        "end_year": 1757,
+        "description": "The post-Aurangzeb period, focusing on the rise of regional courts, the dispersal of artists, and the impact of Nadir Shah's raid."
+      },
+      "advisory_seconds": 120,
+      "objective": "Demonstrate that the decline of central Mughal power did not mean the disappearance of cultural production, but rather its redistribution to regional centers.",
+      "topic_ids": [
+        "T05"
+      ],
+      "source_ids": [
+        "S3",
+        "S4"
+      ],
+      "research_queries": [
+        "Specific examples of artistic production in Rajasthani and provincial Muslim courts",
+        "Impact of Nadir Shah's 1739 raid on Delhi's artistic community",
+        "Migration patterns of Mughal artists to regional courts",
+        "Autonomy of the Nawabs of Avadh and their interaction with regional powers"
+      ],
+      "opening_role": "continuation",
+      "ending_role": "handoff",
+      "entry_context": "The central Mughal state is weakening, and political power is becoming more decentralized.",
+      "exit_handoff": "As regional powers like the Nawabs of Avadh gain autonomy, how does the rise of the East India Company further alter the political balance?",
+      "exclude": [
+        "East India Company's military victories (owned by C06)",
+        "1857 uprising (owned by C07)"
+      ],
+      "mood": {
+        "preset": "reflective",
+        "direction": "Narration is contemplative and adaptive, highlighting the resilience of cultural traditions amidst political chaos. The tone is one of observation, noting how artists and patrons found new homes in regional courts. The emotional arc moves from disruption to adaptation, ending with a sense of emerging regional agency.",
+        "rationale": "The chapter deals with adaptation, displacement, and the resilience of cultural traditions amidst political chaos."
+      },
+      "music": {
+        "direction": "Eclectic mix of instruments, including flute and light percussion, reflecting the hybrid nature of regional art. The motif is varied and less structured, mirroring the decentralization of power. Energy is moderate and fluid, creating a sense of movement and change. Transition out with a shift to a more formal, structured rhythm.",
+        "bpm": 75
+      },
+      "visual_direction": "Miniatures from regional courts (Bikaner, Bundi, Lucknow); maps showing the rise of regional states; illustrations of the 1739 raid. Native overlays for migration routes.",
+      "section_card": {
+        "title": "Regional Resilience and Disruption",
+        "date_label": "1707–1757",
+        "image_selection_brief": "Select a generated Avadhi miniature style sample or a map of regional states from the incoming chapter."
+      }
+    },
+    {
+      "id": "C06",
+      "title": "The Company Ascendant",
+      "scope": {
+        "start_year": 1757,
+        "end_year": 1800,
+        "description": "The rise of the East India Company, its military victories, and the gradual erosion of Mughal political authority."
+      },
+      "advisory_seconds": 120,
+      "objective": "Explain how the East India Company transitioned from a trading entity to a dominant political power, using regional alliances and military force.",
+      "topic_ids": [
+        "T06"
+      ],
+      "source_ids": [
+        "S4",
+        "S6"
+      ],
+      "research_queries": [
+        "Details of the Battles of Plassey and Buxar",
+        "The Diwani grant of 1765 and its implications",
+        "Role of the Nawabs of Avadh as a buffer state"
+      ],
+      "opening_role": "continuation",
+      "ending_role": "handoff",
+      "entry_context": "Regional powers are autonomous, and the Mughal emperor retains symbolic legitimacy, granting revenue rights to the Company in 1765.",
+      "exit_handoff": "With the Company in control of revenue and military power, what was the status of the Mughal emperor in the 19th century?",
+      "exclude": [
+        "1857 uprising details (owned by C07)",
+        "Cultural production in Avadh (owned by C05)"
+      ],
+      "mood": {
+        "preset": "professional",
+        "direction": "Delivery is neutral and analytical, focusing on the political and economic shifts. The narrator should convey the systematic nature of the Company's rise, avoiding emotional language. The tone is objective, highlighting the transition from trade to political dominance.",
+        "rationale": "The focus is on political and economic shifts, requiring a neutral and analytical tone."
+      },
+      "music": {
+        "direction": "Structured, rhythmic percussion and steady string ostinato. The motif is precise and mechanical, reflecting the bureaucratic and military nature of the Company's expansion. Energy is steady and controlled, creating a sense of inevitability. Transition out with a gradual fade into a more somber tone.",
+        "bpm": 80
+      },
+      "visual_direction": "Maps of Company expansion; illustrations of the Battles of Plassey and Buxar; portraits of Company officials and Mughal emperors. Native overlays for revenue rights.",
+      "section_card": {
+        "title": "The Company Ascendant",
+        "date_label": "1757–1800",
+        "image_selection_brief": "Select a generated map of the Bengal Diwani grant or an illustration of the Battle of Plassey from the incoming chapter."
+      }
+    },
+    {
+      "id": "C07",
+      "title": "Nominal Empire and the 1857 Uprising",
+      "scope": {
+        "start_year": 1800,
+        "end_year": 1857,
+        "description": "The 19th-century Mughal court as a symbol of legitimacy, and the 1857 uprising that marked the end of the era."
+      },
+      "advisory_seconds": 120,
+      "objective": "Distinguish between the nominal legitimacy of the Mughal emperor and the actual British control, and conclude the film with the 1857 uprising.",
+      "topic_ids": [
+        "T07"
+      ],
+      "source_ids": [
+        "S3",
+        "S5",
+        "S6",
+        "S7"
+      ],
+      "research_queries": [
+        "The role of Bahadur Shah Zafar in the 1857 uprising",
+        "British perception of Mughal legitimacy in the 19th century",
+        "Immediate aftermath of the 1857 uprising",
+        "Consolidation of British paramountcy between 1800 and 1857"
+      ],
+      "opening_role": "continuation",
+      "ending_role": "film_conclusion",
+      "entry_context": "The East India Company is the dominant power, and the Mughal emperor is a nominal figurehead.",
+      "exit_handoff": "The 1857 uprising marks the end of the Mughal era, with formal abolition and exile occurring in the aftermath.",
+      "exclude": [
+        "Detailed post-1857 history (outside scope)",
+        "Earlier Company victories (owned by C06)"
+      ],
+      "mood": {
+        "preset": "serious",
+        "direction": "Narration is grave and conclusive, reflecting the final crisis of the era. The tone is somber, acknowledging the complexity of the 1857 uprising and the end of Mughal political authority. The emotional arc moves from the tension of the uprising to a reflective conclusion, emphasizing the distinction between nominal legitimacy and actual power.",
+        "rationale": "The chapter deals with the final crisis of the era, requiring a grave and conclusive tone."
+      },
+      "music": {
+        "direction": "Somber, sustained strings and low percussion. The motif is resolved into a final, quiet statement, reflecting the end of the era. Energy is low and reflective, creating a sense of closure. Transition out with a final, sustained note that fades into silence.",
+        "bpm": 70
+      },
+      "visual_direction": "Portraits of Bahadur Shah Zafar; illustrations of the 1857 uprising; maps showing the extent of British control. Native overlays for the distinction between nominal and actual power.",
+      "section_card": {
+        "title": "Nominal Empire and the 1857 Uprising",
+        "date_label": "1800–1857",
+        "image_selection_brief": "Select a generated portrait of Bahadur Shah Zafar or a map of British control from the incoming chapter."
+      }
+    }
+  ],
+  "assembly": {
+    "chapter_order": [
+      "C01",
+      "C02",
+      "C03",
+      "C04",
+      "C05",
+      "C06",
+      "C07"
+    ],
+    "section_card_seconds": 2.0,
+    "narration_pause_seconds": 0.7,
+    "music_crossfade_seconds": 1.5,
+    "narration_policy": "separate_clean_stems",
+    "card_image_policy": "approved_incoming_chapter_asset"
+  },
+  "research_gaps": [
+    {
+      "question": "What were the specific economic conditions and peasant life like during the Mughal era, beyond courtly perspectives?",
+      "chapter_id": "C02"
+    },
+    {
+      "question": "How did women participate in Mughal political and cultural life?",
+      "chapter_id": "C03"
+    },
+    {
+      "question": "What were the specific military institutions and strategies used by the Mughals and the East India Company?",
+      "chapter_id": "C06"
+    },
+    {
+      "question": "How did the Deccan region's political dynamics influence the broader Mughal empire?",
+      "chapter_id": "C04"
+    }
+  ]
+}

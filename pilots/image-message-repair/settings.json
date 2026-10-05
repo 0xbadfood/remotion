@@ -1,0 +1,7 @@
+{
+  "provider": "qwen_local",
+  "full_size": [1536, 864],
+  "max_image_attempts": 3,
+  "max_json_attempts": 2,
+  "audit_after_acceptance": false
+}

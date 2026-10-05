@@ -1,0 +1,25 @@
+[Unit]
+Description=Remotion Video research and film interface
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=nitin
+Group=nitin
+WorkingDirectory=/home/nitin/remotion
+Environment=PYTHONUNBUFFERED=1
+Environment=PATH=/home/nitin/.local/bin:/home/nitin/.pyenv/versions/3.11.9/bin:/usr/local/bin:/usr/bin:/bin
+EnvironmentFile=-/home/nitin/remotion/.service.env
+ExecStart=/home/nitin/.pyenv/versions/3.11.9/bin/python -m infofilm serve --host 0.0.0.0 --port 8051
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=15
+# Long film workers continue across web restarts and are reattached by the queue.
+KillMode=process
+UMask=0077
+NoNewPrivileges=true
+# GPU service start/stop uses deploy/50-remotion-gpu-services.rules, not sudo.
+
+[Install]
+WantedBy=multi-user.target

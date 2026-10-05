@@ -1,0 +1,21 @@
+{
+  "schema_version": "infofilm.external-planner-settings.v0",
+  "max_chapters": 12,
+  "max_topics": 32,
+  "max_attempts": 3,
+  "draft_max_tokens": 9500,
+  "review_max_tokens": 3500,
+  "max_brief_bytes": 50000,
+  "max_request_bytes": 110000,
+  "recommended_chapter_seconds": [60, 180],
+  "review_min_score": 82,
+  "planner_role": "reviewer",
+  "rubric_weights": {
+    "grounding": 0.25,
+    "coverage": 0.20,
+    "chapter_coherence": 0.15,
+    "global_flow": 0.20,
+    "mood_fit": 0.10,
+    "production_readiness": 0.10
+  }
+}

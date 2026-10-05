@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#082d34">
+  <title>Remotion Video</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <section id="login-screen" class="login-screen">
+    <div class="login-card">
+      <p class="eyebrow">REMOTION VIDEO</p>
+      <h1>A subject.<br>A story worth watching.</h1>
+      <p class="muted">Research, natural narration, and visuals that bring an explanation together.</p>
+      <form id="login-form">
+        <label for="username">Username</label>
+        <input id="username" name="username" autocomplete="username" value="nitin" required>
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required>
+        <p id="login-error" class="error" role="alert"></p>
+        <button type="submit" class="primary">Sign in <span aria-hidden="true">→</span></button>
+      </form>
+    </div>
+  </section>
+
+  <div id="app" hidden>
+    <header>
+      <a class="brand" href="/">REMOTION<span>VIDEO</span></a>
+      <div class="header-actions"><span id="connection" class="connection">Connecting…</span><button id="logout" class="quiet">Sign out</button></div>
+    </header>
+    <main class="workspace">
+      <aside>
+        <section class="create-panel panel">
+          <p class="eyebrow">MAKE AN EXPLANATION</p>
+          <h1>What’s the subject?</h1>
+          <form id="create-form">
+            <label for="subject">Subject or question</label>
+            <textarea id="subject" minlength="3" maxlength="300" rows="3" placeholder="Why does the Moon change shape?" required></textarea>
+            <div class="suggestions">
+              <button type="button" data-subject="How a rainbow forms">Rainbows</button>
+              <button type="button" data-subject="Why volcanoes erupt">Volcanoes</button>
+              <button type="button" data-subject="How the printing press changed the world">Printing press</button>
+            </div>
+            <label for="generation-mode">Generation</label>
+            <select id="generation-mode"><option value="short">Short film · 30–180 seconds</option><option value="long">Long film · chapters · 5–30 minutes</option></select>
+            <label for="production-target">Produce</label>
+            <select id="production-target"><option value="video">Complete video</option><option value="audio">Audio first · listen before creating images</option></select>
+            <p class="hint">Audio first delivers narration with your chosen score. Continue to video after listening; the saved audio is reused.</p>
+            <div class="form-row">
+              <div id="short-length-row"><label for="duration">Approximate length</label><div class="unit-input"><input id="duration" type="number" min="30" max="180" step="1" value="60" required><span>seconds</span></div></div>
+              <div id="long-length-row" hidden><label for="long-duration">Approximate length</label><div class="unit-input"><input id="long-duration" type="number" min="5" max="30" step="1" value="15"><span>minutes</span></div></div>
+              <div><label for="orientation">Format</label><select id="orientation"><option value="landscape">Landscape · 16:9</option><option value="portrait">Portrait · 9:16</option><option value="both">Both formats</option></select></div>
+            </div>
+            <p class="hint">Length guides the depth. The explanation and natural delivery determine the final runtime.</p>
+            <div id="long-options" hidden>
+              <label for="subject-graph">Subject graph planning</label>
+              <select id="subject-graph"><option value="off">Off</option><option value="on">On</option></select>
+              <p class="hint">On classifies the subject and uses its profile to guide research and chapter planning. The planner chooses the outline.</p>
+              <p class="hint">Plans connected chapters, researches and produces each one, then joins them with section cards and music transitions. A failed chapter stays saved while the remaining chapters continue.</p>
+            </div>
+            <label for="mood">Mood</label>
+            <select id="mood"><option value="auto">Auto</option></select>
+            <p class="hint">Auto chooses a treatment for the subject. Mood carries through the narration, generated imagery and optional music.</p>
+            <div class="form-row">
+              <div><label for="mood-intensity">Intensity</label><select id="mood-intensity"><option value="restrained">Restrained</option></select></div>
+              <div><label for="visual-balance">Visual balance</label><select id="visual-balance"><option value="auto">Auto</option></select></div>
+            </div>
+            <label for="music-engine">Background score</label>
+            <select id="music-engine"><option value="none">Off</option></select>
+            <p class="hint">Generated instrumental music follows the film’s mood and stays beneath the narrator.</p>
+            <label id="second-version-row" class="check"><input id="second-version" type="checkbox"><span>Also make a longer version</span></label>
+            <div id="second-duration-row" hidden><label for="second-duration">Second approximate length</label><div class="unit-input"><input id="second-duration" type="number" min="30" max="180" value="120"><span>seconds</span></div></div>
+            <label for="voice">Narrator reference</label>
+            <select id="voice"><option value="default">Default reference</option></select>
+            <div class="upload-row"><label class="upload-label" for="voice-file">＋ Add a reference WAV</label><input id="voice-file" type="file" accept=".wav,audio/wav" hidden><span id="voice-status" class="hint"></span></div>
+            <label for="tts-engine">Narration engine</label>
+            <select id="tts-engine"><option value="vibevoice">VibeVoice · current</option><option value="omnivoice">OmniVoice · experimental</option></select>
+            <div id="omni-speed-row" hidden><label for="omni-speed">Omni narration speed</label><input id="omni-speed" type="number" min="0.5" max="2" step="0.05" value="0.8"><p class="hint">0.8 is the default for a more relaxed delivery.</p></div>
+            <div id="reference-transcript-row" hidden><label for="reference-transcript">Exact reference recording transcript</label><textarea id="reference-transcript" rows="3" maxlength="5000" placeholder="Type the words spoken in the uploaded reference WAV"></textarea><p class="hint">Required for an uploaded voice with OmniVoice. The default reference already has a verified transcript.</p></div>
+            <p class="hint">Indian English narration. A reference recording changes the voice. Whisper and MFA check either engine’s output.</p>
+            <label for="image-review">Generated image review</label>
+            <select id="image-review"><option value="on">On · review and repair images</option><option value="off">Off · generate planned images once</option></select>
+            <p class="hint">Off skips image reviews, prompt repairs and premium recovery. Script and image planning reviews follow the separate review setting below.</p>
+            <details class="advanced"><summary>Review options</summary><label class="check"><input id="review-mode" type="checkbox" checked><span>Use the second-model planning review loop</span></label><p class="hint">It reviews meaning and visual planning with bounded corrections. Saved measurements track its benefit and cost.</p></details>
+            <p id="create-error" class="error" role="alert"></p>
+            <button id="create-button" class="primary" type="submit">Create video <span aria-hidden="true">→</span></button>
+            <p class="hint">Runs are saved and processed one at a time. You can leave this page and return.</p>
+          </form>
+        </section>
+        <details class="panel service-panel"><summary><span id="service-summary">Checking services…</span><button id="refresh-services" type="button" class="quiet" aria-label="Refresh services">↻</button></summary><ul id="services"></ul></details>
+      </aside>
+
+      <section class="review-workspace">
+        <div class="section-heading"><div><p class="eyebrow">YOUR FILMS</p><h2>From question to screen.</h2></div><span id="job-count" class="muted"></span></div>
+        <div id="jobs" class="jobs" aria-label="Saved runs"></div>
+        <div id="empty" class="empty panel" hidden><div class="empty-symbol" aria-hidden="true">▶</div><h2>Start with something you’re curious about.</h2><p class="muted">Your narration, sources, and finished videos will appear here.</p></div>
+        <section id="run" class="run panel" hidden>
+          <div class="run-heading"><div><p id="run-meta" class="eyebrow"></p><h2 id="run-title"></h2></div><span id="run-status" class="status"></span></div>
+          <ol id="stages" class="stages"></ol>
+          <p id="run-event" class="muted live-event" aria-live="polite"></p>
+          <div id="run-error" class="run-error" hidden>
+            <p id="run-error-text" class="error"></p>
+            <label for="resume-image-review">Image review on resume</label>
+            <select id="resume-image-review"><option value="on">On · review and repair images</option><option value="off">Off · generate planned images once</option></select>
+            <button id="resume" class="secondary" type="button">Resume saved run</button>
+            <p class="hint">Completed chapters stay saved. This setting applies to images in unfinished chapters.</p>
+          </div>
+          <div id="chapter-plan-link"></div>
+          <div id="chapter-progress" class="muted"></div>
+          <div id="chapters" class="chapters"></div>
+          <div id="outputs" class="outputs"></div>
+          <div id="audio-deliveries" class="narrations"></div>
+          <div id="continue-video" hidden>
+            <button id="continue-video-button" class="primary" type="button">Continue to video</button>
+            <p class="hint">Start scene planning and images using this narration and word timing. Narration and music are reused.</p>
+            <p id="continue-video-error" class="error" aria-live="polite"></p>
+          </div>
+          <div id="narrations" class="narrations"></div>
+          <div id="music" class="narrations"></div>
+          <div id="review-link"></div>
+          <div id="revise-narration" hidden>
+            <button id="revise-narration-button" class="secondary" type="button">Repair narration and subtitles</button>
+            <p class="hint">Uses the saved script and approved images. Previous videos remain saved.</p>
+            <p id="revise-narration-error" class="error" aria-live="polite"></p>
+          </div>
+          <div id="revise-music" hidden>
+            <label for="revision-music-engine">Background score for this finished run</label>
+            <select id="revision-music-engine"><option value="acestep">Auto · ACE-Step</option><option value="none">Off</option></select>
+            <p class="hint">Reuses narration and existing video frames. Previous videos remain saved.</p>
+            <button id="revise-music-button" class="secondary" type="button">Update background score</button>
+            <p id="revise-music-error" class="error" aria-live="polite"></p>
+          </div>
+          <details class="diagnostics"><summary>Run details</summary><p class="hint">Saved stage activity and the most recent worker output.</p><pre id="run-log"></pre></details>
+        </section>
+        <p class="footer-note">Give the subject room to breathe. Runtime is a guide, not a cut-off.</p>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

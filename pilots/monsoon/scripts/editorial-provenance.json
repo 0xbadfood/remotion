@@ -1,0 +1,17 @@
+{
+  "actor": "assistant",
+  "owning_stage": "narration script",
+  "reason": "Bounded local-LLM drafts did not satisfy deterministic word budgets; preserve failed candidates and do not adopt the broad repair loop.",
+  "before": [
+    "artifacts/monsoon/planning/script-60",
+    "artifacts/monsoon/script-routing-probe.json",
+    "artifacts/monsoon/script-compression-probe.json"
+  ],
+  "after": [
+    "script-60.json",
+    "script-120.json"
+  ],
+  "changes": "Rebuilt duration-appropriate narrative sequences from the audited evidence; exact narration remains available for independent model review.",
+  "classification": "empirically discoverable model constraint-following failure",
+  "human_approval": "not claimed"
+}

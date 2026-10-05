@@ -1,0 +1,31 @@
+{
+  "actor": "assistant",
+  "changes": [
+    {
+      "field": "P01.narration",
+      "before": "Why does India's dry summer suddenly give way to rain?",
+      "after": "Why do India's scorching days give way to drenching monsoon rains?",
+      "reason": "Source-grounded clarity correction suggested by semantic model review",
+      "owner": "narration script"
+    },
+    {
+      "field": "P04.narration",
+      "before": "Moist winds then carry water inland from the warm surrounding seas.",
+      "after": "Moist winds carry ocean water inland from the Arabian Sea and Bay of Bengal.",
+      "reason": "Source-grounded clarity correction suggested by semantic model review",
+      "owner": "narration script"
+    },
+    {
+      "field": "P08.narration",
+      "before": "But rainfall varies across places, with wetter spells interrupted by breaks.",
+      "after": "Terrain shapes where rain falls; wet spells and breaks shape its rhythm.",
+      "reason": "Source-grounded clarity correction suggested by semantic model review",
+      "owner": "narration script"
+    }
+  ],
+  "review_sources": [
+    "artifacts/monsoon/film-60/script-semantic-review-planner.json",
+    "artifacts/monsoon/film-60/script-semantic-review-reviewer.json"
+  ],
+  "duration_policy": "advisory; no word-count trimming"
+}

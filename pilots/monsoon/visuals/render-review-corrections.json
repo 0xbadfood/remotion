@@ -1,0 +1,60 @@
+{
+  "changes": [
+    {
+      "requested_seconds": 60,
+      "point_id": "P05",
+      "field": "summary",
+      "before": "Northward ITCZ band organizes seasonal circulation.",
+      "after": "Tropical rain belt shifts north, organizing circulation.",
+      "owner": "storyboard editorial review",
+      "reason": "Clarify cloud formation and use accessible place/season context labels."
+    },
+    {
+      "requested_seconds": 60,
+      "point_id": "P05",
+      "field": "banner_override",
+      "before": null,
+      "after": "Tropical Rain Belt",
+      "owner": "storyboard editorial review",
+      "reason": "Clarify cloud formation and use accessible place/season context labels."
+    },
+    {
+      "requested_seconds": 60,
+      "point_id": "P06",
+      "field": "heading",
+      "before": "Vapour condenses into rain",
+      "after": "Rising air builds rain clouds",
+      "owner": "storyboard editorial review",
+      "reason": "Clarify cloud formation and use accessible place/season context labels."
+    },
+    {
+      "requested_seconds": 60,
+      "point_id": "P07",
+      "field": "banner_override",
+      "before": null,
+      "after": "Western Ghats",
+      "owner": "storyboard editorial review",
+      "reason": "Clarify cloud formation and use accessible place/season context labels."
+    },
+    {
+      "requested_seconds": 60,
+      "point_id": "P09",
+      "field": "banner_override",
+      "before": null,
+      "after": "June–September",
+      "owner": "storyboard editorial review",
+      "reason": "Clarify cloud formation and use accessible place/season context labels."
+    },
+    {
+      "requested_seconds": 120,
+      "point_id": "P13",
+      "field": "banner_override",
+      "before": null,
+      "after": "Food and Water",
+      "owner": "storyboard editorial review",
+      "reason": "Clarify cloud formation and use accessible place/season context labels."
+    }
+  ],
+  "actor": "assistant",
+  "audio_unchanged": true
+}

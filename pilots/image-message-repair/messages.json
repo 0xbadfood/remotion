@@ -1,0 +1,126 @@
+{
+  "schema_version": "infofilm.manual-visual-messages.v1",
+  "annotation_method": "Manually written from the frozen narrated passages, asset purposes and supplied source facts; not model-generated or newly researched.",
+  "cases": {
+    "T01": {
+      "visual_message": "Akbar's administration standardized land measurement so revenue assessments could use comparable units across regions.",
+      "setting": "Late sixteenth-century Mughal agricultural administration in northern India.",
+      "essential_constraints": "The measuring implement and farming setting belong to preindustrial Mughal India; standardization is the idea, rather than a claim about the exact appearance of a surviving instrument.",
+      "initial_scene": "A single elegant brass measuring rod representing the Ilahi gaz lies straight across cultivated ground, right of centre. A faint golden grid overlays the land beneath it, suggesting standardized measurement. The composition is orderly, with subdued earth on the left."
+    },
+    "T02": {
+      "visual_message": "The rugged Deccan landscape and its fortified strongholds formed the setting of prolonged Mughal-Maratha warfare.",
+      "setting": "The Deccan plateau in India during the late seventeenth and early eighteenth centuries.",
+      "essential_constraints": "Rocky terrain and period hilltop fortresses establish the setting; a portrait of a ruler or a foreground hero is incidental to this landscape message.",
+      "initial_scene": "A full-frame landscape of rugged rocky Deccan terrain with scattered hilltop fortresses. The main fortress stands on the right, with jagged rocks and sparse vegetation filling the frame. Harsh midday sunlight creates high contrast and a difficult, contested atmosphere."
+    },
+    "T03": {
+      "visual_message": "Mughal revenue assessment brought land area, crop yields and prices together using averages, making taxation more systematic.",
+      "setting": "Late sixteenth-century Mughal land-revenue administration in northern India.",
+      "essential_constraints": "Land, harvest and monetary assessment are connected; narration supplies the exact averaging period and numerical details. The depiction is illustrative rather than an actual calculation.",
+      "initial_scene": "A stylized visualization of columns of wheat representing yield, coins representing price, and land plots representing area merging into a single balanced golden scale on the right. The background is dark and the left side is subdued."
+    },
+    "T04": {
+      "visual_message": "Maratha forces used mobile hit-and-run tactics suited to difficult terrain, frustrating conventional Mughal warfare.",
+      "setting": "The Deccan in India during late seventeenth-century Mughal-Maratha conflict.",
+      "essential_constraints": "The mobile forces are period Indian Maratha riders; terrain and mobility matter more than an elaborate battle tableau or fixed character likenesses.",
+      "initial_scene": "Small groups of Maratha cavalry move swiftly through dense forest and rocky passes. Horses and riders blend into foliage and shadows. Dynamic motion suggests speed and stealth, contrasting with the static appearance of conventional armies."
+    },
+    "T05": {
+      "visual_message": "Systematic Mughal revenue assessments made collection more predictable than ad hoc lump-sum negotiations.",
+      "setting": "Late sixteenth-century Mughal revenue administration in northern India.",
+      "essential_constraints": "The contrast is administrative unpredictability versus orderly assessment, rather than wealth versus poverty or one religious group versus another.",
+      "initial_scene": "A split illustrative scene. On the left, overlapping hands exchange goods in a blurred, dark and disorderly arrangement. On the right, a neatly arranged stack of period coins and a document are sharply lit."
+    },
+    "T06": {
+      "visual_message": "Tax burdens under Aurangzeb created friction and discontent among merchants.",
+      "setting": "A Mughal marketplace in late seventeenth-century India during Aurangzeb's reign.",
+      "essential_constraints": "A period revenue-collection interaction conveys economic pressure. Clothing alone cannot establish religion, and the scene should not invent physical violence or present all merchants as equally affected.",
+      "initial_scene": "A bustling Mughal marketplace where merchants interact with Mughal tax collectors. Their interaction occupies the centre-right, with tension and unease visible among the surrounding people. Period goods and architecture establish the market setting."
+    },
+    "T07": {
+      "visual_message": "Eroding Mughal central authority left a power vacuum that other forces could exploit.",
+      "setting": "An early eighteenth-century Mughal imperial interior in India.",
+      "essential_constraints": "The scene symbolizes weakened authority; it does not claim that a particular throne room was literally abandoned or destroyed.",
+      "initial_scene": "A dark, empty Mughal throne room with a single beam of light illuminating dust. The atmosphere is quiet and ominous, evoking the absence of effective central authority."
+    },
+    "T08": {
+      "visual_message": "The 1765 Diwani grant gave the East India Company revenue-collection authority in Bengal, Bihar and Orissa, extending its role beyond trade.",
+      "setting": "An eighteenth-century East India Company administrative setting in eastern India.",
+      "essential_constraints": "A grant document represents taxation authority, not a wildlife scene; geographical outlines are optional and must not imply modern national boundaries are the granted territory.",
+      "initial_scene": "A stylized editorial illustration of a seal or document granting taxation rights, with faint outlines representing Bengal, Bihar and Orissa in the background. The principal document is right of centre in a serious historical composition."
+    },
+    "T09": {
+      "visual_message": "Before Akbar consolidated administration, early Mughal conquests had not yet become a stable, integrated state.",
+      "setting": "Early Mughal northern India around the beginning of Akbar's reign in the sixteenth century.",
+      "essential_constraints": "Fragility and incomplete integration are central; modern India's political outline must not stand in for early Mughal territorial extent. A literal map is optional.",
+      "initial_scene": "A stylized aged-parchment map of northern India, right of centre. Scattered disconnected red markers suggest early conquests on a dark textured background. The left side is darker and sparsely detailed."
+    },
+    "T10": {
+      "visual_message": "Sambhaji's execution, intended to suppress rebellion, instead strengthened Maratha resistance.",
+      "setting": "Mughal-Maratha conflict in India around Sambhaji's death in 1689.",
+      "essential_constraints": "A solemn reconstruction or the aftermath of the death can support the message. Exact likenesses, execution mechanics and graphic injury are unnecessary; the image must not imply that resistance ended.",
+      "initial_scene": "A somber, dimly lit public execution square in period India. A solitary figure stands on a raised platform at centre-right, with a crowd behind. A heavy tragic atmosphere conveys the gravity of the event."
+    },
+    "T11": {
+      "visual_message": "The East India Company's acquisition of taxation rights changed its role from a trading organization toward territorial revenue administration.",
+      "setting": "An East India Company office in eastern India after the 1765 Diwani grant.",
+      "essential_constraints": "Administrative control and revenue collection are the focus; specific officials, readable document contents and a literal before-and-after montage are optional.",
+      "initial_scene": "An eighteenth-century East India Company office with ledgers and tax documents taking the place of trade goods. A figure in period Company attire oversees the paperwork. The principal activity is right of centre."
+    },
+    "T12": {
+      "visual_message": "Akbar divided executive responsibilities among four ministries to limit concentration of power in a single minister.",
+      "setting": "An illustrative reconstruction of late sixteenth-century Mughal administration in India.",
+      "essential_constraints": "Four functions share executive responsibility; the scene need not retain pillars, a dome or color coding. Any explicit visual count representing those ministries should remain four.",
+      "initial_scene": "An abstract architectural illustration of four distinct ornate red-sandstone pillars supporting a central dome on the right. Subtle gold, blue, green and red accents distinguish the pillars. The background is dark with subdued space on the left."
+    },
+    "T13": {
+      "visual_message": "Prolonged Deccan warfare depleted resources and devastated livelihoods, contributing to imperial financial weakness.",
+      "setting": "Peninsular India during the late seventeenth and early eighteenth-century Deccan wars.",
+      "essential_constraints": "The illustration supports war-related depletion and hardship; it must not imply that weather was the sole cause. Exact loss percentages and accounts are supplied by narration.",
+      "initial_scene": "A desolate landscape with cracked ground, withered crops and empty granaries in peninsular India. A barren horizon emphasizes the loss of surplus grain and prosperity after prolonged conflict."
+    },
+    "T14": {
+      "visual_message": "East India Company revenue collection continued during famine despite severe hardship among the population.",
+      "setting": "An eastern Indian village during the Bengal famine around 1770.",
+      "essential_constraints": "The scene contrasts collection activity with hardship. It should not invent torture or turn qualified accounts of rigorous enforcement into a universal claim about every village.",
+      "initial_scene": "Tax collectors visit a period eastern Indian village while distressed villagers look on. Formal collection activity contrasts with the villagers' depleted surroundings and visible hardship. The principal interaction is right of centre."
+    },
+    "T15": {
+      "visual_message": "Mughal governance drew on Islamic jurisprudence, local customs and imperial administrative rules rather than a single uniform legal source.",
+      "setting": "An illustrative view of law and administration in late sixteenth-century Mughal India.",
+      "essential_constraints": "Multiple legal traditions coexist; a balanced scale is a metaphor, not proof of equal legal power or equal treatment. Readable religious text is unnecessary.",
+      "initial_scene": "A balanced scale stands right of centre. One side holds a book representing Islamic jurisprudence, while the other holds a scroll representing local customs and an imperial decree. The surrounding surface is plain and subdued."
+    },
+    "T16": {
+      "visual_message": "Weakening Mughal central control allowed regional powers to gain autonomy and fragmented imperial authority.",
+      "setting": "Early eighteenth-century India after Aurangzeb's death, with rising regional powers including the Marathas and Rajputs.",
+      "essential_constraints": "Fragmentation concerns political authority, not the physical breaking of land. Exact territorial borders and rates of expansion are unnecessary; modern national boundaries cannot represent historical rule.",
+      "initial_scene": "A stylized abstract illustration of the subcontinent's political landscape, with shrinking Mughal influence and growing Maratha and Rajput influence. Symbolic colors and shapes convey fragmentation rather than precise territorial lines."
+    },
+    "T17": {
+      "visual_message": "Mir Jafar's cavalry withheld participation at Plassey, helping cause the Nawab's army to collapse into a rout.",
+      "setting": "Bengal in 1757 during the Battle of Plassey.",
+      "essential_constraints": "The inactive cavalry belong to the Nawab's Indian forces, not European redcoat cavalry. Their inaction contrasts with collapse elsewhere; a fixed portrait of Mir Jafar is unnecessary.",
+      "initial_scene": "A wide view of a cavalry division standing inactive on a battlefield ridge, while other troops flee in disarray in the background. The contrast between stillness and disorder suggests withheld participation. The principal cavalry group is right of centre."
+    },
+    "T18": {
+      "visual_message": "Severe distress in the Bengal famine continued beyond its peak years rather than ending immediately with the initial crisis.",
+      "setting": "Eastern India in the early 1770s after the main Bengal famine crisis.",
+      "essential_constraints": "Persistent hardship is the message; the illustration need not prove an exact year or imply that drought alone continued everywhere throughout the entire period.",
+      "initial_scene": "A desolate eastern Indian landscape with a dried riverbed and sparse vegetation. Soft melancholic lighting conveys lingering environmental stress and hardship. The principal landscape feature lies right of centre."
+    },
+    "T19": {
+      "visual_message": "Division of authority between Humayun and Kamran after Babur's death created rival power centres within the inherited Mughal empire.",
+      "setting": "Mughal South Asia and its Central Asian frontier after Babur's death in 1530.",
+      "essential_constraints": "The split concerns authority between brothers, not physically fractured terrain. Kamran's Kabul and Kandahar sphere is distinct from Humayun's northern Indian centre; literal maps, exact portraits and architectural duplicates are optional.",
+      "initial_scene": "A stylized symbolic representation of divided territory, with two distinct spheres of influence pulling apart. The main arrangement is right of centre, reflecting rivalry within a fraternal division of authority."
+    },
+    "T20": {
+      "visual_message": "The mansabdari system organized Mughal officers into graded ranks linking status and pay with military obligations.",
+      "setting": "Late sixteenth-century Mughal imperial administration in India.",
+      "essential_constraints": "Hierarchy links civil status and cavalry obligations; exact rank numerals and a literal pyramid are optional. Period officers must not resemble a modern organization or European regiment.",
+      "initial_scene": "A vertical tiered arrangement of distinct Mughal officer silhouettes on the right. Subtle glowing numerical indicators suggest hierarchy beside the figures, which form a pyramid structure. The left side is dark and subdued."
+    }
+  }
+}

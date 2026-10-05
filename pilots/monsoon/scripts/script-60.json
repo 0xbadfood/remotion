@@ -1,0 +1,102 @@
+{
+  "title": "How the Indian monsoon works",
+  "requested_seconds": 60,
+  "authorship": "assistant editorial revision after non-converged local-LLM drafting",
+  "points": [
+    {
+      "id": "P01",
+      "heading": "The seasonal switch",
+      "narration": "Why do India's scorching days give way to drenching monsoon rains?",
+      "fact_ids": [
+        "F01"
+      ],
+      "visual_intent": "Explain the narrated concept with a suitable contextual illustration or explicit native diagram."
+    },
+    {
+      "id": "P02",
+      "heading": "A shift in the winds",
+      "narration": "The summer monsoon begins with a seasonal shift in the winds.",
+      "fact_ids": [
+        "F01"
+      ],
+      "visual_intent": "Explain the narrated concept with a suitable contextual illustration or explicit native diagram."
+    },
+    {
+      "id": "P03",
+      "heading": "Heat sets it in motion",
+      "narration": "As land heats much faster than the ocean, pressure falls over land.",
+      "fact_ids": [
+        "F02"
+      ],
+      "visual_intent": "Explain the narrated concept with a suitable contextual illustration or explicit native diagram."
+    },
+    {
+      "id": "P04",
+      "heading": "Moisture moves inland",
+      "narration": "Moist winds carry ocean water inland from the Arabian Sea and Bay of Bengal.",
+      "fact_ids": [
+        "F04"
+      ],
+      "visual_intent": "Explain the narrated concept with a suitable contextual illustration or explicit native diagram."
+    },
+    {
+      "id": "P05",
+      "heading": "A moving rain belt",
+      "narration": "A northward moving tropical rain belt helps organize this vast seasonal circulation.",
+      "fact_ids": [
+        "F03"
+      ],
+      "visual_intent": "Explain the narrated concept with a suitable contextual illustration or explicit native diagram."
+    },
+    {
+      "id": "P06",
+      "heading": "From vapour to rain",
+      "narration": "Rising moist air cools, condensing its moisture into clouds and eventually rain.",
+      "fact_ids": [
+        "F05"
+      ],
+      "visual_intent": "Explain the narrated concept with a suitable contextual illustration or explicit native diagram."
+    },
+    {
+      "id": "P07",
+      "heading": "Mountains shape the rain",
+      "narration": "The Western Ghats lift these moist winds, bringing heavy rain to their windward slopes.",
+      "fact_ids": [
+        "F07"
+      ],
+      "visual_intent": "Explain the narrated concept with a suitable contextual illustration or explicit native diagram."
+    },
+    {
+      "id": "P08",
+      "heading": "Rain has a rhythm",
+      "narration": "Terrain shapes where rain falls; wet spells and breaks shape its rhythm.",
+      "fact_ids": [
+        "F07",
+        "F08"
+      ],
+      "visual_intent": "Explain the narrated concept with a suitable contextual illustration or explicit native diagram."
+    },
+    {
+      "id": "P09",
+      "heading": "Water that sustains life",
+      "narration": "From June to September, these rains sustain crops and replenish water supplies.",
+      "fact_ids": [
+        "F06",
+        "F09"
+      ],
+      "visual_intent": "Explain the narrated concept with a suitable contextual illustration or explicit native diagram."
+    },
+    {
+      "id": "P10",
+      "heading": "One connected system",
+      "narration": "Understanding the monsoon means following heat, winds, moisture, and the seasonal rhythm connecting them.",
+      "fact_ids": [
+        "F01",
+        "F02",
+        "F04",
+        "F05"
+      ],
+      "visual_intent": "Explain the narrated concept with a suitable contextual illustration or explicit native diagram."
+    }
+  ]
+}

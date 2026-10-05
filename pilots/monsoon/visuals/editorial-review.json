@@ -1,0 +1,586 @@
+{
+  "library_baseline_sha256": "9c2eb958429c570a2e81498759e409966054c4466f90193573c497c5aada2bc4",
+  "library_change": "Replace split-composition language with one continuous atmospheric landscape.",
+  "storyboard_changes": [
+    {
+      "stage": "storyboard",
+      "point_id": "P02",
+      "field": "kind",
+      "before": "flow",
+      "after": "compare",
+      "reason": "Avoid unsupported single-trigger causality and blanket dry-winter claim.",
+      "earliest_checkpoint": "source-grounded storyboard review",
+      "repair_owner": "storyboard",
+      "discovery": "preventable at semantic review"
+    },
+    {
+      "stage": "storyboard",
+      "point_id": "P02",
+      "field": "labels",
+      "before": [
+        "Winter NE winds",
+        "Seasonal shift",
+        "Summer SW winds"
+      ],
+      "after": [
+        "Winter wind pattern",
+        "Summer wind pattern"
+      ],
+      "reason": "Avoid unsupported single-trigger causality and blanket dry-winter claim.",
+      "earliest_checkpoint": "source-grounded storyboard review",
+      "repair_owner": "storyboard",
+      "discovery": "preventable at semantic review"
+    },
+    {
+      "stage": "storyboard",
+      "point_id": "P02",
+      "field": "details",
+      "before": [
+        "Dry northeasterly trades dominate winter.",
+        "ITCZ movement triggers reversal.",
+        "Moist southwesterly winds arrive."
+      ],
+      "after": [
+        "Generally northeasterly winds.",
+        "Generally moist southwesterly winds."
+      ],
+      "reason": "Avoid unsupported single-trigger causality and blanket dry-winter claim.",
+      "earliest_checkpoint": "source-grounded storyboard review",
+      "repair_owner": "storyboard",
+      "discovery": "preventable at semantic review"
+    },
+    {
+      "stage": "storyboard",
+      "point_id": "P02",
+      "field": "rationale",
+      "before": "Explicitly shows the causal sequence of wind reversal.",
+      "after": "Seasonal contrast without presenting ITCZ movement as the sole trigger.",
+      "reason": "Avoid unsupported single-trigger causality and blanket dry-winter claim.",
+      "earliest_checkpoint": "source-grounded storyboard review",
+      "repair_owner": "storyboard",
+      "discovery": "preventable at semantic review"
+    },
+    {
+      "stage": "storyboard",
+      "point_id": "P03",
+      "field": "details",
+      "before": [
+        "Creates low pressure over continent.",
+        "Stores heat, maintaining higher pressure."
+      ],
+      "after": [
+        "Helps lower pressure over the heated land.",
+        "Water moderates seasonal heating."
+      ],
+      "reason": "Keep differential heating causal qualification.",
+      "earliest_checkpoint": "source-grounded storyboard review",
+      "repair_owner": "storyboard",
+      "discovery": "preventable at semantic review"
+    },
+    {
+      "stage": "storyboard",
+      "point_id": "P06",
+      "field": "kind",
+      "before": "cycle",
+      "after": "flow",
+      "reason": "Condensation forms clouds before droplets may produce rain.",
+      "earliest_checkpoint": "source-grounded storyboard review",
+      "repair_owner": "storyboard",
+      "discovery": "preventable at semantic review"
+    },
+    {
+      "stage": "storyboard",
+      "point_id": "P06",
+      "field": "labels",
+      "before": [
+        "Moist air rises",
+        "Air cools down",
+        "Condensation forms rain"
+      ],
+      "after": [
+        "Moist air rises",
+        "Rising air cools",
+        "Clouds can rain"
+      ],
+      "reason": "Condensation forms clouds before droplets may produce rain.",
+      "earliest_checkpoint": "source-grounded storyboard review",
+      "repair_owner": "storyboard",
+      "discovery": "preventable at semantic review"
+    },
+    {
+      "stage": "storyboard",
+      "point_id": "P06",
+      "field": "details",
+      "before": [
+        "Ascent driven by low pressure.",
+        "Temperature drops with altitude.",
+        "Water vapour becomes liquid."
+      ],
+      "after": [
+        "Moist air moves upward.",
+        "Cooling helps vapour condense into cloud droplets.",
+        "Cloud droplets can grow into rain."
+      ],
+      "reason": "Condensation forms clouds before droplets may produce rain.",
+      "earliest_checkpoint": "source-grounded storyboard review",
+      "repair_owner": "storyboard",
+      "discovery": "preventable at semantic review"
+    },
+    {
+      "stage": "storyboard",
+      "point_id": "P06",
+      "field": "rationale",
+      "before": "Shows the causal physical process of precipitation formation.",
+      "after": "Distinguishes cloud formation from possible precipitation.",
+      "reason": "Condensation forms clouds before droplets may produce rain.",
+      "earliest_checkpoint": "source-grounded storyboard review",
+      "repair_owner": "storyboard",
+      "discovery": "preventable at semantic review"
+    },
+    {
+      "stage": "storyboard",
+      "point_id": "P06",
+      "field": "summary",
+      "before": "Rising air cools, forming clouds and rain.",
+      "after": "Rising air cools; condensation forms clouds that can rain.",
+      "reason": "Condensation forms clouds before droplets may produce rain.",
+      "earliest_checkpoint": "source-grounded storyboard review",
+      "repair_owner": "storyboard",
+      "discovery": "preventable at semantic review"
+    },
+    {
+      "stage": "storyboard",
+      "point_id": "P08",
+      "field": "heading",
+      "before": "Terrain shapes rain rhythm",
+      "after": "Rain varies in place and time",
+      "reason": "Separate geographic rainfall distribution from temporal rhythm.",
+      "earliest_checkpoint": "source-grounded storyboard review",
+      "repair_owner": "storyboard",
+      "discovery": "preventable at semantic review"
+    },
+    {
+      "stage": "storyboard",
+      "point_id": "P08",
+      "field": "summary",
+      "before": "Terrain dictates location; troughs dictate timing.",
+      "after": "Terrain shapes location; wet spells and breaks shape rhythm.",
+      "reason": "Separate geographic rainfall distribution from temporal rhythm.",
+      "earliest_checkpoint": "source-grounded storyboard review",
+      "repair_owner": "storyboard",
+      "discovery": "preventable at semantic review"
+    },
+    {
+      "stage": "storyboard",
+      "point_id": "P10",
+      "field": "labels",
+      "before": [
+        "Heat creates pressure",
+        "Winds carry moisture",
+        "Rhythm delivers rain"
+      ],
+      "after": [
+        "Seasonal heating",
+        "Moisture-bearing winds",
+        "Clouds and rain"
+      ],
+      "reason": "Replace nonphysical rhythm-delivers-rain causal chain.",
+      "earliest_checkpoint": "source-grounded storyboard review",
+      "repair_owner": "storyboard",
+      "discovery": "preventable at semantic review"
+    },
+    {
+      "stage": "storyboard",
+      "point_id": "P10",
+      "field": "details",
+      "before": [
+        "Differential heating initiates flow.",
+        "Southwesterlies transport ocean vapour.",
+        "ITCZ movement times rainfall."
+      ],
+      "after": [
+        "Land-ocean heating helps organize seasonal circulation.",
+        "Winds bring ocean moisture inland.",
+        "Rising moist air cools and forms clouds."
+      ],
+      "reason": "Replace nonphysical rhythm-delivers-rain causal chain.",
+      "earliest_checkpoint": "source-grounded storyboard review",
+      "repair_owner": "storyboard",
+      "discovery": "preventable at semantic review"
+    },
+    {
+      "stage": "storyboard",
+      "point_id": "P02",
+      "field": "kind",
+      "before": "flow",
+      "after": "compare",
+      "reason": "Avoid unsupported single-trigger causality and blanket dry-winter claim.",
+      "earliest_checkpoint": "source-grounded storyboard review",
+      "repair_owner": "storyboard",
+      "discovery": "preventable at semantic review"
+    },
+    {
+      "stage": "storyboard",
+      "point_id": "P02",
+      "field": "labels",
+      "before": [
+        "Winter NE Trades",
+        "Seasonal Shift",
+        "Summer SW Winds"
+      ],
+      "after": [
+        "Winter wind pattern",
+        "Summer wind pattern"
+      ],
+      "reason": "Avoid unsupported single-trigger causality and blanket dry-winter claim.",
+      "earliest_checkpoint": "source-grounded storyboard review",
+      "repair_owner": "storyboard",
+      "discovery": "preventable at semantic review"
+    },
+    {
+      "stage": "storyboard",
+      "point_id": "P02",
+      "field": "details",
+      "before": [
+        "Dry northeasterly winds dominate winter.",
+        "ITCZ shift drives the reversal.",
+        "Moist southwesterly winds arrive summer."
+      ],
+      "after": [
+        "Generally northeasterly winds.",
+        "Generally moist southwesterly winds."
+      ],
+      "reason": "Avoid unsupported single-trigger causality and blanket dry-winter claim.",
+      "earliest_checkpoint": "source-grounded storyboard review",
+      "repair_owner": "storyboard",
+      "discovery": "preventable at semantic review"
+    },
+    {
+      "stage": "storyboard",
+      "point_id": "P02",
+      "field": "rationale",
+      "before": "Explicitly explains the causal sequence of wind reversal.",
+      "after": "Seasonal contrast without presenting ITCZ movement as the sole trigger.",
+      "reason": "Avoid unsupported single-trigger causality and blanket dry-winter claim.",
+      "earliest_checkpoint": "source-grounded storyboard review",
+      "repair_owner": "storyboard",
+      "discovery": "preventable at semantic review"
+    },
+    {
+      "stage": "storyboard",
+      "point_id": "P03",
+      "field": "summary",
+      "before": "Land heats faster, creating lower pressure.",
+      "after": "Land heats faster, helping lower continental pressure.",
+      "reason": "Preserve helping rather than sole-cause qualification.",
+      "earliest_checkpoint": "source-grounded storyboard review",
+      "repair_owner": "storyboard",
+      "discovery": "preventable at semantic review"
+    },
+    {
+      "stage": "storyboard",
+      "point_id": "P05",
+      "field": "summary",
+      "before": "Tropical rain belt shifts northward over India.",
+      "after": "Northward rain-belt movement helps organize summer circulation.",
+      "reason": "Avoid implying a cloud illustration is a precise geographic band.",
+      "earliest_checkpoint": "source-grounded storyboard review",
+      "repair_owner": "storyboard",
+      "discovery": "preventable at semantic review"
+    },
+    {
+      "stage": "storyboard",
+      "point_id": "P05",
+      "field": "rationale",
+      "before": "Visualizes the ITCZ cloud band moving north.",
+      "after": "Atmospheric cloud context; narration explains the seasonal displacement.",
+      "reason": "Avoid implying a cloud illustration is a precise geographic band.",
+      "earliest_checkpoint": "source-grounded storyboard review",
+      "repair_owner": "storyboard",
+      "discovery": "preventable at semantic review"
+    },
+    {
+      "stage": "storyboard",
+      "point_id": "P06",
+      "field": "labels",
+      "before": [
+        "Arabian Sea Jet",
+        "Bay of Bengal Systems"
+      ],
+      "after": [
+        "Arabian Sea",
+        "Bay of Bengal"
+      ],
+      "reason": "Distinguish moisture pathways from necessarily forming depressions.",
+      "earliest_checkpoint": "source-grounded storyboard review",
+      "repair_owner": "storyboard",
+      "discovery": "preventable at semantic review"
+    },
+    {
+      "stage": "storyboard",
+      "point_id": "P06",
+      "field": "details",
+      "before": [
+        "Somali Jet brings cross-equatorial flow.",
+        "Depressions form over the Bay."
+      ],
+      "after": [
+        "Somali Jet helps transport moist air.",
+        "Weather systems can carry Bay moisture inland."
+      ],
+      "reason": "Distinguish moisture pathways from necessarily forming depressions.",
+      "earliest_checkpoint": "source-grounded storyboard review",
+      "repair_owner": "storyboard",
+      "discovery": "preventable at semantic review"
+    },
+    {
+      "stage": "storyboard",
+      "point_id": "P07",
+      "field": "kind",
+      "before": "cycle",
+      "after": "flow",
+      "reason": "Condensation forms clouds before droplets may produce rain.",
+      "earliest_checkpoint": "source-grounded storyboard review",
+      "repair_owner": "storyboard",
+      "discovery": "preventable at semantic review"
+    },
+    {
+      "stage": "storyboard",
+      "point_id": "P07",
+      "field": "labels",
+      "before": [
+        "Air Rises",
+        "Vapour Cools",
+        "Clouds Condense"
+      ],
+      "after": [
+        "Moist air rises",
+        "Rising air cools",
+        "Clouds can rain"
+      ],
+      "reason": "Condensation forms clouds before droplets may produce rain.",
+      "earliest_checkpoint": "source-grounded storyboard review",
+      "repair_owner": "storyboard",
+      "discovery": "preventable at semantic review"
+    },
+    {
+      "stage": "storyboard",
+      "point_id": "P07",
+      "field": "details",
+      "before": [
+        "Moist air ascends due to pressure.",
+        "Temperature drops with altitude.",
+        "Water vapour forms rain clouds."
+      ],
+      "after": [
+        "Moist air moves upward.",
+        "Cooling helps vapour condense into cloud droplets.",
+        "Cloud droplets can grow into rain."
+      ],
+      "reason": "Condensation forms clouds before droplets may produce rain.",
+      "earliest_checkpoint": "source-grounded storyboard review",
+      "repair_owner": "storyboard",
+      "discovery": "preventable at semantic review"
+    },
+    {
+      "stage": "storyboard",
+      "point_id": "P07",
+      "field": "rationale",
+      "before": "Explains the causal cycle of cloud formation.",
+      "after": "Distinguishes cloud formation from possible precipitation.",
+      "reason": "Condensation forms clouds before droplets may produce rain.",
+      "earliest_checkpoint": "source-grounded storyboard review",
+      "repair_owner": "storyboard",
+      "discovery": "preventable at semantic review"
+    },
+    {
+      "stage": "storyboard",
+      "point_id": "P07",
+      "field": "summary",
+      "before": "Rising air cools, condensing into rain.",
+      "after": "Rising air cools; condensation forms clouds that can rain.",
+      "reason": "Condensation forms clouds before droplets may produce rain.",
+      "earliest_checkpoint": "source-grounded storyboard review",
+      "repair_owner": "storyboard",
+      "discovery": "preventable at semantic review"
+    },
+    {
+      "stage": "storyboard",
+      "point_id": "P10",
+      "field": "summary",
+      "before": "Monsoon reaches Kerala in early June.",
+      "after": "Typically reaches Kerala around early June.",
+      "reason": "Preserve typical approximate onset qualification.",
+      "earliest_checkpoint": "source-grounded storyboard review",
+      "repair_owner": "storyboard",
+      "discovery": "preventable at semantic review"
+    },
+    {
+      "stage": "storyboard",
+      "point_id": "P11",
+      "field": "kind",
+      "before": "flow",
+      "after": "compare",
+      "reason": "Avoid overgeneralizing all-India active/break rainfall or a rigid sequence.",
+      "earliest_checkpoint": "source-grounded storyboard review",
+      "repair_owner": "storyboard",
+      "discovery": "preventable at semantic review"
+    },
+    {
+      "stage": "storyboard",
+      "point_id": "P11",
+      "field": "labels",
+      "before": [
+        "Trough Moves South",
+        "Active Spells",
+        "Trough Moves North"
+      ],
+      "after": [
+        "Active spells",
+        "Break spells"
+      ],
+      "reason": "Avoid overgeneralizing all-India active/break rainfall or a rigid sequence.",
+      "earliest_checkpoint": "source-grounded storyboard review",
+      "repair_owner": "storyboard",
+      "discovery": "preventable at semantic review"
+    },
+    {
+      "stage": "storyboard",
+      "point_id": "P11",
+      "field": "details",
+      "before": [
+        "Southward shift brings heavy rain.",
+        "Active conditions dominate India.",
+        "Northward shift causes dry breaks."
+      ],
+      "after": [
+        "Rain is more widespread during active conditions.",
+        "Rain weakens over many areas during breaks."
+      ],
+      "reason": "Avoid overgeneralizing all-India active/break rainfall or a rigid sequence.",
+      "earliest_checkpoint": "source-grounded storyboard review",
+      "repair_owner": "storyboard",
+      "discovery": "preventable at semantic review"
+    },
+    {
+      "stage": "storyboard",
+      "point_id": "P11",
+      "field": "rationale",
+      "before": "Explains the mechanism behind active/break cycles.",
+      "after": "Contrasts rainfall rhythms without an unsupported nationwide causal sequence.",
+      "reason": "Avoid overgeneralizing all-India active/break rainfall or a rigid sequence.",
+      "earliest_checkpoint": "source-grounded storyboard review",
+      "repair_owner": "storyboard",
+      "discovery": "preventable at semantic review"
+    },
+    {
+      "stage": "storyboard",
+      "point_id": "P11",
+      "field": "summary",
+      "before": "Rain alternates with monsoon trough shifts.",
+      "after": "Active spells and breaks partly follow monsoon trough shifts.",
+      "reason": "Avoid overgeneralizing all-India active/break rainfall or a rigid sequence.",
+      "earliest_checkpoint": "source-grounded storyboard review",
+      "repair_owner": "storyboard",
+      "discovery": "preventable at semantic review"
+    },
+    {
+      "stage": "storyboard",
+      "point_id": "P12",
+      "field": "summary",
+      "before": "El Niño reduces, La Niña increases rain.",
+      "after": "ENSO influences rainfall; outcomes are never guaranteed.",
+      "reason": "Preserve probabilistic ENSO language.",
+      "earliest_checkpoint": "source-grounded storyboard review",
+      "repair_owner": "storyboard",
+      "discovery": "preventable at semantic review"
+    },
+    {
+      "stage": "storyboard",
+      "point_id": "P12",
+      "field": "labels",
+      "before": [
+        "El Niño Effect",
+        "La Niña Effect"
+      ],
+      "after": [
+        "El Niño",
+        "La Niña"
+      ],
+      "reason": "Preserve probabilistic ENSO language.",
+      "earliest_checkpoint": "source-grounded storyboard review",
+      "repair_owner": "storyboard",
+      "discovery": "preventable at semantic review"
+    },
+    {
+      "stage": "storyboard",
+      "point_id": "P12",
+      "field": "details",
+      "before": [
+        "Often associated with reduced rainfall.",
+        "Often correlates with increased rainfall."
+      ],
+      "after": [
+        "Often a tendency toward reduced monsoon rainfall.",
+        "A tendency toward stronger monsoon rainfall."
+      ],
+      "reason": "Preserve probabilistic ENSO language.",
+      "earliest_checkpoint": "source-grounded storyboard review",
+      "repair_owner": "storyboard",
+      "discovery": "preventable at semantic review"
+    },
+    {
+      "stage": "storyboard",
+      "point_id": "P16",
+      "field": "kind",
+      "before": "cycle",
+      "after": "flow",
+      "reason": "Clarify connected processes without implying a closed cycle.",
+      "earliest_checkpoint": "source-grounded storyboard review",
+      "repair_owner": "storyboard",
+      "discovery": "preventable at semantic review"
+    },
+    {
+      "stage": "storyboard",
+      "point_id": "P16",
+      "field": "labels",
+      "before": [
+        "Seasonal Heat",
+        "Moisture Transport",
+        "Terrain Lift"
+      ],
+      "after": [
+        "Seasonal heat",
+        "Moisture-bearing winds",
+        "Rising air and terrain"
+      ],
+      "reason": "Clarify connected processes without implying a closed cycle.",
+      "earliest_checkpoint": "source-grounded storyboard review",
+      "repair_owner": "storyboard",
+      "discovery": "preventable at semantic review"
+    },
+    {
+      "stage": "storyboard",
+      "point_id": "P16",
+      "field": "details",
+      "before": [
+        "Heat drives wind reversal.",
+        "Winds carry ocean moisture.",
+        "Mountains force air upward."
+      ],
+      "after": [
+        "Heating helps organize large-scale circulation.",
+        "Shifting winds bring ocean moisture inland.",
+        "Rising air cools; mountains shape regional rainfall."
+      ],
+      "reason": "Clarify connected processes without implying a closed cycle.",
+      "earliest_checkpoint": "source-grounded storyboard review",
+      "repair_owner": "storyboard",
+      "discovery": "preventable at semantic review"
+    }
+  ],
+  "sources": "artifacts/monsoon/evidence-final.json",
+  "actor": "assistant editorial review",
+  "human_acceptance": "pending",
+  "loop_assessment": "Smaller reviewer falsely labeled non-adjacent image reuse as consecutive, while missing factual qualifications in overlays. Treat passing scores as limited evidence."
+}

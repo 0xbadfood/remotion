@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Informational video services — competitor reference</title>
+  <style>
+    :root { color-scheme: light; --ink:#172537; --muted:#536477; --line:#dbe3ed; --accent:#195ac0; }
+    * { box-sizing:border-box; }
+    body { margin:0; font:16px/1.6 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; color:var(--ink); background:#f3f6fa; }
+    main { max-width:1240px; margin:36px auto; padding:32px; background:white; border:1px solid var(--line); border-radius:16px; }
+    h1 { font-size:clamp(26px,4vw,38px); line-height:1.2; margin:0 0 12px; }
+    h2 { font-size:23px; margin:32px 0 12px; }
+    p { margin:10px 0; }
+    a { color:var(--accent); text-underline-offset:3px; }
+    a:focus-visible { outline:3px solid #e79422; outline-offset:4px; }
+    .meta { color:var(--muted); font-size:14px; }
+    .note { padding:14px 18px; background:#eff5ff; border-left:4px solid var(--accent); margin:18px 0; }
+    nav { display:flex; flex-wrap:wrap; gap:10px 22px; margin:24px 0; }
+    .table-wrap { overflow-x:auto; border:1px solid var(--line); border-radius:10px; }
+    table { width:100%; border-collapse:collapse; font-size:15px; }
+    caption { text-align:left; padding:14px 16px; font-weight:600; background:#f8fafc; }
+    th,td { text-align:left; vertical-align:top; padding:16px; border-bottom:1px solid var(--line); }
+    thead th { background:#eaf0f8; }
+    tbody th { width:16%; }
+    tbody tr:nth-child(even) { background:#f8fafc; }
+    tbody tr:last-child>* { border-bottom:0; }
+    .tag { display:inline-block; font-size:12px; font-weight:600; color:#20538f; background:#e6effb; padding:2px 8px; border-radius:4px; margin-top:8px; }
+    ul,ol { padding-left:24px; }
+    li { margin:7px 0; }
+    code { background:#edf1f6; border-radius:4px; padding:2px 5px; font-size:.9em; }
+    footer { border-top:1px solid var(--line); margin-top:30px; padding-top:16px; color:var(--muted); font-size:14px; }
+    @media(max-width:650px) { main { margin:0; padding:20px; border:0; border-radius:0; } #comparison table { min-width:820px; } th,td { padding:12px; } }
+    @media print { body { background:white; font-size:11pt; } main { max-width:none; margin:0; padding:0; border:0; } nav { display:none; } .table-wrap { overflow:visible; } table { font-size:10pt; } tr { break-inside:avoid; } a { color:inherit; } h2 { break-after:avoid; } }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Informational video services</h1>
+    <p>A quick competitor reference for our research → narration → visuals → video pipeline.</p>
+    <p class="meta">Checked: <time datetime="2026-10-04">4 October 2026</time> · Official vendor sources · Initial scan, not a production benchmark</p>
+  </header>
+  <div class="note"><strong>Assessment:</strong> Several services already offer topic-to-video production. Our potential differentiation is research quality, coherent narration, factual visuals, chapter continuity, and an audio-first approval workflow. These advantages need comparative output testing.</div>
+  <nav aria-label="Reference sections">
+    <a href="#comparison">Comparison table</a>
+    <a href="#animations">X-Pilot scientific animation</a>
+    <a href="#preview">Preview funnel</a>
+    <a href="#benchmark">Suggested benchmark</a>
+  </nav>
+
+  <section id="comparison">
+    <h2>Competitor comparison</h2>
+    <div class="table-wrap">
+      <table>
+        <caption>Advertised capabilities and relevance to our project</caption>
+        <thead><tr><th scope="col">Service / source</th><th scope="col">Advertised workflow</th><th scope="col">Format and scope</th><th scope="col">Overlap / what to examine</th></tr></thead>
+        <tbody>
+          <tr><th scope="row"><a href="https://www.cliptalk.pro/ai-documentary-generator">ClipTalk</a><br><span class="tag">Close competitor</span></th><td>Topic → structured script, generated scenes, narration, captions and music.</td><td>Documentaries up to 25 minutes; landscape and portrait. Longer productions use outline and section planning.</td><td>Very close to our history and long-film workflow. Test research depth, historical imagery and section coherence.</td></tr>
+          <tr><th scope="row"><a href="https://storyshort.ai/ai-long-form-video-generator">StoryShort</a><br><span class="tag">Close competitor</span></th><td>Automated documentary and educational production with scripts, generated imagery and narration; sections can be regenerated.</td><td>Advertises 10–30-minute long-form videos.</td><td>Close to our chapter production and selective recovery. Test continuity, repetition and useful revision controls.</td></tr>
+          <tr><th scope="row"><a href="https://www.x-pilot.ai/products/free-educational-video-generator">X-Pilot</a><br><span class="tag">Science benchmark</span></th><td>Topic, PDF or syllabus → editable outline, narration and knowledge scenes. Approved scene code is rendered with Remotion.</td><td>Educational videos and independent chapter projects; diagrams, formulas and animated explanations.</td><td>Especially relevant for science and technical subjects. A distinct capability beyond our generated-image scenes. <a href="#animations">Animation notes below.</a></td></tr>
+          <tr><th scope="row"><a href="https://tapvid.ai/documentary-video-maker">TapVid</a></th><td>Approved script and research inputs, source URLs or audio → documentary scenes; scene review and selective regeneration.</td><td>Documentary workflow from supplied source material.</td><td>Close to our resumable, source-grounded production. Expects approved research inputs; source verification remains with the user.</td></tr>
+          <tr><th scope="row"><a href="https://support.google.com/notebooklm/answer/16454555?hl=en">Google Video Overviews</a></th><td>Notebook sources → narrated visual explanations.</td><td>Explainer and cinematic video formats.</td><td>Strong competition for explaining supplied research. Test factual grounding and control over the final narrative.</td></tr>
+          <tr><th scope="row"><a href="https://invideo.io/make/ai-video-generator">InVideo AI</a></th><td>Prompt → script, generated or stock visuals, voiceover, subtitles and music.</td><td>Broad AI video creation.</td><td>Broad overlap with short informational videos. Check how much the result depends on stock footage and manual editing.</td></tr>
+          <tr><th scope="row"><a href="https://fliki.ai/features/idea-to-video">Fliki</a></th><td>Idea → scene-based script, multilingual narration, stock or generated visuals, captions and music.</td><td>Advertises videos up to 15 minutes.</td><td>Relevant for narration, language coverage and editable scenes. Test pronunciation and visual specificity.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="animations">
+    <h2>How X-Pilot’s scientific animations work</h2>
+    <p><strong>Publicly documented:</strong> X-Pilot describes knowledge scenes built from editable code and structured data, rendered with Remotion. Its homepage lists a neural-network backpropagation example and advertises 58 visualization components. Sources: <a href="https://www.x-pilot.ai/">homepage</a>, <a href="https://www.x-pilot.ai/products/deterministic-rendering">rendering architecture</a>.</p>
+    <p>Its <a href="https://www.x-pilot.ai/products/knowledge-visualization">knowledge-visualization page</a> describes diagrams, formulas, charts, process flows and mechanisms sequenced over time. The exact implementation of the neural-network demo is not disclosed; the example below explains how we could build a comparable scene.</p>
+    <div class="table-wrap">
+      <table>
+        <caption>Illustrative implementation of a neural-network explainer — not verified X-Pilot internals</caption>
+        <thead><tr><th scope="col">Step</th><th scope="col">What happens</th><th scope="col">What the viewer sees</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">1. Specify</th><td>The planner defines layers, nodes, connections, labels and the teaching objective.</td><td>A clear network diagram with input, hidden and output layers.</td></tr>
+          <tr><th scope="row">2. Draw</th><td>A reusable React/SVG component draws circles, connecting lines, arrows and labels.</td><td>Exact geometry and readable text that can be edited directly.</td></tr>
+          <tr><th scope="row">3. Animate</th><td>Frame-based code changes node colour, arrow progress and displayed values.</td><td>Activations advance through the network; an error signal travels backwards; weights change.</td></tr>
+          <tr><th scope="row">4. Synchronize</th><td>For our implementation, MFA timestamps anchor each visual event to the matching phrase.</td><td>The matching layer or equation highlights when the narrator explains it.</td></tr>
+          <tr><th scope="row">5. Review</th><td>Check topology, labels, mathematics and timing; render the approved scene.</td><td>A consistent animation. Rendering consistency alone does not establish scientific correctness.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><a href="https://www.remotion.dev/docs/animating-properties">Remotion’s animation documentation</a> explains this mechanism: calculate visual properties from the current frame, using interpolation or spring motion. The renderer produces each frame from those instructions.</p>
+    <p><strong>Implication for our pipeline:</strong> Add a scene route for structured animations alongside generated illustrations. Start with reusable components for processes, graphs, timelines and node networks. The planner supplies validated scene data and narration anchors; code controls layout and motion. This could reduce image-repair work for abstract concepts, while adding diagram and explanation checks. This is a proposal, not an implemented capability.</p>
+  </section>
+
+  <section id="preview">
+    <h2>Audio preview and conversion funnel</h2>
+    <p>Free previews already have precedent: <a href="https://www.cliptalk.pro/ai-documentary-generator">ClipTalk</a> offers free script generation before signup; <a href="https://www.x-pilot.ai/products/free-educational-video-generator">X-Pilot</a> advertises one free video without a card.</p>
+    <p>Our proposed listening preview fits this pattern: produce a short opening or chapter during spare GPU capacity, let the user assess the narration, then resume the saved project for full visuals after purchase. Audio-first production is available in our stack; abandoned-cart outreach, payments and idle-capacity scheduling remain future work.</p>
+  </section>
+
+  <section id="benchmark">
+    <h2>Suggested next comparison</h2>
+    <p>Start with <strong>ClipTalk, StoryShort and X-Pilot</strong>. Use the same Chola or Mughal brief for historical production, plus a neural-network or other scientific explanation to assess animation.</p>
+    <ol>
+      <li><strong>Coverage and grounding:</strong> important facts, source support, omissions and misleading claims.</li>
+      <li><strong>Narration:</strong> flow, pronunciation, pacing, silence and a complete ending.</li>
+      <li><strong>Visuals:</strong> historical plausibility, teaching value, diagram accuracy and motion.</li>
+      <li><strong>Synchronization:</strong> subtitle accuracy and visuals matching the spoken point.</li>
+      <li><strong>Long-form quality:</strong> repeated material, chapter transitions and musical flow.</li>
+      <li><strong>Production effort:</strong> total cost, wall-clock time, repairs and manual intervention.</li>
+    </ol>
+  </section>
+  <footer>Capabilities above are vendor-advertised and may change. No competitor outputs have been independently generated or scored in this scan. Assessment and proposed implementation are our own judgments. This file is standalone and works without external scripts or assets.</footer>
+</main>
+</body>
+</html>

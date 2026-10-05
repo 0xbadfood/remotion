@@ -1,0 +1,147 @@
+{
+  "scenes": [
+    {
+      "point_id": "P01",
+      "kind": "image",
+      "asset_id": "A01",
+      "heading": "Seasonal switch from heat to rain",
+      "summary": "Scorching days transition into drenching monsoon rains.",
+      "labels": [],
+      "details": [],
+      "motion": "push",
+      "rationale": "Visual hook contrasting dry heat and wet rain."
+    },
+    {
+      "point_id": "P02",
+      "kind": "compare",
+      "asset_id": null,
+      "heading": "Seasonal wind reversal begins",
+      "summary": "Summer monsoon starts with wind direction shift.",
+      "labels": [
+        "Winter wind pattern",
+        "Summer wind pattern"
+      ],
+      "details": [
+        "Generally northeasterly winds.",
+        "Generally moist southwesterly winds."
+      ],
+      "motion": "drift",
+      "rationale": "Seasonal contrast without presenting ITCZ movement as the sole trigger."
+    },
+    {
+      "point_id": "P03",
+      "kind": "compare",
+      "asset_id": null,
+      "heading": "Differential heating drives pressure",
+      "summary": "Land heats faster than ocean, lowering pressure.",
+      "labels": [
+        "Land heats fast",
+        "Ocean heats slow"
+      ],
+      "details": [
+        "Helps lower pressure over the heated land.",
+        "Water moderates seasonal heating."
+      ],
+      "motion": "hold",
+      "rationale": "Contrasts thermal properties to explain pressure gradient."
+    },
+    {
+      "point_id": "P04",
+      "kind": "image",
+      "asset_id": "A03",
+      "heading": "Moisture moves inland",
+      "summary": "Winds carry ocean water from seas inland.",
+      "labels": [],
+      "details": [],
+      "motion": "drift",
+      "rationale": "Atmospheric illustration of humid air moving from sea."
+    },
+    {
+      "point_id": "P05",
+      "kind": "image",
+      "asset_id": "A04",
+      "heading": "Moving rain belt organizes circulation",
+      "summary": "Tropical rain belt shifts north, organizing circulation.",
+      "labels": [],
+      "details": [],
+      "motion": "push",
+      "rationale": "Visualizes the dense cloud band of the ITCZ.",
+      "banner_override": "Tropical Rain Belt"
+    },
+    {
+      "point_id": "P06",
+      "kind": "flow",
+      "asset_id": null,
+      "heading": "Rising air builds rain clouds",
+      "summary": "Rising air cools; condensation forms clouds that can rain.",
+      "labels": [
+        "Moist air rises",
+        "Rising air cools",
+        "Clouds can rain"
+      ],
+      "details": [
+        "Moist air moves upward.",
+        "Cooling helps vapour condense into cloud droplets.",
+        "Cloud droplets can grow into rain."
+      ],
+      "motion": "drift",
+      "rationale": "Distinguishes cloud formation from possible precipitation."
+    },
+    {
+      "point_id": "P07",
+      "kind": "image",
+      "asset_id": "A05",
+      "heading": "Mountains lift winds for rain",
+      "summary": "Western Ghats force winds up, causing rain.",
+      "labels": [],
+      "details": [],
+      "motion": "push",
+      "rationale": "Illustrates orographic lift on windward slopes.",
+      "banner_override": "Western Ghats"
+    },
+    {
+      "point_id": "P08",
+      "kind": "image",
+      "asset_id": "A06",
+      "heading": "Rain varies in place and time",
+      "summary": "Terrain shapes location; wet spells and breaks shape rhythm.",
+      "labels": [],
+      "details": [],
+      "motion": "hold",
+      "rationale": "Shows rain shadow effect, implying spatial distribution."
+    },
+    {
+      "point_id": "P09",
+      "kind": "image",
+      "asset_id": "A07",
+      "heading": "Rains sustain life and crops",
+      "summary": "June-September rains support agriculture and water.",
+      "labels": [],
+      "details": [],
+      "motion": "pull",
+      "rationale": "Focuses on the vital outcome for agriculture.",
+      "banner_override": "June–September"
+    },
+    {
+      "point_id": "P10",
+      "kind": "flow",
+      "asset_id": null,
+      "heading": "One connected monsoon system",
+      "summary": "Heat, winds, moisture, and rhythm connect.",
+      "labels": [
+        "Seasonal heating",
+        "Moisture-bearing winds",
+        "Clouds and rain"
+      ],
+      "details": [
+        "Land-ocean heating helps organize seasonal circulation.",
+        "Winds bring ocean moisture inland.",
+        "Rising moist air cools and forms clouds."
+      ],
+      "motion": "drift",
+      "rationale": "Synthesizes the key drivers into a sequential summary."
+    }
+  ],
+  "authorship": "Assistant editorial revision of local LLM storyboard; original candidates and reviews preserved",
+  "baseline_sha256": "264e1c8ba070988d69a206b9f37b722a506efea8dbd741638ec4c09b9a0ffeba"
+}

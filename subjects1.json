@@ -1,0 +1,794 @@
+[
+  {
+    "subject": "The Apollo Guidance Computer: Design, Core Rope Memory, and Luminary Code",
+    "type": "Engineering & Computing"
+  },
+  {
+    "subject": "The Black Death and the Restructuring of Medieval European Feudalism",
+    "type": "Medicine & Public Health"
+  },
+  {
+    "subject": "The Peloponnesian War: Delian Hegemony, the Sicilian Expedition, and the Fall of Athens",
+    "type": "Military Conflicts & Revolutions"
+  },
+  {
+    "subject": "The History of the Silk Road: Sogdian Merchants and Overland Trade Networks",
+    "type": "Economics & Trade"
+  },
+  {
+    "subject": "General Relativity vs. Quantum Mechanics: Singularities and the Planck Scale Impasse",
+    "type": "Physics & Space Systems"
+  },
+  {
+    "subject": "The Trial of Socrates and the Birth of Western Political Thought",
+    "type": "Philosophy & Governance"
+  },
+  {
+    "subject": "The East-West Schism of 1054: Filioque Controversy and Papal Jurisdiction",
+    "type": "Religion & Theology"
+  },
+  {
+    "subject": "The Race to the South Pole: Roald Amundsen vs. Robert Falcon Scott",
+    "type": "Exploration & Navigation"
+  },
+  {
+    "subject": "The Italian High Renaissance: Perspective Technique and the Medici Patronage System",
+    "type": "Arts & Architecture"
+  },
+  {
+    "subject": "The Cambrian Explosion and the Emergence of Complex Animal Body Plans",
+    "type": "Earth & Evolutionary Sciences"
+  },
+  {
+    "subject": "The Nuremberg Trials and the Creation of International Criminal Jurisprudence",
+    "type": "Law & Geopolitics"
+  },
+  {
+    "subject": "The Maurya Empire under Ashoka: The Kalinga War and the Edicts System",
+    "type": "Empires & Civilizations"
+  },
+  {
+    "subject": "The Development of Silicon Lithography: From Planar Process to Extreme Ultraviolet (EUV)",
+    "type": "Engineering & Computing"
+  },
+  {
+    "subject": "The 1918 Influenza Pandemic: Troop Mobility Vectors and Public Health Censorship",
+    "type": "Medicine & Public Health"
+  },
+  {
+    "subject": "The Haitian Revolution: Toussaint Louverture and the Defeat of Napoleon's Expeditionary Force",
+    "type": "Military Conflicts & Revolutions"
+  },
+  {
+    "subject": "The 1929 Wall Street Crash, Banking Panics, and the Great Depression Spiral",
+    "type": "Economics & Trade"
+  },
+  {
+    "subject": "Cosmic Microwave Background Radiation: Sound Horizons and Inflation Signatures",
+    "type": "Physics & Space Systems"
+  },
+  {
+    "subject": "Ancient Chinese Legalism vs. Confucianism in the Qin Imperial Unification",
+    "type": "Philosophy & Governance"
+  },
+  {
+    "subject": "The Protestant Reformation: Martin Luther, Vernacular Bibles, and the Printing Press",
+    "type": "Religion & Theology"
+  },
+  {
+    "subject": "Ferdinand Magellan's Circumnavigation: Strait Passage, Scurvy, and Elcano's Return",
+    "type": "Exploration & Navigation"
+  },
+  {
+    "subject": "Gothic Cathedral Architecture: Flying Buttresses, Stained Glass, and Structural Mechanics",
+    "type": "Arts & Architecture"
+  },
+  {
+    "subject": "The Permian-Triassic Extinction: Siberian Traps, Anoxia, and Ocean Acidification",
+    "type": "Earth & Evolutionary Sciences"
+  },
+  {
+    "subject": "The Cuban Missile Crisis: The Thirteen Days, Naval Quarantine, and Backchannel Diplomacy",
+    "type": "Law & Geopolitics"
+  },
+  {
+    "subject": "The Byzantine Empire under Justinian I: Corpus Juris Civilis, Nika Riots, and Reconquests",
+    "type": "Empires & Civilizations"
+  },
+  {
+    "subject": "The History of Internet Protocols: Packet Switching, ARPANET, and the TCP/IP Transition",
+    "type": "Engineering & Computing"
+  },
+  {
+    "subject": "The Eradication of Smallpox: Variolation, Edward Jenner, and Global Ring Vaccination",
+    "type": "Medicine & Public Health"
+  },
+  {
+    "subject": "The Battle of Stalingrad: Street Combat Dynamics, Operation Uranus, and the 6th Army Encirclement",
+    "type": "Military Conflicts & Revolutions"
+  },
+  {
+    "subject": "The Dutch East India Company (VOC) and the Spice Monopolies of the Banda Islands",
+    "type": "Economics & Trade"
+  },
+  {
+    "subject": "Black Hole Thermodynamics: Event Horizons, Information Paradox, and Hawking Radiation",
+    "type": "Physics & Space Systems"
+  },
+  {
+    "subject": "Thomas Hobbes' Leviathan and the Early Modern Theory of State Sovereignty",
+    "type": "Philosophy & Governance"
+  },
+  {
+    "subject": "The Rise and Spread of Early Buddhism: Siddhartha Gautama, Sangha, and the Ashokan Missions",
+    "type": "Religion & Theology"
+  },
+  {
+    "subject": "The Search for the Northwest Passage: Sir John Franklin's Lost Expedition on HMS Erebus and Terror",
+    "type": "Exploration & Navigation"
+  },
+  {
+    "subject": "The Weimar Bauhaus School: Walter Gropius, Industrial Design, and Form Follows Function",
+    "type": "Arts & Architecture"
+  },
+  {
+    "subject": "The Great Oxidation Event: Cyanobacterial Photosynthesis and Huronian Glaciation",
+    "type": "Earth & Evolutionary Sciences"
+  },
+  {
+    "subject": "The Dissolution of the Soviet Union: Glasnost, Perestroika, and the Belovezha Accords",
+    "type": "Law & Geopolitics"
+  },
+  {
+    "subject": "The Fall of the Western Roman Empire: Military Reorganization, Foederati, and Economic Fractures",
+    "type": "Empires & Civilizations"
+  },
+  {
+    "subject": "The Construction of the Panama Canal: Malaria Vector Eradication and Lock Hydraulics",
+    "type": "Engineering & Computing"
+  },
+  {
+    "subject": "The Discovery and Industrial Fermentation of Penicillin: Alexander Fleming to Florey and Chain",
+    "type": "Medicine & Public Health"
+  },
+  {
+    "subject": "The Taiping Rebellion: Hong Xiuquan's Millenarian Movement and Qing State Mobilization",
+    "type": "Military Conflicts & Revolutions"
+  },
+  {
+    "subject": "The Atlantic Slave Trade: Mercantile Finance, Plantation Economies, and the Triangle Route",
+    "type": "Economics & Trade"
+  },
+  {
+    "subject": "The Standard Model of Particle Physics: Quark Flavors, Gauge Bosons, and the Higgs Mechanism",
+    "type": "Physics & Space Systems"
+  },
+  {
+    "subject": "The German Idealist Dialectic: Immanuel Kant's Critique to G.W.F. Hegel's Phenomenology",
+    "type": "Philosophy & Governance"
+  },
+  {
+    "subject": "The Council of Nicaea (325 CE): The Arian Controversy and the Homoousios Debate",
+    "type": "Religion & Theology"
+  },
+  {
+    "subject": "Captain James Cook's Pacific Voyages: Lunar Distances, Harrison's H4 Chronometer, and Cartography",
+    "type": "Exploration & Navigation"
+  },
+  {
+    "subject": "The Evolution of Cinema: Lumière Cinematograph to Soviet Montage and Dziga Vertov",
+    "type": "Arts & Architecture"
+  },
+  {
+    "subject": "Human Evolutionary Lineage: From Australopithecus to Neanderthal and Denisovan Interbreeding",
+    "type": "Earth & Evolutionary Sciences"
+  },
+  {
+    "subject": "The Partition of India (1947): The Radcliffe Line, Communal Displacement, and Border Demarcation",
+    "type": "Law & Geopolitics"
+  },
+  {
+    "subject": "The Ottoman Empire in the Reign of Suleiman the Magnificent: Kanun Laws and Frontier Wars",
+    "type": "Empires & Civilizations"
+  },
+  {
+    "subject": "The First Transatlantic Telegraph Cable: Cyrus Field, Gutta-Percha, and Signal Retardation",
+    "type": "Engineering & Computing"
+  },
+  {
+    "subject": "The Salk vs. Sabin Polio Vaccine Rivalry: Inactivated Injectable vs. Attenuated Oral Drops",
+    "type": "Medicine & Public Health"
+  },
+  {
+    "subject": "The Thirty Years' War: The Defenestration of Prague, Swedish Intervention, and Peace of Westphalia",
+    "type": "Military Conflicts & Revolutions"
+  },
+  {
+    "subject": "The Bretton Woods System: The Gold Standard Peg, Harry Dexter White, and Keynesian Bancor",
+    "type": "Economics & Trade"
+  },
+  {
+    "subject": "The Formation and Migration of Solar System Bodies: The Nebular Disk and Nice Model",
+    "type": "Physics & Space Systems"
+  },
+  {
+    "subject": "Jean-Paul Sartre, Albert Camus, and Post-War French Existentialism",
+    "type": "Philosophy & Governance"
+  },
+  {
+    "subject": "The Islamic Golden Age and Sufi Philosophy: Al-Ghazali, Ibn Arabi, and Rumi",
+    "type": "Religion & Theology"
+  },
+  {
+    "subject": "The Voyage of HMS Beagle: Charles Darwin's South American Geology and Finch Observations",
+    "type": "Exploration & Navigation"
+  },
+  {
+    "subject": "Baroque Painting and Chiaroscuro: Caravaggio's Realism and Bernini's Theatrical Sculpture",
+    "type": "Arts & Architecture"
+  },
+  {
+    "subject": "Plate Tectonics and Mantle Convection: Alfred Wegener's Drift to Paleomagnetic Reversals",
+    "type": "Earth & Evolutionary Sciences"
+  },
+  {
+    "subject": "The Magna Carta: Baronial Revolt, Clause 39, and the Evolution of Due Process",
+    "type": "Law & Geopolitics"
+  },
+  {
+    "subject": "The Khmer Empire and Angkor: Hydraulic Engineering, Baray Reservoirs, and Agrarian Collapse",
+    "type": "Empires & Civilizations"
+  },
+  {
+    "subject": "The Manhattan Project's Industrial Architecture: Oak Ridge Gaseous Diffusion and Hanford B-Reactor",
+    "type": "Engineering & Computing"
+  },
+  {
+    "subject": "The History of Surgical Anesthesia: Crawford Long, William Morton, and the Ether Dome of 1846",
+    "type": "Medicine & Public Health"
+  },
+  {
+    "subject": "The American Civil War's Western Theater: River Gunboats, Vicksburg, and Rail Supply Lines",
+    "type": "Military Conflicts & Revolutions"
+  },
+  {
+    "subject": "The 1973 OPEC Oil Embargo: Stagflation, Price Shocks, and Petrodollar Recycling",
+    "type": "Economics & Trade"
+  },
+  {
+    "subject": "Magnetic Confinement Fusion: Tokamak Physics, Stellarator Field Coils, and the Lawson Criterion",
+    "type": "Physics & Space Systems"
+  },
+  {
+    "subject": "Karl Popper's Demarcation Problem: Falsificationism vs. Inductive Verificationism",
+    "type": "Philosophy & Governance"
+  },
+  {
+    "subject": "The Jesuit Order in East Asia: Matteo Ricci's Accommodation Policy and the Rites Controversy",
+    "type": "Religion & Theology"
+  },
+  {
+    "subject": "Traditional Polynesian Wayfinding: Star Compasses, Swell Patterns, and Double-Hulled Canoes",
+    "type": "Exploration & Navigation"
+  },
+  {
+    "subject": "The Rise of Modernist Literature: James Joyce's Ulysses and Virginia Woolf's Narrative Flow",
+    "type": "Arts & Architecture"
+  },
+  {
+    "subject": "The Anthropocene Debate: Nuclear Fallout Markers, Technofossils, and Biostratigraphic Signals",
+    "type": "Earth & Evolutionary Sciences"
+  },
+  {
+    "subject": "The Watergate Scandal: CREEP Operations, Executive Privilege Disputes, and US v. Nixon",
+    "type": "Law & Geopolitics"
+  },
+  {
+    "subject": "The Tokugawa Shogunate and Sakoku: Alternate Attendance (Sankin-Kotai) and Closed Borders",
+    "type": "Empires & Civilizations"
+  },
+  {
+    "subject": "The Standardization of Intermodal Shipping Containers: Malcom McLean and Global Supply Logistics",
+    "type": "Engineering & Computing"
+  },
+  {
+    "subject": "Neuroscience of Memory: Patient H.M., Bilateral Medial Temporal Lobectomy, and Hippocampal Encoding",
+    "type": "Medicine & Public Health"
+  },
+  {
+    "subject": "The Meiji Restoration and the Boshin War: Abolition of the Han System and Modern Conscription",
+    "type": "Military Conflicts & Revolutions"
+  },
+  {
+    "subject": "The Opium Wars: British Gunboat Imperialism, Silver Trade Imbalances, and the Treaty of Nanking",
+    "type": "Economics & Trade"
+  },
+  {
+    "subject": "Dark Matter Detection: Vera Rubin's Rotation Curves, Weak Lensing, and WIMP Searches",
+    "type": "Physics & Space Systems"
+  },
+  {
+    "subject": "Michel Foucault's Discipline and Punish: The Panopticon and Dispersed Biopower",
+    "type": "Philosophy & Governance"
+  },
+  {
+    "subject": "The Bhakti Movement in Medieval India: Kabir, Mirabai, and the Critique of Caste Ritualism",
+    "type": "Religion & Theology"
+  },
+  {
+    "subject": "Zheng He's Treasure Voyages: Ming Dynasty Naval Power, Tributary Diplomatics, and Fleet Abandonment",
+    "type": "Exploration & Navigation"
+  },
+  {
+    "subject": "The Impressionist Revolt: En Plein Air Techniques, Chemical Pigments, and the Salon des Refusés",
+    "type": "Arts & Architecture"
+  },
+  {
+    "subject": "Deep-Sea Hydrothermal Vent Communities: Chemosynthesis, Archaea, and Extreme Geochemistry",
+    "type": "Earth & Evolutionary Sciences"
+  },
+  {
+    "subject": "The Suez Crisis of 1956: Nasser's Nationalization, the Sevres Protocol, and Dollar Sanctions",
+    "type": "Law & Geopolitics"
+  },
+  {
+    "subject": "The Mali Empire under Mansa Musa: The 1324 Cairo Hajj, Gold Inflation, and Sankore University",
+    "type": "Empires & Civilizations"
+  },
+  {
+    "subject": "The Evolution of Modern Cryptography: Bletchley Park Bombes to Diffie-Hellman Key Exchange",
+    "type": "Engineering & Computing"
+  },
+  {
+    "subject": "The HIV/AIDS Epidemic: Retroviral Identification, AZT, and Highly Active Antiretroviral Therapy (HAART)",
+    "type": "Medicine & Public Health"
+  },
+  {
+    "subject": "The Spanish Civil War: The Defense of Madrid, Soviet Aid, and the Condor Legion Interventions",
+    "type": "Military Conflicts & Revolutions"
+  },
+  {
+    "subject": "The 2008 Global Financial Crisis: Securitization of Subprime Loans and Credit Default Swaps",
+    "type": "Economics & Trade"
+  },
+  {
+    "subject": "Gravitational Wave Astronomy: Advanced LIGO Laser Interferometers and Binary Black Hole Mergers",
+    "type": "Physics & Space Systems"
+  },
+  {
+    "subject": "The Stoic System: Chrysippus' Logic, Epictetus' Enchiridion, and Marcus Aurelius' Meditations",
+    "type": "Philosophy & Governance"
+  },
+  {
+    "subject": "Zoroastrianism: Dualism of Ahura Mazda, Fire Temples, and the Parsi Migration to India",
+    "type": "Religion & Theology"
+  },
+  {
+    "subject": "The Lewis and Clark Expedition: The Corps of Discovery, Shoshone Logistics, and Pacific Reaching",
+    "type": "Exploration & Navigation"
+  },
+  {
+    "subject": "The Evolution of the Symphony: Joseph Haydn's Form to Ludwig van Beethoven's Ninth Symphony",
+    "type": "Arts & Architecture"
+  },
+  {
+    "subject": "The Theropod-Avian Transition: Feathers, Furcula Bones, and Archaeopteryx Fossil Analysis",
+    "type": "Earth & Evolutionary Sciences"
+  },
+  {
+    "subject": "Operation Overlord Deception: Operation Fortitude, Ultra Intercepts, and Double Agent Garbo",
+    "type": "Law & Geopolitics"
+  },
+  {
+    "subject": "The Han Dynasty vs. Roman Empire: Bureaucracy, Tax Base, and Border Defense Structures",
+    "type": "Empires & Civilizations"
+  },
+  {
+    "subject": "The War of the Currents: Nikola Tesla's AC Multiphase System vs. Edison's Direct Current Grid",
+    "type": "Engineering & Computing"
+  },
+  {
+    "subject": "John Snow and the 1854 Broad Street Cholera Outbreak: Spatial Mapping and Waterborne Transmission",
+    "type": "Medicine & Public Health"
+  },
+  {
+    "subject": "The English Civil War: New Model Army Tactics, the Putney Debates, and Charles I's Regicide",
+    "type": "Military Conflicts & Revolutions"
+  },
+  {
+    "subject": "The South Sea Bubble of 1720: National Debt Conversion and the English Bubble Act",
+    "type": "Economics & Trade"
+  },
+  {
+    "subject": "Superconductivity: The Meissner Effect, Bardeen-Cooper-Schrieffer (BCS) Theory, and Cuprates",
+    "type": "Physics & Space Systems"
+  },
+  {
+    "subject": "Classical Utilitarianism: Jeremy Bentham's Panopticon Calculus vs. John Stuart Mill's Harm Principle",
+    "type": "Philosophy & Governance"
+  },
+  {
+    "subject": "The Catholic Counter-Reformation: The Council of Trent, Jesuit Education, and the Roman Inquisition",
+    "type": "Religion & Theology"
+  },
+  {
+    "subject": "Ernest Shackleton's Imperial Trans-Antarctic Expedition: The Crushing of Endurance and Elephant Island",
+    "type": "Exploration & Navigation"
+  },
+  {
+    "subject": "The Harlem Renaissance: Alain Locke, Langston Hughes, and African American Cultural Autonomy",
+    "type": "Arts & Architecture"
+  },
+  {
+    "subject": "The Pleistocene Megafaunal Extinction: Quaternary Climate Shifts vs. Anthropogenic Overkill",
+    "type": "Earth & Evolutionary Sciences"
+  },
+  {
+    "subject": "The Cambridge Five Spy Ring: Soviet MI6 Infiltration, Kim Philby, and Cold War Defections",
+    "type": "Law & Geopolitics"
+  },
+  {
+    "subject": "The Inca Imperial State: Tawantinsuyu Road Logistics, Quipu Recordkeeping, and the Mita Tax",
+    "type": "Empires & Civilizations"
+  },
+  {
+    "subject": "The Development of High-Speed Rail: The 1964 Tokaido Shinkansen, Bogie Dynamics, and Aerodynamics",
+    "type": "Engineering & Computing"
+  },
+  {
+    "subject": "The Discovery and Isolation of Insulin: Frederick Banting, Charles Best, and James Collip",
+    "type": "Medicine & Public Health"
+  },
+  {
+    "subject": "The First Punic War: The Corvus Boarding Bridge, Naval Losses, and Sicilian Campaign",
+    "type": "Military Conflicts & Revolutions"
+  },
+  {
+    "subject": "The East India Company as Sovereign Ruler: The Battle of Plassey and the 1765 Diwani of Bengal",
+    "type": "Economics & Trade"
+  },
+  {
+    "subject": "Quantum Entanglement and Bell's Theorem: The EPR Paradox, Locality, and Alain Aspect's Tests",
+    "type": "Physics & Space Systems"
+  },
+  {
+    "subject": "The Federalist Papers: Alexander Hamilton, James Madison, and the Problem of Factions in No. 10",
+    "type": "Philosophy & Governance"
+  },
+  {
+    "subject": "The Split of Early Islam: The Caliphate Succession, the Battle of Siffin, and the Tragedy of Karbala",
+    "type": "Religion & Theology"
+  },
+  {
+    "subject": "Deep-Ocean Bathyscaphe Exploration: Auguste and Jacques Piccard's Trieste in the Challenger Deep",
+    "type": "Exploration & Navigation"
+  },
+  {
+    "subject": "The Development of Jazz: Congo Square Rhythms, New Orleans Brass Bands, and Bebop Harmonies",
+    "type": "Arts & Architecture"
+  },
+  {
+    "subject": "The Deep Subterranean Biosphere: Endolithic Microbial Metabolism Without Solar Radiation",
+    "type": "Earth & Evolutionary Sciences"
+  },
+  {
+    "subject": "The Iranian Revolution of 1979: The White Revolution, Ayatollah Khomeini's Audio Tapes, and Theocracy",
+    "type": "Law & Geopolitics"
+  },
+  {
+    "subject": "The Post-Chinggis Mongol Khanates: The Golden Horde, Ilkhanate, Chagatai, and Yuan Administrative Styles",
+    "type": "Empires & Civilizations"
+  },
+  {
+    "subject": "The Large Hadron Collider: Superconducting Dipole Magnets and the Discovery of the Higgs Boson",
+    "type": "Engineering & Computing"
+  },
+  {
+    "subject": "The Cellular Biology of Aging: Telomere Attrition, Hayflick Limit, and Senolytic Interventions",
+    "type": "Medicine & Public Health"
+  },
+  {
+    "subject": "The Seven Years' War: Global Geopolitical Scope Across Europe, North America, and Bengal",
+    "type": "Military Conflicts & Revolutions"
+  },
+  {
+    "subject": "The California Gold Rush of 1849: Hydraulic Mining Technology, Inflation, and Westward Migration",
+    "type": "Economics & Trade"
+  },
+  {
+    "subject": "The James Webb Space Telescope: Deployable Sunshields, Cryogenic Actuators, and First Light Surveys",
+    "type": "Physics & Space Systems"
+  },
+  {
+    "subject": "The Vienna Circle and Logical Positivism: Moritz Schlick, Rudolf Carnap, and the Verification Criterion",
+    "type": "Philosophy & Governance"
+  },
+  {
+    "subject": "The Dead Sea Scrolls and the Formation of the Hebrew Biblical Canon at Qumran",
+    "type": "Religion & Theology"
+  },
+  {
+    "subject": "The Search for the Source of the Nile: Richard Burton, John Hanning Speke, and Lake Victoria",
+    "type": "Exploration & Navigation"
+  },
+  {
+    "subject": "Japanese Timber Architecture: Earthquake-Resistant Mortise-and-Tenon Joinery in Pagodas",
+    "type": "Arts & Architecture"
+  },
+  {
+    "subject": "Oceanic Thermohaline Circulation: North Atlantic Deep Water Formation and AMOC Dynamics",
+    "type": "Earth & Evolutionary Sciences"
+  },
+  {
+    "subject": "The Code of Hammurabi: Lex Talionis, Babylonian Social Hierarchies, and Cuneiform Law",
+    "type": "Law & Geopolitics"
+  },
+  {
+    "subject": "The Republic of Venice: Naval Hegemony, the Venetian Arsenal, and the Levant Trade Routes",
+    "type": "Empires & Civilizations"
+  },
+  {
+    "subject": "The Concorde Supersonic Transport: Ogive Wing Aerodynamics and Olympus 593 Turbojet Engineering",
+    "type": "Engineering & Computing"
+  },
+  {
+    "subject": "The CRISPR-Cas9 Revolution: Bacterial Adaptive Immunity Adapted for Precision Gene Editing",
+    "type": "Medicine & Public Health"
+  },
+  {
+    "subject": "The Battle of the Atlantic: German U-Boat Wolfpacks, Allied Escort Carriers, and Naval Enigma Decryption",
+    "type": "Military Conflicts & Revolutions"
+  },
+  {
+    "subject": "Post-Soviet Russian Shock Therapy: Voucher Privatization, Hyperinflation, and the Oligarch Class",
+    "type": "Economics & Trade"
+  },
+  {
+    "subject": "Thermonuclear Evolution of Massive Stars: Core Carbon Burning to Iron Catastrophe Supernovae",
+    "type": "Physics & Space Systems"
+  },
+  {
+    "subject": "The Frankfurt School and Critical Theory: Max Horkheimer, Theodor Adorno, and the Culture Industry",
+    "type": "Philosophy & Governance"
+  },
+  {
+    "subject": "The Spanish Inquisition and the Expulsion of Sephardic Jews: The 1492 Alhambra Decree",
+    "type": "Religion & Theology"
+  },
+  {
+    "subject": "The Voyager Interstellar Mission: Gravity-Assist Trajectories, Magnetometers, and the Golden Record",
+    "type": "Exploration & Navigation"
+  },
+  {
+    "subject": "Brutalist Architecture: Le Corbusier's Beton Brut and Postwar European Public Housing",
+    "type": "Arts & Architecture"
+  },
+  {
+    "subject": "Early Paleozoic Plant Colonization: Bryophytes, Vascular Tracheids, and the Devonian Carbon Sink",
+    "type": "Earth & Evolutionary Sciences"
+  },
+  {
+    "subject": "The Congress of Vienna (1814-1815): Klemens von Metternich and the Balance of Power in Europe",
+    "type": "Law & Geopolitics"
+  },
+  {
+    "subject": "The Safavid Dynasty and Isfahan: Shah Abbas I, Persian Urbanism, and Twelver State Identity",
+    "type": "Empires & Civilizations"
+  },
+  {
+    "subject": "The Evolution of Operating Systems: Multics Time-Sharing, Unix Philosophy, and C Language Portability",
+    "type": "Engineering & Computing"
+  },
+  {
+    "subject": "The Architecture of Adaptive Immunity: Somatic V(D)J Recombination and T-Cell Thymic Selection",
+    "type": "Medicine & Public Health"
+  },
+  {
+    "subject": "The War of the Triple Alliance: Francisco Solano Lopez, Total War Mobilization, and Paraguayan Demographics",
+    "type": "Military Conflicts & Revolutions"
+  },
+  {
+    "subject": "The Geopolitics of Rare Earth Elements: Chemical Separation Challenges and Monopolized Processing Chains",
+    "type": "Economics & Trade"
+  },
+  {
+    "subject": "Chaos Theory and Nonlinear Dynamics: The Lorenz Butterfly Attractor and Predictability Horizons",
+    "type": "Physics & Space Systems"
+  },
+  {
+    "subject": "American Pragmatism: Charles Sanders Peirce's Semiotics and William James' Theory of Truth",
+    "type": "Philosophy & Governance"
+  },
+  {
+    "subject": "State Shinto in Modern Japan: The Kokugaku Movement, Meiji Shrine Policy, and Postwar Disestablishment",
+    "type": "Religion & Theology"
+  },
+  {
+    "subject": "The Great Trigonometrical Survey of India: William Lambton, George Everest, and Theodolite Baselines",
+    "type": "Exploration & Navigation"
+  },
+  {
+    "subject": "The Pre-Raphaelite Brotherhood: Rebellion Against Mannerism, Medievalism, and Enriched Naturalism",
+    "type": "Arts & Architecture"
+  },
+  {
+    "subject": "The Messinian Salinity Crisis: The Desiccation and Zanclean Deluge of the Mediterranean Sea",
+    "type": "Earth & Evolutionary Sciences"
+  },
+  {
+    "subject": "The 1960 'Year of Africa': Decolonization Waves, Inherited Boundaries, and the Lumumba Crisis",
+    "type": "Law & Geopolitics"
+  },
+  {
+    "subject": "The Song Dynasty Technological and Economic Boom: Paper Jinbi Currency, Blast Furnaces, and Maritime Compasses",
+    "type": "Empires & Civilizations"
+  },
+  {
+    "subject": "The Industrial Development of the Steam Engine: Newcomen's Atmospheric Beam to James Watt's Condenser",
+    "type": "Engineering & Computing"
+  },
+  {
+    "subject": "Malaria Biology and Vector Eradication: The Complex Life Cycle of Plasmodium and Artemisinin Discovery",
+    "type": "Medicine & Public Health"
+  },
+  {
+    "subject": "The Six-Day War of 1967: Operation Focus Preemptive Strikes and Sinai Armor Operations",
+    "type": "Military Conflicts & Revolutions"
+  },
+  {
+    "subject": "The Trans-Saharan Gold and Salt Network: The Caravan Economy of Taghaza and Sijilmasa",
+    "type": "Economics & Trade"
+  },
+  {
+    "subject": "Planetary Terraforming Physics: Atmospheric Sputtering, Volatile Trapping, and Induced Magnetic Shields",
+    "type": "Physics & Space Systems"
+  },
+  {
+    "subject": "Classical Anarchism: Pierre-Joseph Proudhon's Property Critique to Peter Kropotkin's Mutual Aid",
+    "type": "Philosophy & Governance"
+  },
+  {
+    "subject": "The Nag Hammadi Library and Gnostic Christianity: The Gospel of Thomas and Demiurge Cosmology",
+    "type": "Religion & Theology"
+  },
+  {
+    "subject": "The Arctic Race: Robert Peary, Frederick Cook, and Matthew Henson's Polar Navigation Disputes",
+    "type": "Exploration & Navigation"
+  },
+  {
+    "subject": "Russian Avant-Garde Constructivism: Kazimir Malevich's Suprematism and El Lissitzky's Typography",
+    "type": "Arts & Architecture"
+  },
+  {
+    "subject": "The Evolution of Mammals in the Mesozoic: Nocturnal Adaptation, Middle Ear Bones, and Morganucodon",
+    "type": "Earth & Evolutionary Sciences"
+  },
+  {
+    "subject": "The Classic Maya Collapse: High-Resolution Paleoclimate Drought Records and Warfare Intensification",
+    "type": "Empires & Civilizations"
+  },
+  {
+    "subject": "Cavity Magnetron Development and Centimetric Microwave Radar in World War II",
+    "type": "Engineering & Computing"
+  },
+  {
+    "subject": "The History of Germ Theory: Louis Pasteur's Flasks and Robert Koch's Postulates",
+    "type": "Medicine & Public Health"
+  },
+  {
+    "subject": "The Mexican Revolution: Francisco Madero, Emiliano Zapata's Plan of Ayala, and the 1917 Constitution",
+    "type": "Military Conflicts & Revolutions"
+  },
+  {
+    "subject": "The Central Banking Revolution: The Bank of England Gold Reserves to Modern Fiat Systems",
+    "type": "Economics & Trade"
+  },
+  {
+    "subject": "Antimatter Physics: Dirac's Sea, Positron Production, and Penning Trap Containment",
+    "type": "Physics & Space Systems"
+  },
+  {
+    "subject": "The French Enlightenment: Voltaire's Treatise on Tolerance and Montesquieu's Trias Politica",
+    "type": "Philosophy & Governance"
+  },
+  {
+    "subject": "The Dalai Lama Institution and Tibetan Buddhist Governance: The 5th Dalai Lama and Lhasa's Potala",
+    "type": "Religion & Theology"
+  },
+  {
+    "subject": "Francisco de Orellana's Descent of the Amazon River: Indigenous Chiefdoms and Jungle Navigation",
+    "type": "Exploration & Navigation"
+  },
+  {
+    "subject": "The Rise of the Western Novel: Miguel de Cervantes' Don Quixote and the Birth of Meta-Fiction",
+    "type": "Arts & Architecture"
+  },
+  {
+    "subject": "Epigenetic Dynamics: Histone Modification, DNA Methylation, and Environmental Gene Regulation",
+    "type": "Earth & Evolutionary Sciences"
+  },
+  {
+    "subject": "The Kingdom of Kush and the 25th Dynasty of Egypt: Black Pharaohs and Meroitic Pyramids",
+    "type": "Empires & Civilizations"
+  },
+  {
+    "subject": "Hoover Dam Concrete Engineering: Artificial Chemical Cooling, Penstock Flow, and Aggregate Curing",
+    "type": "Engineering & Computing"
+  },
+  {
+    "subject": "The French Revolutionary Wars: The Levee en Masse, Lazare Carnot, and the Battle of Valmy",
+    "type": "Military Conflicts & Revolutions"
+  },
+  {
+    "subject": "The Dutch Tulip Mania of 1637: Tavern Windhandel Futures Contracts and Speculative Dynamics",
+    "type": "Economics & Trade"
+  },
+  {
+    "subject": "Hubble Ultra-Deep Field Observations: Early Galaxy Morphology and Reionization Epochs",
+    "type": "Physics & Space Systems"
+  },
+  {
+    "subject": "The American Great Awakenings: Jonathan Edwards, George Whitefield, and Religious Egalitarianism",
+    "type": "Religion & Theology"
+  },
+  {
+    "subject": "Islamic Geometric Ornamentation: Girih Tiles, Quasicrystalline Symmetries, and Muqarnas Vaulting",
+    "type": "Arts & Architecture"
+  },
+  {
+    "subject": "Coral Reef Biomineralization: Aragonite Skeleton Deposition and Thermal Bleaching Cascades",
+    "type": "Earth & Evolutionary Sciences"
+  },
+  {
+    "subject": "The Portuguese Estado da India: Afonso de Albuquerque, the Cartaz Pass System, and Malacca",
+    "type": "Empires & Civilizations"
+  },
+  {
+    "subject": "Mechanized Textile Automation: Richard Arkwright's Water Frame, Crompton's Mule, and Mill Organization",
+    "type": "Engineering & Computing"
+  },
+  {
+    "subject": "The Siege of Leningrad: The 872-Day Ring of Iron, Shostakovich's Symphony, and the Road of Life",
+    "type": "Military Conflicts & Revolutions"
+  },
+  {
+    "subject": "Galactic Nuclei and Supermassive Black Holes: Accretion Disks, Relativistic Jets, and Starburst Quenching",
+    "type": "Physics & Space Systems"
+  },
+  {
+    "subject": "Island Biogeography: E.O. Wilson's Equilibrium Model, Insular Dwarfism, and Madagascar Radiations",
+    "type": "Earth & Evolutionary Sciences"
+  },
+  {
+    "subject": "The Austro-Hungarian Dual Monarchy: The Ausgleich of 1867, Polyglot Armies, and Imperial Paralysis",
+    "type": "Empires & Civilizations"
+  },
+  {
+    "subject": "The Deep Submergence Vehicle Alvin and the Hydrothermal Exploration of the Mid-Atlantic Ridge",
+    "type": "Engineering & Computing"
+  },
+  {
+    "subject": "The Boxer Rebellion and the Eight-Nation Alliance: The Siege of the Peking Legations and the 1901 Protocol",
+    "type": "Military Conflicts & Revolutions"
+  },
+  {
+    "subject": "The Burgess Shale Fauna: Charles Walcott, Anomalocaris, Hallucigenia, and Stem Group Bilateria",
+    "type": "Earth & Evolutionary Sciences"
+  },
+  {
+    "subject": "The Late Bronze Age Collapse: Sea Peoples Raids, Palace Trade Stoppages, and Hittite/Mycenaean Fall",
+    "type": "Empires & Civilizations"
+  },
+  {
+    "subject": "The Kingdom of Aksum: Ge'ez Inscriptions, King Ezana's Monotheism, and Red Sea Stelae Ports",
+    "type": "Empires & Civilizations"
+  },
+  {
+    "subject": "The Iran-Iraq War: Static Trench Warfare, Basra Front Assaults, and the War of the Cities",
+    "type": "Military Conflicts & Revolutions"
+  },
+  {
+    "subject": "The Russian Empire under Peter the Great: The Grand Embassy, Table of Ranks, and St. Petersburg Construction",
+    "type": "Empires & Civilizations"
+  }
+]

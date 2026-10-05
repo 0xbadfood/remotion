@@ -1,0 +1,10 @@
+// Allow the existing nitin-owned worker to park/restore this shared system unit.
+// No unit-file changes, daemon reloads, or control of other services is granted.
+polkit.addRule(function(action, subject) {
+    if (subject.user === "nitin" &&
+        action.id === "org.freedesktop.systemd1.manage-units" &&
+        action.lookup("unit") === "vibevoice-api-local.service" &&
+        (action.lookup("verb") === "start" || action.lookup("verb") === "stop")) {
+        return polkit.Result.YES;
+    }
+});

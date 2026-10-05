@@ -1,0 +1,157 @@
+{
+  "title": "How the Indian monsoon works",
+  "requested_seconds": 120,
+  "authorship": "assistant editorial revision after non-converged local-LLM drafting",
+  "points": [
+    {
+      "id": "P01",
+      "heading": "Why the rains arrive",
+      "narration": "Why does India's dry heat give way to downpours that transform farms, rivers, and daily life?",
+      "fact_ids": [
+        "F01",
+        "F09"
+      ],
+      "visual_intent": "Explain the narrated concept with a suitable contextual illustration or explicit native diagram."
+    },
+    {
+      "id": "P02",
+      "heading": "A seasonal wind reversal",
+      "narration": "The monsoon is a seasonal reversal of winds, organizing a season of changing weather.",
+      "fact_ids": [
+        "F01"
+      ],
+      "visual_intent": "Explain the narrated concept with a suitable contextual illustration or explicit native diagram."
+    },
+    {
+      "id": "P03",
+      "heading": "The land warms first",
+      "narration": "Summer land heats faster than the ocean, helping create lower pressure over the continent.",
+      "fact_ids": [
+        "F02"
+      ],
+      "visual_intent": "Explain the narrated concept with a suitable contextual illustration or explicit native diagram."
+    },
+    {
+      "id": "P04",
+      "heading": "Ocean moisture moves inland",
+      "narration": "Moist air flows towards this lower pressure, carrying ocean water inland as invisible vapour.",
+      "fact_ids": [
+        "F02",
+        "F04"
+      ],
+      "visual_intent": "Explain the narrated concept with a suitable contextual illustration or explicit native diagram."
+    },
+    {
+      "id": "P05",
+      "heading": "The rain belt shifts",
+      "narration": "The tropical rain belt shifts northward, helping organize the summer circulation over India.",
+      "fact_ids": [
+        "F03"
+      ],
+      "visual_intent": "Explain the narrated concept with a suitable contextual illustration or explicit native diagram."
+    },
+    {
+      "id": "P06",
+      "heading": "Two ocean pathways",
+      "narration": "Moisture arrives through the Arabian Sea and weather systems over the Bay of Bengal.",
+      "fact_ids": [
+        "F04"
+      ],
+      "visual_intent": "Explain the narrated concept with a suitable contextual illustration or explicit native diagram."
+    },
+    {
+      "id": "P07",
+      "heading": "Cooling builds rain clouds",
+      "narration": "As moist air rises, it cools; water vapour condenses into clouds that can produce rain.",
+      "fact_ids": [
+        "F05"
+      ],
+      "visual_intent": "Explain the narrated concept with a suitable contextual illustration or explicit native diagram."
+    },
+    {
+      "id": "P08",
+      "heading": "Mountains add a lift",
+      "narration": "The Western Ghats force approaching winds upward, enhancing rain on slopes facing the moist flow.",
+      "fact_ids": [
+        "F07"
+      ],
+      "visual_intent": "Explain the narrated concept with a suitable contextual illustration or explicit native diagram."
+    },
+    {
+      "id": "P09",
+      "heading": "The rain shadow",
+      "narration": "Leeward areas receive less rain, creating a rain shadow and making rainfall vary across regions.",
+      "fact_ids": [
+        "F07"
+      ],
+      "visual_intent": "Explain the narrated concept with a suitable contextual illustration or explicit native diagram."
+    },
+    {
+      "id": "P10",
+      "heading": "The summer rain season",
+      "narration": "The southwest monsoon typically reaches Kerala around early June, during the June to September rain season.",
+      "fact_ids": [
+        "F06"
+      ],
+      "visual_intent": "Explain the narrated concept with a suitable contextual illustration or explicit native diagram."
+    },
+    {
+      "id": "P11",
+      "heading": "Active spells and breaks",
+      "narration": "Rain alternates between active spells and breaks, partly following shifts in the monsoon trough.",
+      "fact_ids": [
+        "F08"
+      ],
+      "visual_intent": "Explain the narrated concept with a suitable contextual illustration or explicit native diagram."
+    },
+    {
+      "id": "P12",
+      "heading": "Tendencies, not guarantees",
+      "narration": "El Niño often reduces rainfall, while La Niña can increase it; these tendencies offer no guarantee.",
+      "fact_ids": [
+        "F11"
+      ],
+      "visual_intent": "Explain the narrated concept with a suitable contextual illustration or explicit native diagram."
+    },
+    {
+      "id": "P13",
+      "heading": "Food and water depend on it",
+      "narration": "For farmers and reservoirs, monsoon rainfall is vital, linking seasonal weather with food and water.",
+      "fact_ids": [
+        "F09"
+      ],
+      "visual_intent": "Explain the narrated concept with a suitable contextual illustration or explicit native diagram."
+    },
+    {
+      "id": "P14",
+      "heading": "A second rainy season",
+      "narration": "From October to December, the northeast monsoon brings important rain to southeastern India, including Tamil Nadu.",
+      "fact_ids": [
+        "F10"
+      ],
+      "visual_intent": "Explain the narrated concept with a suitable contextual illustration or explicit native diagram."
+    },
+    {
+      "id": "P15",
+      "heading": "Moisture from the Bay",
+      "narration": "Northeasterly winds can acquire moisture crossing the Bay of Bengal, bringing rain to that coast.",
+      "fact_ids": [
+        "F10"
+      ],
+      "visual_intent": "Explain the narrated concept with a suitable contextual illustration or explicit native diagram."
+    },
+    {
+      "id": "P16",
+      "heading": "Follow the connections",
+      "narration": "Understanding the monsoon means connecting seasonal heat, shifting winds, ocean moisture, rising air, and terrain.",
+      "fact_ids": [
+        "F01",
+        "F02",
+        "F04",
+        "F05",
+        "F07"
+      ],
+      "visual_intent": "Explain the narrated concept with a suitable contextual illustration or explicit native diagram."
+    }
+  ]
+}

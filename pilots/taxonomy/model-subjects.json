@@ -1,0 +1,10 @@
+[
+  {"subject":"The human anatomy","expected_branches":["science.biology.anatomy"]},
+  {"subject":"The Mughal empire in India (1526 to 1857 CE)","expected_branches":["history.era"]},
+  {"subject":"History of human anatomy","expected_branches":["history"]},
+  {"subject":"How the body's organs fit together","expected_branches":["science.biology.anatomy"]},
+  {"subject":"Why do objects fall toward Earth?","expected_branches":["science.physics"]},
+  {"subject":"What happens when prices keep going up?","expected_branches":["society.economics"]},
+  {"subject":"Could a computer learn without explicit instructions?","expected_branches":["technology.ai"]},
+  {"subject":"Mercury","expected_branches":["science","general"]}
+]

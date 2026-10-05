@@ -1,0 +1,100 @@
+{
+  "schema_version": "infofilm.anatomy-image-cases.v1",
+  "subject": "Human digestive system",
+  "annotation_method": "Second experiment: same six scene descriptions and seeds; scene-specific source diagrams plus explicit reference interpretation, strict v2 screening.",
+  "physiology_source_url": "https://www.niddk.nih.gov/health-information/digestive-diseases/digestive-system-how-it-works",
+  "cases": [
+    {
+      "id": "D01",
+      "title": "Whole system: flat educational illustration",
+      "reference_support": "whole-organ layout",
+      "visual_message": "The digestive tract is a connected route from mouth to anus, with distinct organs arranged inside the body.",
+      "scene": "A clear, colored, flat medical illustration of the human digestive system in an anterior torso cutaway. Show the mouth and a single esophagus descending into the stomach; liver on the patient's right, which is the viewer's left; stomach on the patient's left, which is the viewer's right. Show a small gallbladder beneath the liver and a pancreas behind the stomach in this transparent schematic view. Coiled small intestine occupies the central lower abdomen, surrounded by the thicker large intestine, continuing into the rectum and anus. Use the reference's organ arrangement. Distinct restrained colors, clean outlines, generous spacing, neutral pale background. The torso and organs alone form the finished artwork, with plain surrounding space for later composited labels.",
+      "checks": [
+        "Liver and stomach occupy the correct anterior-view sides",
+        "A single esophagus reaches the stomach",
+        "Small intestine is central and large intestine frames it",
+        "The rectum and anus terminate the tract",
+        "Accessory organs remain distinct from the alimentary passage"
+      ]
+    },
+    {
+      "id": "D02",
+      "title": "Whole system: dimensional torso cutaway",
+      "reference_support": "whole-organ layout; generated depth is inferred",
+      "visual_message": "Digestive organs fit together within the torso; their spatial arrangement remains consistent across visual styles.",
+      "scene": "A polished three-dimensional educational anatomical model of an adult torso viewed directly from the front, with a clean cutaway exposing the digestive organs. Preserve the organ positions and approximate proportions in the attached diagram. Liver occupies the patient's right upper abdomen, viewer's left; stomach occupies the patient's left upper abdomen, viewer's right. A single esophagus enters the stomach. A transparent portion of the stomach reveals the pancreas behind it; a small gallbladder sits beneath the liver. Central coiled small intestine is framed by the thicker colon and continues toward the rectum. Smooth matte organ surfaces, distinct natural colors, soft studio lighting, neutral pale background. Finished artwork consists of the anatomical model and plain background.",
+      "checks": [
+        "Front view has correct left-right organ placement",
+        "Depth treatment does not swap or duplicate organs",
+        "Pancreas is behind the stomach in the stated transparent view",
+        "Small bowel lies within the colon frame",
+        "Digestive tract connections are visually coherent"
+      ]
+    },
+    {
+      "id": "D03",
+      "title": "Accessory organs: close-up",
+      "reference_support": "Accessory organ arrangement and bile/pancreatic duct routing; focus on the visible upper-abdominal organs.",
+      "visual_message": "The liver, gallbladder and pancreas assist digestion by delivering secretions into the small intestine.",
+      "scene": "A focused, colored medical illustration of the upper abdominal digestive organs in an anterior transparent schematic view. Show liver on viewer's left, stomach on viewer's right, a small pear-shaped gallbladder tucked beneath the liver, and the elongated pancreas behind the stomach. Use transparency in the stomach wall to make the pancreas visible while preserving these spatial relationships. Depict the duodenum curving around the pancreatic head and simplified bile and pancreatic ducts entering the duodenum. Keep all organs clearly distinguishable and the duct paths continuous and easy to follow. Clean medical illustration, restrained colors, neutral pale background, plain surrounding space for compositor typography.",
+      "checks": [
+        "Gallbladder is beneath the liver rather than an independent large organ",
+        "Pancreas has plausible elongated form and relationship to stomach",
+        "The duodenum relates to the pancreatic head",
+        "Ducts deliver into the duodenum rather than stomach or colon",
+        "Fine duct details absent from the overview reference are identified as inferred"
+      ],
+      "reference_manifest": "reference/accessory/source.json",
+      "reference_instruction": "The attached textbook diagram supplies accessory organ and duct relationships. Use its upper abdominal organs as a reference for the requested focused close-up. Render the requested stomach transparency to expose the pancreas and the duct entries into the duodenum. Compose one anatomical scene with plain surrounding space; the source text, leader lines and full-body outline remain reference material."
+    },
+    {
+      "id": "D04",
+      "title": "Stomach: longitudinal cutaway",
+      "reference_support": "Stomach anatomy and internal rugae; esophageal inlet and one pyloric outlet to duodenum. Exact microscopic tissue is not shown.",
+      "visual_message": "The stomach is a muscular chamber that mixes food, with an inlet from the esophagus and an outlet into the small intestine.",
+      "scene": "An isolated enlarged human stomach shown as a clean longitudinal cutaway in a medical teaching illustration. Preserve its recognizable curved sac-like shape, with the esophagus entering the upper stomach and a narrowed pyloric outlet continuing into a short segment of duodenum. The near wall is cut away to reveal one continuous internal lumen, natural folded inner lining, and a visibly substantial muscular wall. A small amount of partly digested food sits within the lumen. Separate the external organ contour, cut wall and internal lining clearly through restrained colors and shading. Neutral pale background, uncluttered composition, plain surrounding space for later labels.",
+      "checks": [
+        "Esophageal inlet and pyloric outlet are distinct and anatomically plausible",
+        "One lumen connects the inlet and outlet",
+        "Folds lie on the internal lining rather than outside the organ",
+        "Food is inside the lumen",
+        "Overview image cannot establish exact wall layers or microscopic accuracy"
+      ],
+      "reference_manifest": "reference/stomach/source.json",
+      "reference_instruction": "The attached stomach diagram supplies the inlet, single pyloric outlet, curved chamber, mucosal folds and cutaway arrangement. Create the requested single enlarged stomach cutaway with a short segment of duodenum. Keep its lumen visibly continuous. The reference labels and leader lines remain reference material; the finished artwork consists of the organ cutaway and plain background."
+    },
+    {
+      "id": "D05",
+      "title": "Small intestine: wall cutaway",
+      "reference_support": "Small-intestinal wall schematic with folds, villi and microscopic enlargements. Final scene should use the bowel segment scale, not collapse all magnification scales.",
+      "visual_message": "The small intestine's folded inner surface supports nutrient absorption while food travels through its lumen.",
+      "scene": "An enlarged isolated short segment of human small intestine shown in a longitudinal cutaway, in a clear medical teaching illustration. Reveal a continuous central lumen bordered by an inner mucosal surface with circular folds and many small finger-shaped villi. Keep the villi small relative to the bowel tube and projecting inward from the lining into the lumen. The outer wall shows a simple continuous muscular layer. A small amount of intestinal contents stays within the lumen. Use restrained contrasting colors to separate lumen, inner lining and outer muscular wall. Neutral pale background, clean composition, plain surrounding space for later explanatory graphics.",
+      "checks": [
+        "The cutaway is a hollow intestinal tube with a continuous lumen",
+        "Folds and villi project inward from the lining",
+        "Villi are not external tentacles or large separate organs",
+        "Wall remains continuous around the lumen",
+        "Supplied whole-organ reference does not verify mucosal or histological detail"
+      ],
+      "reference_manifest": "reference/intestine/source.json",
+      "reference_instruction": "The attached intestinal-wall figure uses several magnification scales. Use the small bowel segment at upper left for tube geometry and the mucosal diagrams for the relationship of folds and inward-projecting villi. Create one isolated bowel-segment cutaway at a consistent scale, with small villi on the luminal lining. The reference panels, micrographs, lettering and arrows remain reference material; the finished scene contains one tube segment and plain background."
+    },
+    {
+      "id": "D06",
+      "title": "Esophagus: peristalsis teaching frame",
+      "reference_support": "Three schematic moments in peristalsis; localized muscle contraction behind the bolus and relaxed tube in front.",
+      "visual_message": "Peristalsis moves swallowed food along the esophagus through coordinated muscular contraction.",
+      "scene": "A simplified longitudinal cutaway of a short vertical segment of human esophagus, enlarged as a medical teaching frame. Show a single continuous muscular tube and one rounded food bolus in its lumen. The muscular wall narrows immediately above the bolus, illustrating contraction behind downward-moving food; the lumen immediately below the bolus is relaxed and open. Make the wall visibly continuous and the bolus clearly contained within the passage. Use distinct restrained colors for muscle and food, a neutral pale background, and plain surrounding space for later composited motion arrows and labels.",
+      "checks": [
+        "A single food bolus remains inside a continuous esophageal lumen",
+        "Contraction is above and behind the descending bolus",
+        "The passage below the bolus is open",
+        "Image is an explanatory still rather than proof of a motion sequence",
+        "Whole-organ source image does not depict this dynamic mechanism"
+      ],
+      "reference_manifest": "reference/peristalsis/source.json",
+      "reference_instruction": "The attached peristalsis diagram supplies three moments of downward movement. Use the middle moment as the anatomical relationship for this single teaching frame: a localized narrowing above the bolus and a relaxed open tube below. Depict one vertical continuous esophageal segment. The other moments, source lettering and arrows remain reference material; the artwork contains the tube, bolus and plain surrounding space."
+    }
+  ]
+}

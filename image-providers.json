@@ -1,0 +1,37 @@
+{
+  "schema_version": "infofilm.image-providers.v1",
+  "default_policy": "standard_then_premium",
+  "providers": {
+    "qwen_local": {
+      "label": "Qwen Image 2.1",
+      "adapter": "qwen_async",
+      "url": "http://127.0.0.1:8075",
+      "settings": {"steps": 25}
+    },
+    "flux_dev_local": {
+      "label": "Flux.2 Dev (ImageStudio)",
+      "adapter": "imagestudio_sdapi",
+      "engine": "flux2",
+      "url": "http://127.0.0.1:8000",
+      "park_idle_services": true,
+      "settings": {"steps": 20, "cfg_scale": 1.0, "dimension_multiple": 16}
+    }
+  },
+  "policies": {
+    "standard_then_premium": {
+      "tiers": [
+        {"provider": "qwen_local", "max_attempts": 5},
+        {"provider": "flux_dev_local", "max_attempts": 5}
+      ],
+      "max_total_attempts": 10,
+      "min_escalation_attempts": 2,
+      "escalation_confidence": 0.8
+    },
+    "standard_only": {
+      "tiers": [{"provider": "qwen_local", "max_attempts": 5}],
+      "max_total_attempts": 5,
+      "min_escalation_attempts": 2,
+      "escalation_confidence": 0.8
+    }
+  }
+}

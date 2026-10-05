@@ -1,0 +1,121 @@
+{
+  "style": "Polished editorial illustration, realistic landscape painting style with soft digital blending. Warm ochre and deep teal accents used for atmospheric lighting and water tones. Natural greens, earthy browns, and cloud whites for terrain and sky. High detail on the right side of the frame, fading into low-detail, quiet negative space on the left 45% suitable for text overlay. No text, labels, arrows, or diagrams. Cinematic lighting, depth of field, and atmospheric perspective.",
+  "assets": [
+    {
+      "id": "A01",
+      "purpose": "Visual hook: Contrast between pre-monsoon heat and the arrival of rain.",
+      "prompt": "A single continuous atmospheric landscape showing the transition from dry heat to monsoon rain. On the right, a vibrant, lush green field under heavy, dark monsoon clouds with visible rain streaks and wet earth. The left side fades into a hazy, warm ochre sky with distant, dry, cracked earth tones, suggesting the preceding heat. The boundary is soft and atmospheric, not a hard line. Deep teal shadows in the wet foreground.",
+      "acceptance": [
+        "Right side shows lush green vegetation and wet ground.",
+        "Left side shows warm, hazy, dry atmospheric tones.",
+        "No hard vertical split; transition is atmospheric.",
+        "No text or arrows."
+      ],
+      "fact_ids": [
+        "F01",
+        "F09"
+      ]
+    },
+    {
+      "id": "A02",
+      "purpose": "Context for differential heating: Land vs. Ocean thermal contrast.",
+      "prompt": "A coastal landscape viewed from a high vantage point on the right. The right foreground features sun-baked, ochre-colored rocky terrain or dry soil, radiating heat haze. The left and background show a deep teal Indian Ocean with calm, cool waters. The horizon is soft. The lighting emphasizes the warmth of the land against the coolness of the sea. Quiet, low-detail sky on the left.",
+      "acceptance": [
+        "Right side clearly depicts warm, dry land tones (ochre/brown).",
+        "Left/background depicts cool ocean tones (deep teal/blue).",
+        "Heat haze effect visible over the land.",
+        "No labels indicating temperature or pressure."
+      ],
+      "fact_ids": [
+        "F02"
+      ]
+    },
+    {
+      "id": "A03",
+      "purpose": "Moisture transport: Oceanic moisture moving inland.",
+      "prompt": "A wide seascape where the right side shows the edge of a landmass with misty, humid air rising from the deep teal ocean. The left side is dominated by a vast, open ocean horizon with subtle cloud formations suggesting moisture movement. The atmosphere is thick with humidity, rendered in soft blues and greys. The land on the right is partially obscured by mist, indicating the arrival of moist air.",
+      "acceptance": [
+        "Right side shows land edge shrouded in mist/humidity.",
+        "Left side is open ocean with subtle cloud texture.",
+        "Color palette emphasizes blues, teals, and soft greys.",
+        "No wind arrows or flow lines."
+      ],
+      "fact_ids": [
+        "F04"
+      ]
+    },
+    {
+      "id": "A04",
+      "purpose": "The ITCZ/Rain Belt: A band of heavy cloud cover.",
+      "prompt": "A dramatic sky-focused illustration. The right side features a dense, towering band of cumulonimbus clouds with deep teal and grey undersides, indicating heavy rain potential. The left side fades into a lighter, clearer sky with soft ochre sunlight breaking through, representing the dry zone ahead of the rain belt. The cloud formation is realistic and voluminous, not diagrammatic.",
+      "acceptance": [
+        "Right side shows dense, dark, rain-bearing cloud structures.",
+        "Left side shows lighter, clearer sky with warm light.",
+        "Clouds look natural and voluminous.",
+        "No labels for 'ITCZ' or 'Rain Belt'."
+      ],
+      "fact_ids": [
+        "F03"
+      ]
+    },
+    {
+      "id": "A05",
+      "purpose": "Orographic Lift: Western Ghats and windward rain.",
+      "prompt": "A lush, green mountain slope (Western Ghats) on the right, heavily shrouded in mist and rain. Waterfalls or streams are visible on the wet, vibrant green slopes. The left side shows the valley below or the approach from the coast, with a hazy, rain-filled atmosphere. The focus is on the wetness and density of the vegetation on the windward side. Deep teal shadows in the ravines.",
+      "acceptance": [
+        "Right side shows steep, lush green mountain slopes.",
+        "Visible rain or heavy mist on the mountains.",
+        "Left side is atmospheric and hazy, not detailed.",
+        "No arrows showing wind direction."
+      ],
+      "fact_ids": [
+        "F05",
+        "F07"
+      ]
+    },
+    {
+      "id": "A06",
+      "purpose": "Rain Shadow: Contrast between wet windward and dry leeward.",
+      "prompt": "A landscape showing the rain shadow effect. The right side features a dry, ochre-colored plateau or plain with sparse, dry vegetation and clear, bright skies. The left side (background) shows the silhouette of a mountain range with clouds clinging to its peaks, indicating the barrier. The foreground right is dry and sun-baked, contrasting with the implied wetness behind the mountains. Quiet, dusty atmosphere on the left.",
+      "acceptance": [
+        "Right foreground shows dry, ochre terrain with sparse vegetation.",
+        "Background/left shows mountain silhouette with clouds.",
+        "Clear visual contrast between dry foreground and cloudy background.",
+        "No text explaining 'rain shadow'."
+      ],
+      "fact_ids": [
+        "F07"
+      ]
+    },
+    {
+      "id": "A07",
+      "purpose": "Agriculture and Water: Monsoon sustaining crops.",
+      "prompt": "A close-up, low-angle view of vibrant green paddy fields or crops on the right, with water droplets on leaves and a flooded field reflecting the sky. The left side fades into a soft, blurred background of distant fields and a hazy horizon. The lighting is soft and diffused, typical of an overcast monsoon day. Deep teal reflections in the water.",
+      "acceptance": [
+        "Right side shows detailed, healthy green crops with water droplets.",
+        "Left side is blurred, low-detail background.",
+        "Atmosphere is humid and overcast.",
+        "No farmers or machinery unless incidental and non-distracting."
+      ],
+      "fact_ids": [
+        "F06",
+        "F09"
+      ]
+    },
+    {
+      "id": "A08",
+      "purpose": "Northeast Monsoon: Rain to Southeast India/Tamil Nadu.",
+      "prompt": "A coastal scene in southeastern India. The right side shows a coastline with palm trees or tropical vegetation being battered by rain and wind, with waves crashing in deep teal. The sky is overcast with grey and ochre tones. The left side is a quieter, rain-streaked view of the sea or distant land, fading into mist. The mood is wet and dynamic, distinct from the summer monsoon's heavy downpours but still rainy.",
+      "acceptance": [
+        "Right side shows tropical coastal vegetation in rain.",
+        "Sea is rough with deep teal waves.",
+        "Left side is quiet and misty.",
+        "No labels for 'NE Monsoon'."
+      ],
+      "fact_ids": [
+        "F10"
+      ]
+    }
+  ],
+  "authorship": "Local planner draft with declared assistant editorial prompt clarification"
+}

@@ -1,0 +1,6 @@
+{
+  "full_size": [1536, 864],
+  "preview_size": [1024, 576],
+  "low_steps": {"qwen_local": 8, "flux_dev_local": 6},
+  "exhaustion_fallback": true
+}

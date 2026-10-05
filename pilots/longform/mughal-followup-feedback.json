@@ -1,0 +1,59 @@
+{
+  "review_kind": "Assistant editorial inspection of automatic sketch; not user acceptance or final history fact-check",
+  "issues": [
+    {
+      "field": "chapters.C04.entry_context",
+      "problem": "Territorial peak is presented as established before the chapter starting 1658; the brief does not establish this claim.",
+      "correction": "Enter from the succession rupture and changes of patronage documented in the brief; later campaigns and fiscal effects remain research questions, not established causes of decline."
+    },
+    {
+      "field": "chapters.C04.scope.description/objective/mood.rationale",
+      "problem": "Orthodox policies, decline of courtly arts and beginning of political fragmentation imply a singular, pre-decided decline story from an arts-heavy brief.",
+      "correction": "Distinguish documented succession and patronage changes from disputed political causation. Ask how military commitments, administration and regional agency interacted; retain explicit research gaps."
+    },
+    {
+      "field": "chapters.C06.entry_context",
+      "problem": "At 1757 the emperor is called a figurehead although F11 supports nominal emperors under British protection in the nineteenth century.",
+      "correction": "Enter with growing regional autonomy and weakened central control; retain continuing Mughal legitimacy. Establish nineteenth-century nominal status in C07."
+    },
+    {
+      "field": "chapters.C01.scope.description",
+      "problem": "Restoration by Humayun and Akbar still conflates the restoration with the later accession.",
+      "correction": "Describe Humayun restoring the dynasty and Akbar succeeding him in 1556."
+    },
+    {
+      "field": "chapters.*.section_card.image_selection_brief",
+      "problem": "All card briefs copy a generic instruction without identifying a relevant scene.",
+      "correction": "Specify a distinct chapter-relevant generated scene to select from the incoming chapter approved assets; native title/date overlays and no new card-only generation."
+    },
+    {
+      "field": "film.shared_visual_style and chapters.*.visual_direction",
+      "problem": "The style is generic; artwork/portrait instructions could depend on archival scans and unavailable footage.",
+      "correction": "Specify a coherent historical illustration style for all generated scene imagery, subject-grounded palettes, stable geography/banner treatment and native overlays. Explicitly describe generated reconstructions/studies; do not request footage, scans or authentic historical document reproductions."
+    }
+  ],
+  "repair_instruction": "Preserve corrected narration/music directions, seven chapter boundaries, coverage ownership, useful research queries and assembly policy. Resolve every evidence-backed finding and revise all must_change_fields. Clarify causation as research questions when unsupported. Keep mood tied to events, not rulers moral identities. No runtime compression.",
+  "must_change_fields": [
+    "chapters.C01.scope.description",
+    "chapters.C04.entry_context",
+    "chapters.C04.scope.description",
+    "chapters.C04.objective",
+    "chapters.C04.mood.rationale",
+    "chapters.C06.entry_context",
+    "film.shared_visual_style",
+    "chapters.C01.section_card.image_selection_brief",
+    "chapters.C01.visual_direction",
+    "chapters.C02.section_card.image_selection_brief",
+    "chapters.C02.visual_direction",
+    "chapters.C03.section_card.image_selection_brief",
+    "chapters.C03.visual_direction",
+    "chapters.C04.section_card.image_selection_brief",
+    "chapters.C04.visual_direction",
+    "chapters.C05.section_card.image_selection_brief",
+    "chapters.C05.visual_direction",
+    "chapters.C06.section_card.image_selection_brief",
+    "chapters.C06.visual_direction",
+    "chapters.C07.section_card.image_selection_brief",
+    "chapters.C07.visual_direction"
+  ]
+}

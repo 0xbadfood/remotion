@@ -1,0 +1,223 @@
+{
+  "scenes": [
+    {
+      "point_id": "P01",
+      "kind": "image",
+      "asset_id": "A01",
+      "heading": "Why the rains arrive",
+      "summary": "Dry heat gives way to transformative downpours.",
+      "labels": [],
+      "details": [],
+      "motion": "push",
+      "rationale": "Visual hook contrasting dry heat and rain arrival."
+    },
+    {
+      "point_id": "P02",
+      "kind": "compare",
+      "asset_id": null,
+      "heading": "A seasonal wind reversal",
+      "summary": "Monsoon organizes weather via seasonal wind reversal.",
+      "labels": [
+        "Winter wind pattern",
+        "Summer wind pattern"
+      ],
+      "details": [
+        "Generally northeasterly winds.",
+        "Generally moist southwesterly winds."
+      ],
+      "motion": "drift",
+      "rationale": "Seasonal contrast without presenting ITCZ movement as the sole trigger."
+    },
+    {
+      "point_id": "P03",
+      "kind": "image",
+      "asset_id": "A02",
+      "heading": "The land warms first",
+      "summary": "Land heats faster, helping lower continental pressure.",
+      "labels": [],
+      "details": [],
+      "motion": "hold",
+      "rationale": "Illustrates thermal contrast between land and ocean."
+    },
+    {
+      "point_id": "P04",
+      "kind": "image",
+      "asset_id": "A03",
+      "heading": "Ocean moisture moves inland",
+      "summary": "Moist air flows inland as invisible vapour.",
+      "labels": [],
+      "details": [],
+      "motion": "drift",
+      "rationale": "Shows atmospheric moisture transport from ocean to land."
+    },
+    {
+      "point_id": "P05",
+      "kind": "image",
+      "asset_id": "A04",
+      "heading": "The rain belt shifts",
+      "summary": "Northward rain-belt movement helps organize summer circulation.",
+      "labels": [],
+      "details": [],
+      "motion": "push",
+      "rationale": "Atmospheric cloud context; narration explains the seasonal displacement."
+    },
+    {
+      "point_id": "P06",
+      "kind": "compare",
+      "asset_id": null,
+      "heading": "Two ocean pathways",
+      "summary": "Moisture arrives via Arabian Sea and Bay.",
+      "labels": [
+        "Arabian Sea",
+        "Bay of Bengal"
+      ],
+      "details": [
+        "Somali Jet helps transport moist air.",
+        "Weather systems can carry Bay moisture inland."
+      ],
+      "motion": "hold",
+      "rationale": "Contrasts the two distinct moisture sources."
+    },
+    {
+      "point_id": "P07",
+      "kind": "flow",
+      "asset_id": null,
+      "heading": "Cooling builds rain clouds",
+      "summary": "Rising air cools; condensation forms clouds that can rain.",
+      "labels": [
+        "Moist air rises",
+        "Rising air cools",
+        "Clouds can rain"
+      ],
+      "details": [
+        "Moist air moves upward.",
+        "Cooling helps vapour condense into cloud droplets.",
+        "Cloud droplets can grow into rain."
+      ],
+      "motion": "drift",
+      "rationale": "Distinguishes cloud formation from possible precipitation."
+    },
+    {
+      "point_id": "P08",
+      "kind": "image",
+      "asset_id": "A05",
+      "heading": "Mountains add a lift",
+      "summary": "Western Ghats force winds upward, enhancing rain.",
+      "labels": [],
+      "details": [],
+      "motion": "push",
+      "rationale": "Shows orographic lift on windward slopes."
+    },
+    {
+      "point_id": "P09",
+      "kind": "image",
+      "asset_id": "A06",
+      "heading": "The rain shadow",
+      "summary": "Leeward areas receive less rain.",
+      "labels": [],
+      "details": [],
+      "motion": "pull",
+      "rationale": "Illustrates dry leeward side vs wet mountains."
+    },
+    {
+      "point_id": "P10",
+      "kind": "image",
+      "asset_id": "A04",
+      "heading": "The summer rain season",
+      "summary": "Typically reaches Kerala around early June.",
+      "labels": [],
+      "details": [],
+      "motion": "hold",
+      "rationale": "Uses rain belt imagery to signify the onset of the wet season."
+    },
+    {
+      "point_id": "P11",
+      "kind": "compare",
+      "asset_id": null,
+      "heading": "Active spells and breaks",
+      "summary": "Active spells and breaks partly follow monsoon trough shifts.",
+      "labels": [
+        "Active spells",
+        "Break spells"
+      ],
+      "details": [
+        "Rain is more widespread during active conditions.",
+        "Rain weakens over many areas during breaks."
+      ],
+      "motion": "drift",
+      "rationale": "Contrasts rainfall rhythms without an unsupported nationwide causal sequence."
+    },
+    {
+      "point_id": "P12",
+      "kind": "compare",
+      "asset_id": null,
+      "heading": "Tendencies, not guarantees",
+      "summary": "ENSO influences rainfall; outcomes are never guaranteed.",
+      "labels": [
+        "El Niño",
+        "La Niña"
+      ],
+      "details": [
+        "Often a tendency toward reduced monsoon rainfall.",
+        "A tendency toward stronger monsoon rainfall."
+      ],
+      "motion": "hold",
+      "rationale": "Contrasts probabilistic impacts of ENSO phases."
+    },
+    {
+      "point_id": "P13",
+      "kind": "image",
+      "asset_id": "A07",
+      "heading": "Food and water depend on it",
+      "summary": "Monsoon links weather with food and water.",
+      "labels": [],
+      "details": [],
+      "motion": "push",
+      "rationale": "Crop imagery directly illustrates agricultural dependency.",
+      "banner_override": "Food and Water"
+    },
+    {
+      "point_id": "P14",
+      "kind": "image",
+      "asset_id": "A08",
+      "heading": "A second rainy season",
+      "summary": "Northeast monsoon brings rain to southeast.",
+      "labels": [],
+      "details": [],
+      "motion": "drift",
+      "rationale": "Shows distinct coastal rain for NE monsoon."
+    },
+    {
+      "point_id": "P15",
+      "kind": "image",
+      "asset_id": "A03",
+      "heading": "Moisture from the Bay",
+      "summary": "Northeasterly winds acquire Bay moisture.",
+      "labels": [],
+      "details": [],
+      "motion": "hold",
+      "rationale": "Uses moisture transport asset to avoid consecutive reuse of A08."
+    },
+    {
+      "point_id": "P16",
+      "kind": "flow",
+      "asset_id": null,
+      "heading": "Follow the connections",
+      "summary": "Monsoon connects heat, winds, moisture, terrain.",
+      "labels": [
+        "Seasonal heat",
+        "Moisture-bearing winds",
+        "Rising air and terrain"
+      ],
+      "details": [
+        "Heating helps organize large-scale circulation.",
+        "Shifting winds bring ocean moisture inland.",
+        "Rising air cools; mountains shape regional rainfall."
+      ],
+      "motion": "drift",
+      "rationale": "Summarizes the interconnected causal chain."
+    }
+  ],
+  "authorship": "Assistant editorial revision of local LLM storyboard; original candidates and reviews preserved",
+  "baseline_sha256": "a4a5a8f0f5e85e494bfb62f5120f4b200653ef8704571bc6ee884870a5bb1eb5"
+}

@@ -1,0 +1,362 @@
+from __future__ import annotations
+
+import re
+from pathlib import Path
+
+from .core import read, write
+from .composition import image_composition
+
+
+def word_count(text):
+    return len(re.findall(r"\b[\w]+(?:['’][\w]+)*\b", text))
+
+
+def evidence_context(extraction, subject):
+    sources = []
+    for i, row in enumerate(extraction["results"], 1):
+        text = row["raw_content"]
+        if row.get("source_digest"):
+            summary = row["source_digest"]
+            sources.append({"id": f"S{i}", "url": row["url"], "title": row.get("title") or row["url"],
+                "source_summary": summary["claims"], "source_cautions": summary.get("cautions", []),
+                "passages": summary["passages"],
+                "policy": "Claims are a first-pass model digest. Excerpts map to the archived full page; verify contested meaning."})
+            continue
+        # Archive complete documents; expose relevant, overlapping windows to models.
+        intervals = []
+        keywords = [w for w in re.findall(r"\w+", subject) if len(w) > 3]
+        terms = "|".join(re.escape(w) for w in keywords) or r"\w+"
+        for match in re.finditer(terms, text, flags=re.I):
+            start, end = max(0, match.start() - 220), min(len(text), match.end() + 550)
+            if intervals and start <= intervals[-1][1]:
+                intervals[-1] = (intervals[-1][0], max(end, intervals[-1][1]))
+            else:
+                intervals.append((start, end))
+        passages = []
+        remaining = 15000
+        for start, end in intervals:
+            if remaining <= 0:
+                break
+            end = min(end, start + remaining)
+            passages.append({"offset_start": start, "offset_end": end, "text": text[start:end]})
+            remaining -= end - start
+        sources.append({"id": f"S{i}", "url": row["url"], "title": row.get("title") or row["url"], "passages": passages})
+    return {"sources": sources, "policy": "Evergreen educational explanation; omit current forecasts and dated economic/population statistics."}
+
+
+def make_evidence(models, extraction, subject="How the Indian monsoon works", audit_notes=None, experimental=True, chapter_context=None):
+    context = evidence_context(extraction, subject)
+    if audit_notes:
+        context["source_audit"] = audit_notes
+    if chapter_context:
+        context["chapter_context"] = chapter_context
+    source_ids = {s["id"] for s in context["sources"]}
+    def validate(value):
+        errors = []
+        facts = value.get("facts", [])
+        if not 8 <= len(facts) <= 20:
+            errors.append("Provide 8–20 distinct, useful facts")
+        if len({f.get("id") for f in facts}) != len(facts):
+            errors.append("Fact IDs must be unique")
+        for fact in facts:
+            if not fact.get("claim") or not fact.get("source_ids") or not set(fact["source_ids"]) <= source_ids:
+                errors.append(f"Invalid claim/source mapping: {fact}")
+        return errors
+    task = (f"Prepare a source-grounded evidence brief on {subject}, usable for short informational films. "
+            "Explain the core concepts, causal mechanisms or chronology, relevant context, significance and important qualifications supported by the sources. "
+            "Distinguish tendencies from guarantees and local mechanisms from large-scale systems. Avoid dated statistics and absolute guarantees. "
+            "Return {title, facts:[{id:'F01',claim,source_ids:['S1'],evidence_note:'paraphrased support and section'},...], uncertainties:[string], narrative_priorities:[string]}.")
+    if chapter_context:
+        task += (" This is one chapter of a longer film. Research its owned questions, scope and objective thoroughly. "
+                 "Earlier/later chapter context may be a short reminder or handoff; do not retell their material. "
+                 "Resolve the assigned research gaps and retain uncertainty where sources cannot establish a claim.")
+    return models.loop("evidence-audit" if audit_notes else "evidence", task, context, validate, experimental=experimental)
+
+
+def script_text(script):
+    return "\n\n".join(p["narration"].strip() for p in script["points"])
+
+
+def script_errors(value, evidence, budget=None):
+    errors = []
+    points = value.get("points", [])
+    facts = {f["id"] for f in evidence["facts"]}
+    if not points or len(points) > 25:
+        errors.append("Need a concise, nonempty duration-appropriate point sequence")
+    if len({p.get("id") for p in points}) != len(points):
+        errors.append("Point IDs must be unique")
+    for p in points:
+        if not p.get("narration") or not p.get("heading") or not p.get("fact_ids") or not set(p["fact_ids"]) <= facts:
+            errors.append(f"Invalid point or evidence mapping: {p.get('id')}")
+        if word_count(p.get("heading", "")) > 7:
+            errors.append(f"Heading too long: {p.get('id')}")
+    return errors
+
+
+def make_script(models, evidence, duration, rate=135, experimental=True, suffix="", correction=None, creative_brief=None):
+    budget = round((duration - 1.0) * rate / 60)
+    task = (f"Write engaging Indian English narration for a general-audience informational video about {evidence['title']}. "
+            "Create a hook, a clear causal progression and a useful closing thought. "
+            f"The advisory duration is about {duration} seconds; the chosen narrator measures roughly {rate:.1f} words/minute. About {budget} spoken words is a planning reference, not a limit. "
+            "Prioritize useful points, their logical flow and natural narration. A somewhat longer or shorter result is acceptable; do not pad, rush or cut a good explanation to match an exact time or word count. "
+            "Choose point count from duration, subject complexity and natural sentence lengths. About ten points for a minute is a starting estimate, not a requirement. "
+            "Select only the facts that comfortably fit this duration; shorter films can omit subsidiary concepts that belong in longer versions. Prioritize a clear main explanation over covering every evidence item. "
+            "Do not cram facts, repeat conclusions, read headings aloud separately, or include stage directions in narration. Use complete natural sentences. "
+            "Use only the evidence brief, with factual qualifications preserved. Each point may have one or two connected sentences. "
+            "Return {title, requested_seconds, points:[{id:'P01',heading:'short on-screen heading',narration:'exact spoken sentence(s)',fact_ids:['F01'],visual_intent:'what helps explain this'}]}. "
+            "Do not generate an unreferenced separate script field.")
+    context = {"evidence": evidence, "advisory_duration_seconds": duration, "rough_word_budget": budget,
+               "duration_policy": "advisory; flow and narration quality take priority"}
+    if creative_brief:
+        context["creative_brief"] = creative_brief
+        task += (" Follow the shared creative brief's mood, intensity and narration direction through wording, examples and sentence rhythm. "
+                 "Keep the narrator identity consistent. Never include delivery instructions as spoken words; humour must preserve the facts.")
+    if evidence.get("chapter_context"):
+        task += (" This is a chapter in one continuous film. Follow chapter_context opening_role and ending_role exactly: "
+                 "only film_intro introduces the overall subject; continuation opens with a natural bridge from entry_context. "
+                 "A handoff ending leads into the next chapter's question, without an overall summary or sign-off. "
+                 "Only film_conclusion answers the film-wide central question and closes the narrative. "
+                 "Advance the owned topics; respect exclusions and avoid repeating previous chapters. "
+                 "The outline gives research intentions, not additional factual evidence; use verified chapter facts for narration.")
+    if correction:
+        context["measured_duration_feedback"] = correction
+    return models.loop(f"script-{duration}{suffix}", task, context, lambda x: script_errors(x, evidence, budget), experimental=experimental)
+
+
+def make_library(models, evidence, scripts, experimental=True):
+    task = (f"Plan a shared library of six to eight distinct landscape still illustrations for two informational films on {evidence['title']}. "
+            "Use polished editorial illustrations appropriate to the subject. Warm ochre and deep teal are accent colours; natural greens, blues, earth and cloud colours are welcome for realistic contextual details. This is not an exclusive palette. "
+            "Scientific mechanisms, maps, arrows, exact labels, calendars and charts will be native Remotion graphics; do not ask generated images to encode these. "
+            "Cover the important contexts and semantic changes in the actual scripts, without inventing settings or unrelated decorative scenes. "
+            "Main detail should be anchored on the right for a portrait crop. Keep the left 45% relatively quiet for a dark text gradient; low-detail sky, water or ground is acceptable. Do not demand completely empty left space. No generated words, labels, borders, logos or split panels. "
+            "These stills provide context and atmosphere. Clouds, rain, mist and heat haze are ordinary landscape features, not forbidden scientific diagrams. Do not force every image to communicate a complete mechanism; the storyboard and narration provide that. "
+            "Keep prompts concise but concrete, and provide observable visual acceptance criteria. This is educational general-audience design, not a children's cartoon. "
+            "Return {style, assets:[{id:'A01',purpose,prompt,acceptance:[string],fact_ids:[string]}]}.")
+    return models.loop("visual-library", task, {"evidence": evidence, "scripts": scripts}, lambda x: library_errors(x, evidence), experimental=experimental)
+
+
+def library_errors(x, evidence):
+    facts = {f["id"] for f in evidence["facts"]}
+    assets = x.get("assets", [])
+    errors = []
+    if not isinstance(assets, list) or len(assets) > 240 or len({a.get("id") for a in assets}) != len(assets):
+        errors.append("Need at most 240 assets with unique IDs, allocated from actual visual beats")
+    for a in assets:
+        if not a.get("prompt") or len(a["prompt"]) > 3500 or not a.get("acceptance") or not set(a.get("fact_ids", [])) <= facts:
+            errors.append(f"Invalid asset {a.get('id')}")
+    return errors
+
+
+def make_storyboard(models, script, library, evidence, duration, experimental=True):
+    task = ("Create an executable storyboard for the exact narration. One scene per point, in unchanged order, anchored to that point's first aligned word. "
+            "Choose a library image when atmosphere/context helps; choose a native process diagram when scientific causality benefits from explicit explanation. "
+            "Use distinct native diagrams where they clarify the actual subject, distributed across the film, and contextual images elsewhere. There is no required diagram count; do not force diagrammatic explanations onto unsuitable subjects. "
+            "Native kinds are 'flow' (three sequential concept cards), 'compare' (two contrasted explanatory cards), or 'cycle' (three causally linked concept cards). "
+            "For native kinds provide exactly three labels for flow/cycle, two labels for compare, each <=4 words, and explanatory details for each <=10 words. "
+            "A compare diagram has no directional arrow; flow/cycle arrows must imply only evidence-supported relations. "
+            "Text heading <=7 words and summary <=12 words, expressing the spoken point without introducing new claims. "
+            "Avoid consecutive reuse of the same image when an appropriate alternate exists. Images use gentle push/pull/drift/hold with text in left 43%; diagrams use the right 55%. "
+            "Return {scenes:[{point_id:'P01',kind:'image'|'flow'|'compare'|'cycle',asset_id:'A01' or null,heading,summary,labels:[],details:[],motion:'push'|'pull'|'drift'|'hold',rationale}]}.")
+    return models.loop(f"storyboard-{duration}", task, {"script": script, "evidence": evidence, "library": library}, lambda x: storyboard_errors(x, script, library), experimental=experimental)
+
+
+def storyboard_errors(x, script, library):
+    ids = {a["id"] for a in library["assets"]}
+    scenes = x.get("scenes", [])
+    errors = []
+    if [s.get("point_id") for s in scenes] != [p["id"] for p in script["points"]]:
+        errors.append("Scene point IDs must exactly cover narration order")
+    diagrams = 0
+    for s in scenes:
+        kind = s.get("kind")
+        if kind == "image":
+            if s.get("asset_id") not in ids:
+                errors.append("Unknown image asset")
+        elif kind in {"flow", "compare", "cycle"}:
+            diagrams += 1
+            n = 2 if kind == "compare" else 3
+            if len(s.get("labels", [])) != n or len(s.get("details", [])) != n:
+                errors.append(f"{s.get('point_id')} needs {n} labels and details")
+            if any(word_count(v) > 4 for v in s.get("labels", [])) or any(word_count(v) > 10 for v in s.get("details", [])):
+                errors.append(f"Diagram copy too long: {s.get('point_id')}")
+        else:
+            errors.append("Unsupported scene kind")
+        if word_count(s.get("heading", "")) > 7 or word_count(s.get("summary", "")) > 12:
+            errors.append(f"Overlay copy too long: {s.get('point_id')}")
+        if s.get("motion") not in {"push", "pull", "drift", "hold"}:
+            errors.append("Unsupported motion")
+        if word_count(s.get("banner_override", "")) > 8:
+            errors.append("Banner override is too long")
+    return errors
+
+
+def image_prompt_evidence(evidence, fact_ids):
+    result = {key: evidence[key] for key in ["title", "uncertainties", "narrative_priorities"] if key in evidence}
+    result["facts"] = [fact for fact in evidence["facts"] if fact["id"] in fact_ids]
+    chapter = evidence.get("chapter_context")
+    if chapter:
+        result["chapter_context"] = {
+            "film": {key: chapter.get("film", {}).get(key) for key in ["subject", "central_question"]},
+            "chapter": {key: chapter.get("chapter", {}).get(key) for key in
+                        ["title", "scope", "objective", "exclusions", "visual_direction"]},
+            "previous_chapter": chapter.get("previous_chapter"), "next_chapter": chapter.get("next_chapter")}
+    return result
+
+
+def make_image_prompts(models, library, films, evidence, orientations, experimental=True, message_recovery=False, batch_size=8, person_references=False):
+    """Bind prompts to actual spoken scenes, including reuse and banner intent."""
+    contexts = {}
+    scene_ids = set()
+    for film in films:
+        points = film["script"]["points"]
+        point_indices = {p["id"]: i for i, p in enumerate(points)}
+        if any(s.get("start_word_id") for s in film["storyboard"]["scenes"]):
+            from .creative import resolved_scenes
+            scenes = resolved_scenes(film["storyboard"], film["script"], film["timing"])
+        else:
+            scenes = film["storyboard"]["scenes"]
+        for j, scene in enumerate(scenes):
+            i = point_indices[scene["point_id"]]
+            if scene["kind"] != "image":
+                continue
+            key = f"{film['requested_seconds']}:{scene.get('id', scene['point_id'])}"
+            scene_ids.add(key)
+            context = {"scene_key": key, "narration": scene.get("covered_narration", points[i]["narration"]),
+                       "point_narration": points[i]["narration"], "heading": scene["heading"],
+                       "visual_purpose": points[i].get("visual_intent", scene["rationale"]),
+                       "previous_narration": (scenes[j-1]["covered_narration"] if j else None) if "covered_narration" in scene else (points[i-1]["narration"] if i else None),
+                       "next_narration": (scenes[j+1]["covered_narration"] if j+1 < len(scenes) else None) if "covered_narration" in scene else (points[i+1]["narration"] if i+1 < len(points) else None),
+                       "fact_ids": points[i]["fact_ids"],
+                       "narrated_seconds": (scene["end"]-scene["start"] if "start" in scene else
+                           film["timing"]["points"][i]["end"]-film["timing"]["points"][i]["start"]),
+                       "copy_density": scene.get("copy_density", "standard")}
+            if 'banner_override' in scene:
+                context['banner_override'] = scene['banner_override']
+            contexts.setdefault(scene["asset_id"], []).append(context)
+    used = [a for a in library["assets"] if a["id"] in contexts]
+    composition = {a['id']: image_composition(contexts[a['id']], orientations) for a in used}
+    task = ("Write the final image-generation prompts for the actual informational film scenes in the context below. "
+            "Read the subject, narration, evidence, scene purpose and neighbouring beats before choosing what each image should show. "
+            "Keep existing asset IDs; a shared still must suit every scene that uses it. No unrelated stock scenery or invented historical/scientific claims. "
+            "Use the shared subject-aware visual style and creative brief, with coherent visual transitions. All images are generated. "
+            "Choose photorealistic or illustrated treatment from the actual subject and brief; do not assume every film needs editorial drawings. "
+            "Follow composition_by_asset, derived from the actual Remotion layout. For standard landscape scenes, put the complete hero subject in the right half with a low-detail left 43%; "
+            "give specific desired background material such as subdued sky, earth or a wall instead of vague 'quiet area'. "
+            "Use camera distance and angle to keep wide objects and groups inside the usable subject area. "
+            "Standard portrait scenes need essential details near the right-biased crop. Minimal-copy scenes use full-frame imagery with text below; centred subjects and natural left-side detail are appropriate. "
+            "Do not require empty left space or exact right-of-centre placement for minimal-copy scenes. State framing once, at the beginning of each prompt, before decorative details. "
+            "Use contextual banners, season/place labels or short process labels where they help the viewer understand the actual scene. "
+            "Return exact banner text separately: the compositor places crisp banners over the image. Plan a clean upper-right banner area with no important subject underneath. "
+            "Do not ask the raster generator to draw typography, maps or arrows; native diagrams and banners supply those precisely. "
+            "Do not label a generic illustrative landscape as an exact photographed location. Avoid split panels and atmospheric features that imply a wrong mechanism. "
+            "Return {style, assets:[{id,purpose,prompt,acceptance:[string],fact_ids:[string]}], banners:[{scene_key,text:'at most 8 words',reason}]}. "
+            "Exactly cover the supplied used assets and image scene keys; an empty banner text is allowed if a banner adds no useful context.")
+    if message_recovery:
+        task += (" Additionally every asset must include visual_message, setting and visual_style. "
+                 "visual_message is the informative meaning the illustration supports, independent of its chosen staging. "
+                 "It must suit all covered passages and preserve essential historical/scientific relationships. "
+                 "setting specifies concrete sourced era/place/surroundings; visual_style specifies visual treatment and mood. "
+                 "Keep literal film/chapter titles, banners and overlay instructions out of setting, visual_style and prompt; "
+                 "banner entries are separate. prompt is only a concrete standalone scene, not a wrapper or abstract summary. "
+                 "Use a simpler subject-specific scene rather than an overloaded diagram or generic symbolism. "
+                 "These fields remain available through reviews and repairs, allowing staging to change while meaning stays fixed.")
+    if person_references:
+        task += (" Additionally every asset must include people_in_frame:[{name,appearance_context,reference_kind}]. "
+                 "List only recognizable real public/historical figures who are visibly depicted in this concrete scene; "
+                 "a person merely mentioned in narration does not belong in the list. Use [] for scenery, objects, "
+                 "generic crowds and unnamed people. Use consistent canonical full names across batches and films. "
+                 "appearance_context gives the sourced life period/age/role needed in this scene, with consistent "
+                 "wording for the same appearance across scenes. reference_kind is photograph when authentic photos "
+                 "exist, or historical_portrait for figures before photography. Do not fabricate a photograph of an "
+                 "ancient ruler or use a modern actor as their likeness. Limit a scene to at most six named figures. "
+                 "Keep the scene prompt under 2600 characters to leave room for appearance-reference conditioning. "
+                 "Research will source these references and attach a labeled card; describe the actual scene and "
+                 "treatment rather than requesting a contact sheet or raster name labels.")
+    def validator(batch_assets, batch_contexts, allowed_facts):
+        batch_scene_ids = {c["scene_key"] for rows in batch_contexts.values() for c in rows}
+        def validate(value):
+            errors = []
+            assets = value.get("assets", [])
+            if not isinstance(assets, list) or any(not isinstance(a, dict) for a in assets):
+                return ["assets must be an array of objects"]
+            if [a.get("id") for a in assets] != [a["id"] for a in batch_assets]:
+                errors.append("Final prompts must retain exactly the used asset IDs and order")
+            for a in assets:
+                if (not isinstance(a.get("prompt"), str) or not a["prompt"].strip() or len(a["prompt"]) > 3500
+                        or not isinstance(a.get("acceptance"), list) or not a["acceptance"]
+                        or not isinstance(a.get("fact_ids"), list)
+                        or any(not isinstance(f, str) or f not in allowed_facts for f in a.get("fact_ids", []))):
+                    errors.append(f"Invalid final prompt: {a.get('id')}")
+            if message_recovery:
+                for asset in assets:
+                    for field, minimum, maximum in [("visual_message", 20, 1600), ("setting", 10, 1000), ("visual_style", 10, 800)]:
+                        text = asset.get(field)
+                        if not isinstance(text, str) or not minimum <= len(text.strip()) <= maximum:
+                            errors.append(f"{asset.get('id')} needs a bounded {field}")
+            if person_references:
+                from .person_references import person_errors
+                for asset in assets:
+                    errors.extend(f"{asset.get('id')}: {error}" for error in person_errors(asset.get('people_in_frame')))
+                    if len(asset.get('prompt', '')) > 2600:
+                        errors.append(f"{asset.get('id')}: leave prompt space for reference conditioning")
+            banners = value.get("banners", [])
+            if not isinstance(banners, list) or any(not isinstance(b, dict) for b in banners):
+                errors.append("banners must be an array of objects")
+            else:
+                if len(banners) != len(batch_scene_ids) or {b.get("scene_key") for b in banners} != batch_scene_ids:
+                    errors.append("Banner entries must exactly cover image scenes")
+                if any(not isinstance(b.get("text"), str) or word_count(b.get("text", "")) > 8 for b in banners):
+                    errors.append("Banner text must be a string of at most eight words")
+            return errors
+        return validate
+
+    base = {"subject": evidence["title"], "evidence": evidence, "style": library["style"],
+            "used_assets": used, "scene_contexts_by_asset": contexts, "orientations": orientations,
+            "composition_by_asset": composition, "creative_brief": library.get("creative_brief")}
+    if not message_recovery:
+        result = models.loop("scene-image-prompts", task, base,
+                             validator(used, contexts, {f["id"] for f in evidence["facts"]}), experimental=experimental)
+    else:
+        if type(batch_size) is not int or not 1 <= batch_size <= 8:
+            raise ValueError("Image prompt batch_size must be between 1 and 8")
+        # The adapter fields made a 28–32 image chapter exceed a 7k output budget.
+        # Bound each output independently; keep all contexts of a shared asset
+        # together and preserve neighbours, source facts and film-wide direction.
+        batches = [used[i:i+batch_size] for i in range(0, len(used), batch_size)]
+        result = {"style": library["style"], "assets": [], "banners": []}
+        for position, batch in enumerate(batches, 1):
+            ids = {a["id"] for a in batch}
+            batch_contexts = {key: rows for key, rows in contexts.items() if key in ids}
+            fact_ids = {f for a in batch for f in a.get("fact_ids", [])}
+            fact_ids.update(f for rows in batch_contexts.values() for row in rows for f in row.get("fact_ids", []))
+            packet = {**base, "used_assets": batch, "scene_contexts_by_asset": batch_contexts,
+                      "composition_by_asset": {key: value for key, value in composition.items() if key in ids},
+                      "evidence": image_prompt_evidence(evidence, fact_ids),
+                      "film_asset_outline": [{"id": a["id"], "purpose": a["purpose"]} for a in used],
+                      "batch": {"position": position, "total": len(batches), "planned_images": len(used)}}
+            detail = {"batch": position, "total_batches": len(batches), "asset_ids": [a["id"] for a in batch],
+                      "planned_images": len(used), "planned_so_far": len(result["assets"])}
+            if hasattr(models, "store"):
+                models.store.event("image-prompts", "batch_running", detail)
+            partial = models.loop(f"scene-image-prompts-batch-{position:03d}",
+                task + " Plan only this batch. Keep the shared treatment in style. Use concise concrete descriptions; "
+                "visual_message should be one informative sentence, setting and visual_style short phrases. "
+                "Return every requested asset and banner; compact JSON is welcome.", packet,
+                validator(batch, batch_contexts, fact_ids), experimental=experimental)
+            result["assets"].extend(partial["assets"])
+            result["banners"].extend(partial["banners"])
+            if hasattr(models, "store"):
+                models.store.event("image-prompts", "batch_succeeded", {**detail, "planned_so_far": len(result["assets"])})
+        errors = validator(used, contexts, {f["id"] for f in evidence["facts"]})(result)
+        if errors:
+            raise ValueError(f"Combined image prompt batches failed validation: {errors}")
+        result["planning_batches"] = len(batches)
+    if message_recovery:
+        for asset in result["assets"]:
+            for context in contexts[asset["id"]]:
+                context["visual_message"] = asset["visual_message"]
+        result["image_recovery_contract"] = "infofilm.image-message-recovery.v1"
+    result["scene_contexts_by_asset"] = contexts
+    result['orientations'] = list(orientations)
+    result['composition_by_asset'] = {a['id']: image_composition(contexts[a['id']], orientations, result['banners']) for a in used}
+    return result

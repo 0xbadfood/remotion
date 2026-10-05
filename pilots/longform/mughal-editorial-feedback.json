@@ -1,0 +1,37 @@
+{
+  "review_kind": "Assistant editorial inspection of automatic sketch; not user acceptance or final history fact-check",
+  "issues": [
+    {
+      "field": "chapters.*.mood.direction",
+      "problem": "All seven chapters copied the contract instruction instead of supplying delivery directions.",
+      "correction": "Provide concrete chapter-specific narration delivery, emotional development and evidence-grounded rationale; no ruler hero/villain labels."
+    },
+    {
+      "field": "chapters.*.music.direction",
+      "problem": "All seven chapters copied the same generic music placeholder; BPM changes do not specify musical development.",
+      "correction": "Give chapter-specific instruments, texture, energy, development and incoming/outgoing transition. Retain one quiet shared instrumental motif below speech. These are contemporary expressive cues, not claims of authentic historical music."
+    },
+    {
+      "field": "chapters.C01.exit_handoff",
+      "problem": "With the throne restored to Akbar conflates Humayun restoration in 1555 with Akbar accession in 1556.",
+      "evidence": "F02 and F03 distinguish these events.",
+      "correction": "Restore the throne to Humayun, then hand off to Akbar accession and consolidation."
+    },
+    {
+      "field": "chapters.C04.entry_context",
+      "problem": "Territorial peak is presented as established before the chapter starting 1658; the brief does not establish this claim.",
+      "correction": "Enter from the succession rupture and changes of patronage documented in the brief; later campaigns and fiscal effects remain research questions, not established causes of decline."
+    },
+    {
+      "field": "chapters.C04.scope.description/objective/mood.rationale",
+      "problem": "Orthodox policies, decline of courtly arts and beginning of political fragmentation imply a singular, pre-decided decline story from an arts-heavy brief.",
+      "correction": "Distinguish documented succession and patronage changes from disputed political causation. Ask how military commitments, administration and regional agency interacted; retain explicit research gaps."
+    },
+    {
+      "field": "chapters.C06.entry_context",
+      "problem": "At 1757 the emperor is called a figurehead although F11 supports nominal emperors under British protection in the nineteenth century.",
+      "correction": "Enter with growing regional autonomy and weakened central control; retain continuing Mughal legitimacy. Establish nineteenth-century nominal status in C07."
+    }
+  ],
+  "repair_instruction": "Preserve the seven-chapter structure, valid chronology, anchor ownership, useful focused research queries, common visual identity and assembly policy. Correct only concrete defects and related inconsistent language. Later research must decide unresolved historical claims. Do not compress to runtime."
+}
