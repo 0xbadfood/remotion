@@ -16,7 +16,7 @@ from pathlib import Path
 
 import httpx
 
-from .core import ROOT, digest, gpu_lease, read, write, resource_slot
+from .core import ROOT, digest, gpu_lease, read, write, resource_slot, shares_gpu
 from .composition import asset_composition
 from .planning import word_count
 
@@ -126,13 +126,14 @@ def render_audio(config, store, text, name):
         health = request(config, "tts", "GET", "/health")
         if health.get("queued_or_running_jobs") and not record_path.exists():
             raise RuntimeError("VibeVoice has other queued/running work; leave it undisturbed")
-        image = request(config, "image", "GET", "/api/status")
-        if image.get("busy"):
-            raise RuntimeError("Image service is busy; cannot switch shared GPU")
-        if image.get("state") == "loading":
-            raise RuntimeError("Image service is loading; cannot switch shared GPU")
-        if image.get("state") == "loaded":
-            request(config, "image", "POST", "/api/unload")
+        if shares_gpu(config, "voice", "images"):      # free the shared GPU only when voice and images share one
+            image = request(config, "image", "GET", "/api/status")
+            if image.get("busy"):
+                raise RuntimeError("Image service is busy; cannot switch shared GPU")
+            if image.get("state") == "loading":
+                raise RuntimeError("Image service is loading; cannot switch shared GPU")
+            if image.get("state") == "loaded":
+                request(config, "image", "POST", "/api/unload")
         try:
             if not record_path.exists():
                 with reference.open("rb") as handle:

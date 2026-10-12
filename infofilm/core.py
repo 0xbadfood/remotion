@@ -68,6 +68,13 @@ def gpu_lease(config, service=None):
             fcntl.flock(handle, fcntl.LOCK_UN)
 
 
+def shares_gpu(config, *services):
+    """True when these services run on the same local GPU. Without `shared_gpu_services` everything does (the old
+    single-3090 setup); with it, only the services it lists."""
+    shared = config.get("shared_gpu_services")
+    return shared is None or all(service in shared for service in services)
+
+
 @contextlib.contextmanager
 def resource_slot(name, slots):
     """Cross-process limit for a local resource (e.g. two video renders at once): one lock file per slot."""

@@ -13,7 +13,7 @@ from pathlib import Path
 
 import httpx
 
-from .core import ROOT, digest, gpu_lease, read, write
+from .core import ROOT, digest, gpu_lease, read, write, shares_gpu
 from .media import audio_info, audit_audio, request
 from .planning import script_text
 
@@ -47,7 +47,10 @@ def level_master(narration, destination, duration, gain_db=DEFAULT_DELIVERY_GAIN
 
 
 def release_services(config):
-    """Called under the cooperative GPU lease; never displace active work."""
+    """Called under the cooperative GPU lease; never displace active work. Only services that share the music GPU
+    are released (on the Spark music runs beside a resident VibeVoice and remote images)."""
+    if not shares_gpu(config, "music", "images") and not shares_gpu(config, "music", "voice"):
+        return
     image = request(config, "image", "GET", "/api/status")
     if image.get("busy") or image.get("state") == "loading":
         raise RuntimeError("Images are busy; music cannot acquire the shared GPU")

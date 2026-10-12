@@ -12,7 +12,7 @@ from pathlib import Path
 import httpx
 
 from .audio_audit import AUDIT_POLICY
-from .core import Store, digest, gpu_lease, read, write
+from .core import Store, digest, gpu_lease, read, write, shares_gpu
 from .media import AlignmentError, align_audio, audio_info, audit_audio, mfa_numeric_text, request, wait_job
 from .planning import script_text, word_count
 from .gpu_release import release_vibevoice
@@ -29,11 +29,12 @@ def vibe_service(config, store, root):
                 own_active |= job.get("status") in {"queued", "loading", "rendering"}
             if not own_active:
                 raise RuntimeError("VibeVoice has other active work; leave it undisturbed")
-        image = request(config, "image", "GET", "/api/status")
-        if image.get("busy") or image.get("state") == "loading":
-            raise RuntimeError("Image service is busy; cannot switch shared GPU")
-        if image.get("state") == "loaded":
-            request(config, "image", "POST", "/api/unload")
+        if shares_gpu(config, "voice", "images"):      # free the shared GPU only when voice and images share one
+            image = request(config, "image", "GET", "/api/status")
+            if image.get("busy") or image.get("state") == "loading":
+                raise RuntimeError("Image service is busy; cannot switch shared GPU")
+            if image.get("state") == "loaded":
+                request(config, "image", "POST", "/api/unload")
         try:
             yield
         finally:
