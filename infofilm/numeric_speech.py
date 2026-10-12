@@ -25,7 +25,8 @@ def _is_year(text, start, end):
     literal = text[start:end]
     number = int(literal)
     before, after = text[:start], text[end:]
-    if before.endswith("-") and (len(before) < 2 or not before[-2].isdigit()):
+    # A leading minus is not a year; a hyphen after a word ('mid-2011', 'pre-1970') still is.
+    if before.endswith("-") and (len(before) < 2 or not (before[-2].isdigit() or before[-2].isalpha())):
         return False
     # Explicit era notation also supports ancient dates below 1000.
     if _ERA.match(after) or re.search(r"\b(?:AD|CE|BC|BCE)\s*$", before, re.I):
@@ -44,16 +45,21 @@ def _is_year(text, start, end):
     if re.search(r"\b(?:January|February|March|April|May|June|July|August|September|"
                  r"October|November|December)\s+\d{1,2}(?:st|nd|rd|th)?[,]?\s*$", before, re.I):
         return True
+    # A month directly before the year: 'May 1967', day-first '11 April 1970', 'April, 1970'. Case-sensitive so the
+    # verb 'may' ('it may 1970 ...') is not read as the month.
+    if re.search(r"\b(?:January|February|March|April|May|June|July|August|September|"
+                 r"October|November|December),?\s+$", before):
+        return True
     # A range inherits date context from its first endpoint.
     left = re.search(r"(\d{4})\s*(?:[-–—]|to|through|and)\s*$", before, re.I)
     if left and _is_year(text, left.start(1), left.end(1)):
         return True
     if right and (_ERA.match(after[right.end():]) or not before.strip()):
         return True
-    # Bare years in headings or date-led sentences, without guessing an
-    # unmarked measurement such as 'the capacity reached 1970'.
-    return not before.strip() and (not after.strip(" .,;:!?()") or bool(
-        re.match(r"\s*(?:was|is|marked|saw|brought|became|AD|CE|BC|BCE)\b", after, re.I)))
+    # Otherwise a plain 1100-2099 number is a year, as in Lesson Studio's spoken form: documentaries name years in
+    # endless phrasings ('a 2004 account', 'late 2010', 'gives 2005 as'), while quantities are caught above by
+    # currency, unit/count nouns and comma thousands. An unmarked measurement ('reached 1970') reads as a year.
+    return 1100 <= number <= 2099
 
 
 def year_text(text, *, context=None, offset=0):

@@ -20,11 +20,23 @@ class NumericSpeechTests(unittest.TestCase):
             with self.subTest(year=notation):
                 self.assertEqual(mfa_numeric_text(f"In {notation}, it opened."), f"In {speech}, it opened.")
         self.assertEqual(mfa_numeric_text("January 1, 1970"), "January one, nineteen seventy")
+        # Month directly before the year, including day-first dates (Apollo 13 narration said 'one thousand ...').
+        self.assertEqual(mfa_numeric_text("Apollo 13 launched on 11 April 1970 from Florida."),
+                         "Apollo thirteen launched on eleven April nineteen seventy from Florida.")
+        self.assertEqual(mfa_numeric_text("It was shipped in May 1967."), "It was shipped in May nineteen sixty seven.")
+        self.assertEqual(mfa_numeric_text("By April, 1970 it was ready."), "By April, nineteen seventy it was ready.")
+        # Years in free phrasing (Neptune Spear narration).
+        for text, speech in [("A 2004 account says so.", "A two thousand four account says so."),
+                             ("Aid was suspended in mid-2011.", "Aid was suspended in mid-twenty eleven."),
+                             ("Letters from late 2010 and early 2011.", "Letters from late twenty ten and early twenty eleven."),
+                             ("Its report gives 2005 as the point.", "Its report gives two thousand five as the point.")]:
+            self.assertEqual(mfa_numeric_text(text), speech)
+        self.assertEqual(mfa_numeric_text("It was -1970 degrees."), "It was minus one thousand, nine hundred and seventy degrees.")
         self.assertEqual(mfa_numeric_text("848 CE"), "eight hundred and forty-eight CE")
 
     def test_quantities_are_not_guessed_as_years(self):
         for text in ["In 1970 houses", "It cost ₹1970.", "It cost $1970.", "It cost 1970 rupees.",
-                     "There were 1,970 soldiers.", "The capacity reached 1970.",
+                     "There were 1,970 soldiers.", "Profit was 1970 dollars.",
                      "It took 1970 years.", "From 1200 to 1500 calories.", "In 1970 km."]:
             with self.subTest(text=text):
                 self.assertNotIn("nineteen seventy", mfa_numeric_text(text))
