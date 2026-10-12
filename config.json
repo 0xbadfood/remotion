@@ -21,8 +21,8 @@
   "acestep_steps": 8,
   "music_max_attempts": 3,
   "delivery_gain_db": 4.0,
-  "music_vad_python": "/home/nitin/story_generator/.whisperx-env/bin/python3",
-  "music_stable_ts_python": "/home/nitin/stable-ts/.venv/bin/python",
+  "music_vad_python": "/home/nitin/remotion/.venv/bin/python",
+  "music_stable_ts_python": "/home/nitin/remotion/.venv/bin/python",
   "music_stable_ts_model": "/home/nitin/.cache/whisper/large-v3.pt",
   "music_vocal_isolation": false,
   "reference_transcript": "Mumbai is the financial, commercial and the entertainment capital of India. It is also one of the world's top ten centres of commerce in terms of global financial flow.",
@@ -30,12 +30,12 @@
   "image_provider_settings": "/home/nitin/remotion/image-providers.json",
   "reference_audio": "/home/nitin/quiz_generator/amit.wav",
   "language": "en_indian",
-  "gpu_lock": "/tmp/infofilm-rtx3090.lock",
+  "gpu_lock": "/tmp/infofilm-spark-gpu.lock",
   "story_backend": "/home/nitin/story_generator/backend",
   "quiz_root": "/home/nitin/quiz_generator",
   "filmora_root": "/home/nitin/story_generator/filmora",
   "kbagent_root": "/home/nitin/kbagent",
-  "browser": "/home/nitin/.cache/ms-playwright/chromium-1148/chrome-linux/chrome",
+  "browser": "/home/nitin/remotion/renderer/node_modules/.remotion/chrome-headless-shell/linux-arm64/chrome-headless-shell-linux-arm64/headless_shell",
   "image_width": 1536,
   "image_height": 864,
   "image_steps": 25,
@@ -77,7 +77,9 @@
     "max_candidates": 1
   },
   "shared_gpu_services": [
-    "music",
-    "flux"
-  ]
+    "music"
+  ],
+  "research_python": "/home/nitin/remotion/.venv/bin/python",
+  "mfa_slots": 3,
+  "render_slots": 2
 }

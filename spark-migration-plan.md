@@ -40,6 +40,20 @@ moves to the Spark; the premium image tier becomes a cloud provider.
   `infofilm-media-adapter` if kept.
 - Public URL (`remotion.photovault.live`) and any proxy/frp entries must point at the Spark.
 
+## Status (2026-10-12, end of day)
+
+- **Live on the Spark:** remotion-video (infofilm, :8051), lesson-studio (:18610), infofilm-media-adapter (:18092 →
+  local VibeVoice :8092, images → amdserver factory). User units with linger. Public URLs remotion./manim.photovault.live
+  point here (master Caddy, persisted in the Caddyfile). The services on the old host are stopped and disabled.
+- **Done:** repos cloned; venvs (infofilm: faster-whisper, torch 2.14 cu130, stable-ts; Lesson Studio: manim 0.21);
+  renderer npm + Remotion ARM headless shell; Obscura ARM build in ~/kbagent; LaTeX/Cairo/Pango; ACE-Step 1.5 + 6 GB
+  checkpoints (15 s test: 112 s, 6.4 GB peak); Whisper large-v3; filmora backend + MFA runner + MFA models copied;
+  interface state, keys, voices, scivid-data, textbook-digest, NCERT books copied; infofilm tests 732/734 pass (the two
+  failures only lack node on PATH in a plain shell).
+- **Open: word alignment (MFA).** MFA 3 needs kalpy, which has no aarch64 build (nor baumwelch). Until resolved, films
+  stop at the timing step. Options: torchaudio MMS forced aligner (native, GPU; recommended), MFA as a service on an x86
+  host, or build kalpy from source.
+
 ## Order
 
 1. Commit/push both codebases: infofilm `github.com/0xbadfood/remotion` (`967de7b`); Lesson Studio
