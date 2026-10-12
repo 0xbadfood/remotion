@@ -98,6 +98,18 @@ rescue chapters; the film ran 46% long.
   loses parallel writing and chapter-sized repair); keeping solo chapters with a wider gate (still patches after
   the fact, cannot manage length).
 
+## Manhattan Project redo (first run after the build, 2026-10-13)
+
+- [x] Beat sheet budget error named only the chapter frame (C06), so beat changes were discarded six times: aggregate
+  errors now name every unit that can fix them (`C06 (B28, ..., B34): ...`).
+- [x] C05 script: 303/299/304 words for a 259 budget (15% band) got three full redrafts, then the one-point review
+  fix never ran (rounds exhausted). Length errors now name the points to trim; code-only rounds get up to three
+  extra rounds; default band 25% (user: not too harsh on length).
+- [x] Reference selector rejected Oppenheimer's c.1944 official portrait and Hahn's 1944 Nobel Foundation photo
+  because the metadata did not state the medium. Rule added: a dated photographic-era portrait from a reputable
+  archive counts as a photograph unless it says painting/drawing/sculpture. (This run keeps the cached rejections.)
+- Cast survived with code ids R01-R12 and C01:F03 refs; 10 of 12 referenced. C02 must show 8 people.
+
 ## Manhattan Project trial (15-min long film, 2026-10-13): stopped for the build, to be redone
 
 4 of 8 chapter videos made. No rescue (premium off on purpose); the run fed the build above.
