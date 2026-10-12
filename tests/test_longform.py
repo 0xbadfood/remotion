@@ -14,6 +14,7 @@ import numpy as np
 from PIL import Image
 
 from infofilm.core import ROOT, Store, configuration, digest, read, write
+OLD_PHASE_A = {**read(ROOT/'external-planner.json'), 'beat_sheet': False}   # tests about other behaviour
 from infofilm.longform import ChapterLogRelay, chapter_context, chapter_creative, create_long, continuity_review, make_orientation, planner_settings, run_chapter, year_bounds, child_stage
 from infofilm.longform_video import assemble
 from infofilm.media import audio_info
@@ -193,7 +194,7 @@ class LongformTests(unittest.TestCase):
                                'assumptions':[],'success_criteria':['The relationship is visible']}}
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory);ref=root/'reference.wav';ref.write_bytes(b'reference')
-            args=SimpleNamespace(config=write(root/'config.json',{'planner_url':'http://p','reviewer_url':'http://r','reference_audio':str(ref)}),
+            args=SimpleNamespace(config=write(root/'config.json',{'planner_url':'http://p','reviewer_url':'http://r','reference_audio':str(ref),'longform_settings':OLD_PHASE_A}),
                 project=root/'parent',subject=plan['film']['subject'],durations=[900],orientation='landscape',reference_audio=None,
                 reference_transcript=None,language='en_indian',tts_engine='vibevoice',omni_speed=.8,mood='auto',mood_intensity='restrained',
                 visual_balance='auto',music_engine='none',review_mode='experimental',animation_chapters=True,
@@ -236,23 +237,40 @@ class LongformTests(unittest.TestCase):
                 tts_engine='vibevoice',omni_speed=.8,mood='auto',mood_intensity='restrained',visual_balance='auto',music_engine='none',
                 review_mode='experimental',sources=write(root/'sources.json',{'results':[{'url':'https://example.org','raw_content':'E'}]}),
                 orientation_brief=write(root/'brief.json',brief),chapter_plan=write(root/'plan.json',plan),until='video')
-            order=[]
+            order=[];contexts={}
             def child(payload,project,store,cid,*extra):
                 order.append((payload['until'],cid))
+                contexts.setdefault(payload['until'],{})[cid]=read(payload['chapter_context'])
+                if payload['until']=='evidence':
+                    write(Path(project)/'evidence-final.json',{'facts':[{'id':'F01','claim':'A fact.'},{'id':'F02','claim':'Another.'}]})
+                    return project/'attempts/test'
                 if payload['until']=='script':return script_stub(payload,project)
                 checked_stub(project);return project/'attempts/test'
             def review(models,plan_,rows):
                 order.append(('continuity',rows[1]['chapter']['id']));return pair_ok(models,plan_,rows)
+            def sheet(models,plan_,records,rate,**kw):
+                order.append(('beat-sheet',None))
+                return {'chapters':[{'id':c['id'],'opening':'Opens here.','closing':'Closes here.','people':[],'word_budget':200}
+                                    for c in plan_['chapters']],
+                        'beats':[{'id':f'B{i:02d}','chapter':c['id'],'intent':'A step.','fact_ids':['F01'],'words':100}
+                                 for i,c in enumerate(plan_['chapters'],1) for _ in range(2)]}
             with patch('infofilm.creative.make_creative_brief',return_value=creative()),patch('infofilm.longform.run_chapter',side_effect=child),\
-                 patch('infofilm.longform.continuity_review',side_effect=review),\
+                 patch('infofilm.longform.continuity_review',side_effect=review),patch('infofilm.beat_sheet.make_beat_sheet',side_effect=sheet),\
                  patch('infofilm.longform_video.assemble',return_value={'video':'checked.mp4'}),patch('infofilm.delivery.preview',return_value=root/'out'):
                 create_long(args)
             kinds=[k for k,_ in order]
+            # Option C: every chapter's evidence, then one beat sheet, then every script, then continuity, then media.
+            self.assertEqual(kinds[:len(plan['chapters'])],['evidence']*len(plan['chapters']))
+            self.assertEqual(kinds[len(plan['chapters'])],'beat-sheet')
             last_script=max(i for i,k in enumerate(kinds) if k=='script')
             first_media=kinds.index('video')
-            self.assertLess(last_script,first_media)
+            self.assertEqual(set(kinds[len(plan['chapters'])+1:last_script+1]),{'script'})
             self.assertEqual(kinds[last_script+1:first_media],['continuity']*(len(plan['chapters'])-1))
             self.assertEqual(read(args.project/'continuity-report.json')['stage'],'scripts')
+            first=plan['chapters'][0]['id']
+            self.assertNotIn('beat_sheet',contexts['evidence'][first])
+            self.assertEqual(contexts['script'][first]['beat_sheet']['word_budget'],200)
+            self.assertEqual(contexts['script'][first]['beat_sheet'],contexts['video'][first]['beat_sheet'])   # same script input
 
     def test_script_gate_redrafts_only_the_later_chapter_once(self):
         from infofilm.longform import script_gate
@@ -291,7 +309,7 @@ class LongformTests(unittest.TestCase):
         plan,brief=accepted_plan()
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory);ref=root/'reference.wav';ref.write_bytes(b'reference')
-            config=write(root/'config.json',{'planner_url':'http://p','reviewer_url':'http://r',
+            config=write(root/'config.json',{'planner_url':'http://p','reviewer_url':'http://r','longform_settings':OLD_PHASE_A,
                 'reference_audio':str(ref),'language':'en_indian','tts_url':'http://v','image_url':'http://i'})
             sources=write(root/'sources.json',{'results':[{'url':'https://example.org','raw_content':'Evidence'}]})
             outline=write(root/'plan.json',plan);orientation=write(root/'brief.json',brief)

@@ -169,6 +169,7 @@ class LongAudioFirstTests(unittest.TestCase):
             root = Path(directory)
             ref = root/'reference.wav'; ref.write_bytes(b'reference')
             config = write(root/'config.json', {'planner_url':'http://p','reviewer_url':'http://r',
+                'longform_settings': {**read(ROOT/'external-planner.json'), 'beat_sheet': False},
                 'reference_audio':str(ref),'language':'en_indian','tts_url':'http://v','image_url':'http://i'})
             sources = write(root/'sources.json', {'results':[{'url':'https://example.org','raw_content':'Evidence'}]})
             outline = write(root/'plan.json', plan); orientation = write(root/'brief.json', brief)

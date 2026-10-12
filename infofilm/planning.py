@@ -105,6 +105,13 @@ def script_errors(value, evidence, budget=None):
             errors.append(f"{p.get('id')}: needs narration, a heading and fact_ids drawn only from the evidence")
         if word_count(p.get("heading", "")) > 7:
             errors.append(f"{p.get('id')}: heading has {word_count(p.get('heading', ''))} words; at most 7")
+    sheet = (evidence.get("chapter_context") or {}).get("beat_sheet")
+    if sheet and points:
+        words, target = sum(word_count(p.get("narration", "")) for p in points), sheet["word_budget"]
+        tolerance = sheet.get("length_tolerance", .15)
+        if abs(words - target) > target * tolerance:
+            errors.append(f"Narration totals {words} words; this chapter's budget is {target} (within {round(tolerance * 100)}%): "
+                          + ("merge or shorten points, keeping every beat" if words > target else "develop the beats more fully"))
     return errors
 
 
@@ -150,6 +157,14 @@ def make_script(models, evidence, duration, rate=135, experimental=True, suffix=
             task += (" chapter_context.continuity_notes lists problems a continuity review found between the previous chapter's "
                      "accepted script and this chapter: resolve each one (chronology, scope, duplicated exposition, handoff) "
                      "while keeping this chapter's own facts and roles. The previous chapter will not change.")
+    sheet = (evidence.get("chapter_context") or {}).get("beat_sheet")
+    if sheet:
+        context["rough_word_budget"] = sheet["word_budget"]
+        task += (" chapter_context.beat_sheet is this chapter's part of the film-wide beat plan: narrate exactly its "
+                 "beats, in order, each as one or two points using that beat's fact_ids; a reminder beat is one short "
+                 "sentence. Open as beat_sheet.opening says and close as beat_sheet.closing says. The narration must "
+                 f"total about {sheet['word_budget']} words (code checks within {round(sheet.get('length_tolerance', .15) * 100)}%); "
+                 "this budget replaces the advisory duration and word reference above.")
     if correction:
         context["measured_duration_feedback"] = correction
     chapter = evidence.get("chapter_context") or {}

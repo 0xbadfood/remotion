@@ -141,6 +141,11 @@ def settings_errors(settings):
         errors.append('planner_role must select one of the two configured LLMs')
     if not finite_number(settings.get('review_min_score')) or not 0 <= settings['review_min_score'] <= 100:
         errors.append('Invalid review_min_score')
+    if type(settings.get('beat_sheet', False)) is not bool:
+        errors.append('beat_sheet must be boolean')
+    tolerance = settings.get('script_length_tolerance', 0.15)
+    if not finite_number(tolerance) or not 0.05 <= tolerance <= 0.5:
+        errors.append('script_length_tolerance must be 0.05-0.5')
     guide = settings.get('recommended_chapter_seconds')
     if not isinstance(guide, list) or len(guide) != 2 or any(not finite_number(v) or v <= 0 for v in guide) or guide[0] > guide[1]:
         errors.append('Need a positive recommended chapter duration range')

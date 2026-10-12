@@ -83,7 +83,7 @@ def cast_errors(value, corpus, chapter_ids, maximum, fact_refs=None):
     return errors
 
 
-def make_cast(models, records, maximum, experimental=True):
+def make_cast(models, records, maximum, experimental=True, planned_people=None):
     chapters, corpus = [], []
     for row in records:
         project = Path(row["project"])
@@ -100,7 +100,10 @@ def make_cast(models, records, maximum, experimental=True):
     ids = {c["id"] for c in chapters}
     refs = {f"{c['id']}:{f['id']}" for c in chapters for f in c["facts"]}
     text = "\n".join(corpus)
-    value = models.loop("film-cast", TASK, {"chapters": chapters, "max_people": maximum},
+    context = {"chapters": chapters, "max_people": maximum}
+    if planned_people:
+        context["planned_people_by_chapter"] = planned_people          # from the central beat sheet
+    value = models.loop("film-cast", TASK, context,
                         lambda v: cast_errors(v, text, ids, maximum, refs), experimental=experimental, units=CAST_UNITS)
     return value["people"]
 

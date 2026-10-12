@@ -20,5 +20,7 @@
     "global_flow": 0.2,
     "mood_fit": 0.1,
     "production_readiness": 0.1
-  }
+  },
+  "beat_sheet": true,
+  "script_length_tolerance": 0.15
 }

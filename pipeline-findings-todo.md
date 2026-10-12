@@ -66,7 +66,7 @@ Audit table before the build (2026-10-13):
 | Per-image take repair | one image's scene | yes | yes |
 | Person reference choice | one decision | n/a | n/a |
 
-### 3. Hybrid planning: central beat sheet for long films (option C, user decision 2026-10-13)
+### 3. Hybrid planning: central beat sheet for long films (option C, user decision 2026-10-13; built 2026-10-13)
 
 Today chapters write their scripts alone from a central outline, and a pairwise continuity gate patches conflicts
 afterwards (redrafting only the later chapter, before any voice work). Its blind spots: it compares only neighbours,
@@ -74,7 +74,15 @@ so duplication between non-adjacent chapters (e.g. C02 and C05) is never seen; i
 and nothing controls pacing or length across the film. Apollo 13: C01 revealed the splashdown and verdict before the
 rescue chapters; the film ran 46% long.
 
-- [ ] **Central beat sheet** between chapter evidence and chapter scripts:
+- [x] **Built** (`infofilm/beat_sheet.py`, `external-planner.json` `beat_sheet: true`, `script_length_tolerance: 0.15`):
+  phase A runs every chapter's research and evidence, then one central beat sheet (`beat-sheet.json`: chapter frames
+  with opening/closing/people, beats B01.. with chapter, intent, own fact ids and word allocation), then the chapter
+  scripts in parallel from their slice. Word budget per chapter = advisory seconds x the film calibration's measured
+  words per minute, owned by code; scripts outside the tolerance are a validation error. The cast receives the
+  planned people per chapter. Units: chapter frames and beats (targeted repair per beat). Older frozen runs keep
+  the previous flow (`beat_sheet` absent = off). Tests: `tests/test_beat_sheet.py`, the phase-order test in
+  `tests/test_longform.py`.
+- [x] **Central beat sheet** between chapter evidence and chapter scripts:
   1. Central outline (as today): chapters, owned topics, research angles.
   2. Per-chapter research and evidence (as today, parallel).
   3. **New:** one central call sees every chapter's evidence summary and fixes, per chapter: the beats (points with

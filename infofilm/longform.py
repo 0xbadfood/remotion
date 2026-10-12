@@ -157,7 +157,7 @@ def chapter_creative(shared, chapter, requested_mood='auto'):
     return result
 
 
-def chapter_context(plan, chapter, shared, brief, continuity_notes=None):
+def chapter_context(plan, chapter, shared, brief, continuity_notes=None, beats=None):
     index = plan['chapters'].index(chapter)
     topics = [t for t in plan['coverage'] if t['id'] in chapter['topic_ids']]
     anchors = {a['id']: a for a in brief['anchors']}
@@ -180,6 +180,9 @@ def chapter_context(plan, chapter, shared, brief, continuity_notes=None):
     if continuity_notes:
         # Script-stage continuity findings against the previous chapter (phase A gate); only the script changes.
         result['continuity_notes'] = continuity_notes
+    if beats:
+        # The chapter's slice of the central beat sheet: beats, opening/closing, people, word budget.
+        result['beat_sheet'] = beats
     return result
 
 
@@ -468,8 +471,11 @@ def cast_film(config, store, models, records, args, event):
     path = store.root / 'film-cast.json'
     try:
         event('cast', 'running')
+        sheet = store.root / 'beat-sheet.json'
+        planned = {f['id']: f.get('people', []) for f in read(sheet)['chapters']} if sheet.exists() else None
         people = read(path)['people'] if path.exists() else make_cast(models, records, settings['max_people'],
-                                                                        experimental=args.review_mode == 'experimental')
+                                                                        experimental=args.review_mode == 'experimental',
+                                                                        planned_people=planned)
         write(path, {'people': people})
         references = research_cast(config, store, people) or {}
         config['film_cast'] = people
@@ -659,6 +665,12 @@ def create_long(args):
         save()
         notes_path = store.root / 'continuity-notes.json'
         notes = read(notes_path) if notes_path.exists() else {}
+        sheet_path = store.root / 'beat-sheet.json'
+        beats = {}
+        if sheet_path.exists():
+            from .beat_sheet import chapter_slice
+            saved_sheet = read(sheet_path)
+            beats = {c['id']: chapter_slice(saved_sheet, c['id']) for c in plan['chapters']}
 
         def reusable(position, row):
             """A chapter whose checked delivery (or audio) already exists needs no work."""
@@ -685,7 +697,7 @@ def create_long(args):
             try:
                 if image_resume and chapter['id'] not in selected:
                     raise RuntimeError('Unselected chapter has no checked delivery; select it explicitly')
-                context = chapter_context(plan, chapter, shared, brief, notes.get(chapter['id']))
+                context = chapter_context(plan, chapter, shared, brief, notes.get(chapter['id']), beats.get(chapter['id']))
                 context_path = write(project / 'chapter-context.json', context)
                 child_config = config
                 if image_resume or audio_resume:
@@ -709,7 +721,9 @@ def create_long(args):
                       position=position, total=len(records), phase=row['phase'])
                 attempt = run_chapter(payload, project, store, chapter['id'], position, len(records), row, save)
                 row['attempt_directory'] = str(attempt)
-                if until == 'script':
+                if until == 'evidence':
+                    row.update(status='evidence_ready', error=None, finished=time.time())
+                elif until == 'script':
                     row.update(status='script_ready', error=None, finished=time.time())
                 elif audio_only:
                     from .audio_delivery import checked_audio
@@ -720,7 +734,8 @@ def create_long(args):
                         raise RuntimeError('Chapter worker finished without a checked delivery')
                     row.update(status='succeeded', error=None, finished=time.time())
                 save()
-                event('chapters', 'chapter_script_ready' if until == 'script' else 'chapter_audio_ready' if audio_only else 'chapter_succeeded',
+                event('chapters', {'evidence': 'chapter_evidence_ready', 'script': 'chapter_script_ready'}.get(until)
+                      or ('chapter_audio_ready' if audio_only else 'chapter_succeeded'),
                       chapter=chapter['id'], position=position, total=len(records))
             except ProductionPaused as exc:
                 row.update(status=exc.status, error=str(exc), pause_details=exc.details, finished=time.time()); save()
@@ -746,9 +761,24 @@ def create_long(args):
             # Phase A: every chapter's research, evidence and script, then the continuity gate, before any media.
             from .pipeline import voice_calibration
             event('narration', 'running', task='Voice calibration (film)')
-            voice_calibration({**config, 'tts_engine': args.tts_engine}, store)
+            rate = voice_calibration({**config, 'tts_engine': args.tts_engine}, store)
             event('narration', 'succeeded', task='Voice calibration (film)')
             scripted = [(position, row) for position, row in pending if production_kind(row['chapter']) != 'animation']
+            if settings.get('beat_sheet', False) and scripted:
+                # Option C: all chapters' evidence first, then one central beat sheet, then the chapter scripts.
+                from .beat_sheet import chapter_slice, make_beat_sheet
+                event('chapters', 'running', phase='evidence', chapters=[r['chapter']['id'] for _, r in scripted])
+                run_all(scripted, 'evidence')
+                event('beat-sheet', 'running', narrator_words_per_minute=round(rate, 1))
+                sheet = make_beat_sheet(models, plan, records, rate, tolerance=settings.get('script_length_tolerance', 0.15),
+                                        experimental=args.review_mode == 'experimental')
+                for frame in sheet['chapters']:
+                    frame['length_tolerance'] = settings.get('script_length_tolerance', 0.15)
+                write(sheet_path, sheet)
+                beats.update({c['id']: chapter_slice(sheet, c['id']) for c in plan['chapters']})
+                event('beat-sheet', 'succeeded', beats=len(sheet['beats']),
+                      budgets={f['id']: f['word_budget'] for f in sheet['chapters']})
+                scripted = [(position, row) for position, row in scripted if row.get('status') != 'failed']
             event('chapters', 'running', phase='script', chapters=[r['chapter']['id'] for _, r in scripted])
             run_all(scripted, 'script')
             event('continuity', 'running', scope='scripts')
