@@ -213,6 +213,30 @@ out of the long-film identity, one place for image endpoints, Wikimedia 403 on p
   someone out, one targeted repair (`scene-image-prompts-cast`) rewrites only the assets the planner picks (advisory on
   failure, recorded as `cast_coverage` in `scene-image-prompts.json`).
 
+## Apollo 13 trial (15-min long film, 2026-10-12)
+
+Result: 21:51 film, 7 chapters, 126 images; 2 h 39 min wall clock including three resumes. Image report:
+`/experiments/apollo13-image-takes/index.html` on the portal.
+
+- [x] Named LLM configuration saved before the premium-image role dropped the premium model ("No premium image
+  model is set" in five chapters). `freeze()` now keeps the current premium choice when a configuration names none.
+- [x] Batched image prompts were each told to show the chapter's required people; Luna rejected batch 1 four times
+  because the Mission Control people belonged in a later batch (C05). Batches now get them as guidance; the
+  chapter-wide check runs once in code after the last batch.
+- [x] Continuity gate redrafted C02 a second time on resume (the repaired script was reviewed again), which would
+  have discarded its narration and images. A chapter with notes is now never redrafted again.
+- [x] Terminal scoring crashed C03 when Luna passed an image whose own inventory said 4 rings for 2. Code now rules
+  such a pass a fail (marks kept, `code_ruling` recorded).
+- [x] Premium rescue made optional per run (web checkbox; off = best local take, tagged) and up to 3 premium tries.
+- [ ] **Film 46% over length** (21:51 for 15 min): chapters asked for 100-160 s came out 165-251 s; narration runs
+  ~125-140 wpm. Calibrate the planner's word budget to the measured voice rate.
+- [ ] **MMS out-of-memory** on the Spark (5 workers × MMS + VibeVoice + arbiter): release the model's GPU memory
+  after each alignment and fall back to CPU on CUDA OOM; audit events still label alignment "MFA".
+- [ ] Rescues cluster on images with named people (10 of 18 vs 6 of 105); Gemini won all 19 rescues. Consider sending
+  people scenes to the premium tier earlier instead of three local takes first.
+- [ ] Per-take scores: normal reviews are pass/fail only; add the three marks so take-to-take improvement is visible.
+- [ ] Research gap: Gene Kranz never reached the scripts (named once in sources); cast "Lousma" lacks a first name.
+
 ## Low priority: livelier visuals (user, 2026-10-11)
 
 - [ ] **Camera motion is very mild** (`renderer/src/Video.tsx`: zoom 1→5.5%, 24 px drift, hard cuts). Options, cheapest first:

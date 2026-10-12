@@ -74,7 +74,7 @@
   "image_terminal_recovery": {
     "enabled": true,
     "provider": "cloud_premium",
-    "max_candidates": 1
+    "max_candidates": 3
   },
   "shared_gpu_services": [
     "music"

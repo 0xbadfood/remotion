@@ -20,8 +20,9 @@ def terminal_settings(config):
         return value
     if value.get('provider') not in config['image_provider_registry']['providers']:
         raise ValueError('Unknown terminal image provider')
-    if type(value.get('max_candidates')) is not int or not 1 <= value['max_candidates'] <= 2:
-        raise ValueError('Terminal recovery permits one or two premium candidates')
+    # 0 = premium rescue switched off for the run: the best local candidate is chosen and tagged, no cloud image.
+    if type(value.get('max_candidates')) is not int or not 0 <= value['max_candidates'] <= 3:
+        raise ValueError('Terminal recovery permits zero to three premium candidates')
     return {**value, 'protocol': PROTOCOL}
 
 
@@ -40,6 +41,20 @@ def score_errors(value, message, *, require_inventory=False, reference_available
         if type(value['score']) not in {float, int} or value['score'] != expected:
             errors.append('score must equal the rubric marks total')
     return errors
+
+
+def overrule_inventory_pass(review):
+    """A score that passes while its own inventory reports a count or placement not met is ruled a fail by code
+    (the rule is mechanical); the marks stay as given, so the candidate still ranks and, if chosen, is tagged."""
+    from .educational_review import inventory_failures
+    if not isinstance(review, dict) or review.get('pass') is not True or not isinstance(review.get('component_inventory'), list):
+        return review
+    failures = inventory_failures(review)
+    if not failures:
+        return review
+    return {**review, 'pass': False, 'reason_keys': ['semantic_mismatch'], 'issues': failures,
+            'correction': review.get('correction') or 'Match the required component counts and placement.',
+            'code_ruling': 'pass overruled: the inventory reports a count or placement not met'}
 
 
 def score_image(models, case, candidate, prompt, name):
@@ -83,6 +98,7 @@ def score_image(models, case, candidate, prompt, name):
             review = models.call('reviewer', name + f'-json-{index}', task + feedback,
                                  image_path=candidate, max_tokens=2200, **reference_kwargs)
             review = normalize_inventory(review)
+            review = overrule_inventory_pass(review)
             errors = score_errors(review, case['visual_message'], require_inventory=component_checks_enabled(asset), reference_available=bool(reference_kwargs))
         except ValueError as exc:
             errors = [str(exc)]
@@ -153,7 +169,8 @@ def recover(config, store, root, case, models, policy, *, session_managed=False)
         if extra['visual_message'] != case['visual_message'] or digest(Path(extra['candidate']).read_bytes()) != extra['sha256']:
             raise ValueError('Extra candidate identity changed')
         candidates.append(extra)
-    store.event(case['asset_id'], 'premium_rescue', {'provider': policy['provider'], 'prior_candidates': len(candidates),
+    store.event(case['asset_id'], 'premium_rescue' if policy['max_candidates'] else 'best_local_selection',
+        {'provider': policy['provider'], 'prior_candidates': len(candidates),
         'max_premium_candidates': policy['max_candidates'], 'selection_policy': 'highest prompt score; expert-review tag'})
     # Sessions are never nested under the standard provider lease. A checkpoint
     # already containing all premium files avoids loading the GPU on resume.

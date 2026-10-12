@@ -271,6 +271,12 @@ class LongformTests(unittest.TestCase):
             self.assertEqual(redrafts,[2])
             self.assertEqual(read(root/'notes.json')['C02'][0]['problem'],'Retells the coup failure')
             self.assertTrue(report[0]['repaired']);self.assertTrue(report[1]['accepted'])
+            # Resume: the repaired script is reviewed again and still has a finding; it is not redrafted again.
+            reviews=[{**bad,'left':'C01','right':'C02'},{'left':'C02','right':'C03','accepted':True,'score':88,'issues':[]}]
+            with patch('infofilm.longform.continuity_review',side_effect=lambda m,p,r:[reviews.pop(0)]):
+                report=script_gate(models,plan,rows,read(root/'notes.json'),root/'notes.json',lambda position,row:redrafts.append(position),Mock())
+            self.assertEqual(redrafts,[2]);self.assertFalse(report[0]['accepted'])
+            self.assertEqual(read(root/'notes.json')['C02'][0]['problem'],'Retells the coup failure')
 
     def test_cloud_llms_work_on_every_chapter_at_once_local_on_one(self):
         from infofilm.longform import chapter_workers

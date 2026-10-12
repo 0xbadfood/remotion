@@ -91,6 +91,20 @@ class TerminalImageTests(unittest.TestCase):
             self.assertTrue(result['needs_review'])
             store.db.close()
 
+    def test_zero_premium_candidates_keeps_the_best_local_try_without_the_cloud(self):
+        config = {**self.config, 'image_terminal_recovery': {'enabled': True, 'provider': 'flux_dev_local', 'max_candidates': 0}}
+        with tempfile.TemporaryDirectory() as folder:
+            store = Store(folder);root, original = self.setup(folder)
+            with patch('infofilm.image_recovery.provider_session', side_effect=AssertionError('No premium session')), \
+                 patch('infofilm.image_recovery.render_take', side_effect=AssertionError('No premium render')), \
+                 patch('infofilm.image_terminal.score_image', return_value=self.score(72)):
+                result = recover(config, store, root, self.case, Mock(), terminal_settings(config))
+            self.assertEqual(result['file'], str(original))
+            self.assertEqual(result['review_tag'], REVIEW_TAG)
+            states = [r[0] for r in store.db.execute("SELECT state FROM events")]
+            self.assertIn('best_local_selection', states); self.assertNotIn('premium_rescue', states)
+            store.db.close()
+
     def test_score_schema_rejects_nan_boolean_and_out_of_range_marks(self):
         for bad in [float('nan'), True, 51, -1]:
             value = self.score(80);value['message_marks'] = bad
@@ -98,6 +112,18 @@ class TerminalImageTests(unittest.TestCase):
         value = self.score(80);value['score'] = 90
         self.assertTrue(score_errors(value, self.message))
         self.assertFalse(selectable({'review': {'pass': False}, 'needs_review': True}))
+
+    def test_pass_contradicting_its_own_inventory_is_ruled_a_fail_by_code(self):
+        models = Mock(); value = self.score(80, True); value.pop('score')
+        value['component_inventory'] = [{'component': 'amber coupling rings', 'expected_count': 2, 'visible_count': 4,
+            'count_status': 'not_met', 'placement_status': 'not_applicable', 'reference_checked': False,
+            'evidence': 'Rings at the tank tops and again on the hoses.'}]
+        models.call.return_value = value
+        result = score_image(models, self.case, Path('/tmp/actual.png'), 'Actual scene prompt', 'test')
+        self.assertEqual(models.call.call_count, 1)                        # no schema-repair round trip
+        self.assertFalse(result['pass']); self.assertEqual(result['score'], 80)
+        self.assertEqual(result['reason_keys'], ['semantic_mismatch'])
+        self.assertIn('amber coupling rings', result['issues'][0]); self.assertIn('overruled', result['code_ruling'])
 
     def test_scoring_is_blind_and_uses_code_total(self):
         models = Mock();value = self.score(80);value.pop('score');models.call.return_value = value

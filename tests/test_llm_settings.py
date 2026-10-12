@@ -69,6 +69,16 @@ class RegistryTests(unittest.TestCase):
         self.registry.apply_configuration(pid)
         self.assertEqual(self.registry.public()['active_configuration'], pid)
 
+    def test_saved_configuration_without_premium_image_keeps_the_current_choice(self):
+        haiku, luna = self.registry.upsert(HAIKU), self.registry.upsert(LUNA)
+        gemini = self.registry.upsert({**HAIKU, 'label': 'Gemini image', 'model': 'google/gemini-3.1-flash-image'})
+        self.registry.assign({'planner': haiku, 'reviewer': luna})
+        pid = self.registry.save_configuration('Haiku + Luna')               # saved before a premium model was chosen
+        self.registry.assign({'premium_image': gemini})
+        config = self.registry.freeze(dict(CONFIG), pid)
+        self.assertEqual(config['premium_image_endpoint']['model'], 'google/gemini-3.1-flash-image')
+        self.assertEqual(config['llm_configuration']['id'], pid)
+
     def test_same_base_url_for_both_roles_keeps_distinct_identities(self):
         haiku = self.registry.upsert(HAIKU); other = self.registry.upsert({**HAIKU, 'label': 'Gemma', 'model': 'google/gemma'})
         self.registry.assign({'planner': haiku, 'reviewer': other})

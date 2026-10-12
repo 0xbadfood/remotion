@@ -349,7 +349,7 @@ def make_image_prompts(models, library, films, evidence, orientations, experimen
                  "(meetings, briefings, public appearances, documented places); empty rooms and distant anonymous "
                  "figures in every scene take the realism out of the film. Keep violence, wounds and death indirect, "
                  "but do not leave the people out.")
-        if required_people:
+        if required_people and not message_recovery:
             task += (" required_people must each be visibly depicted, listed in people_in_frame, in at least one asset "
                      "of this chapter; pick the asset whose narration and facts best support showing them.")
         if film_cast:
@@ -447,7 +447,11 @@ def make_image_prompts(models, library, films, evidence, orientations, experimen
             partial = models.loop(f"scene-image-prompts-batch-{position:03d}",
                 task + " Plan only this batch. Keep the shared treatment in style. Use concise concrete descriptions; "
                 "visual_message should be one informative sentence, setting and visual_style short phrases. "
-                "Return every requested asset and banner; compact JSON is welcome.", packet,
+                "Return every requested asset and banner; compact JSON is welcome." + (
+                " required_people lists the people this chapter must show somewhere: depict them in this batch where "
+                "its narration and facts support it. It is not a requirement for this batch alone; code checks the "
+                "whole chapter after the last batch and repairs any omission, so a person missing here is not an issue."
+                if person_references and film_cast and required_people else ""), packet,
                 validator(batch, batch_contexts, fact_ids), experimental=experimental)
             result["assets"].extend(partial["assets"])
             result["banners"].extend(partial["banners"])

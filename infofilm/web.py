@@ -94,6 +94,7 @@ class FilmRequest(BaseModel):
     orientation: Literal["landscape", "portrait", "both"] = "landscape"
     review_mode: Literal["off", "experimental"] = "experimental"
     image_review: bool = Field(default=True, strict=True)
+    premium_rescue: bool = Field(default=True, strict=True)
     voice_id: str = "default"
     llm_configuration: str | None = Field(default=None, max_length=60)
     tts_engine: Literal["vibevoice", "omnivoice"] = "vibevoice"

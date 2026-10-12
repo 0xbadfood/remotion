@@ -239,6 +239,10 @@ class Registry:
         """Write the chosen endpoints into a job's config (no secrets; workers read keys at call time)."""
         data = self.load()
         roles = dict(self._configuration(data, configuration)['roles']) if configuration else dict(data['roles'])
+        if configuration and 'premium_image' not in roles and data['roles'].get('premium_image'):
+            # The premium image tier is an image setting, not part of an LLM pairing: a saved configuration that
+            # does not name one (e.g. saved before the role existed) keeps the current choice.
+            roles['premium_image'] = data['roles']['premium_image']
         if not configuration and not self.path.exists() and not {'planner', 'reviewer'} <= set(roles):
             config['llm_configuration'] = None      # nothing configured anywhere: leave the config as it is
             return config

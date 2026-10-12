@@ -211,6 +211,8 @@ class PersonReferenceTests(unittest.TestCase):
                 self.assertEqual(validator({'assets': [fixed]}), [])
                 return {'assets': [fixed]}
             self.assertIn('historical documentary', task); self.assertEqual(context['required_people'], ['Albert Einstein'])
+            self.assertIn('not a requirement for this batch alone', task)       # batches never demand chapter-wide coverage
+            self.assertNotIn('in at least one asset of this chapter', task)
             assets = copy.deepcopy(context['used_assets'])
             for asset in assets:
                 asset.update(visual_message='A grounded informative meaning for the illustration.',

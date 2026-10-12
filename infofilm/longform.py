@@ -415,7 +415,9 @@ def script_gate(models, plan, records, notes, notes_path, rescript, event):
     def ready(row):
         return (row.get('status') in {'script_ready', 'succeeded', 'audio_ready'}
                 and (Path(row['project']) / f"film-{row['duration']}" / 'script.json').exists())
-    report, repaired = [], set()
+    # A chapter keeps its notes once repaired, so a resumed run (which reviews the repaired script again) never
+    # redrafts it a second time and throws away its narration and images.
+    report, repaired = [], set(notes)
     for left, right in zip(records, records[1:]):
         if 'script_ready' not in {left.get('status'), right.get('status')}:
             continue                                  # both chapters were delivered earlier; nothing new to check

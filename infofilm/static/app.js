@@ -125,7 +125,7 @@ async function refreshSelected() {
   $('run-meta').textContent = `${generationLabel(job)} advisory · ${job.settings.orientation} · ${job.settings.tts_engine === 'omnivoice' ? 'OmniVoice' : 'VibeVoice'} · ${mood} · ${job.settings.music_engine === 'acestep' ? 'ACE-Step score' : 'no score'}`;
   if (job.settings.generation_mode === 'long') $('run-meta').textContent += ` · subject graph ${job.settings.subject_graph ? 'on' : 'off'}`;
   if (job.settings.animation_chapters) $('run-meta').textContent += ' · animation chapters enabled';
-  $('run-meta').textContent += ` · image review ${job.settings.image_review === false ? 'off' : 'on'}`;
+  $('run-meta').textContent += ` · image review ${job.settings.image_review === false ? 'off' : 'on'}${job.settings.premium_rescue === false ? ' · no premium rescue' : ''}`;
   const resumeSettings = JSON.stringify([job.id, job.settings.image_review]);
   if (state.signatures.resumeSettings !== resumeSettings) {
     $('resume-image-review').value = job.settings.image_review === false ? 'off' : 'on';
@@ -341,7 +341,7 @@ $('create-form').addEventListener('submit', async event => {
   try {
     const job = await post('/api/jobs', {subject: $('subject').value, durations, orientation: $('orientation').value,
       review_mode: $('review-mode').checked ? 'experimental' : 'off', voice_id: $('voice').value,
-      image_review: $('image-review').value === 'on',
+      image_review: $('image-review').value === 'on', premium_rescue: $('premium-rescue').checked,
       tts_engine: $('tts-engine').value, reference_transcript: $('reference-transcript').value,
       mood: $('mood').value, mood_intensity: $('mood-intensity').value, visual_balance: $('visual-balance').value,
       music_engine: $('music-engine').value, omni_speed: Number($('omni-speed').value),
