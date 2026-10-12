@@ -209,7 +209,63 @@ def image_prompt_evidence(evidence, fact_ids):
     return result
 
 
-def make_image_prompts(models, library, films, evidence, orientations, experimental=True, message_recovery=False, batch_size=8, person_references=False, classify_review=False, film_cast=None):
+def shown_people(assets):
+    return {str(person.get("name", "")).casefold() for asset in assets for person in asset.get("people_in_frame") or []
+            if isinstance(person, dict)}
+
+
+def cover_required_people(models, task, base, result, used, contexts, evidence, validator, required, experimental):
+    """Targeted repair when the chapter's prompts leave out cast members it must show: the planner rewrites only the
+    assets it picks for them, and those replace the originals. Advisory: a failed repair keeps the prompts as they are."""
+    missing = [name for name in required if name.casefold() not in shown_people(result["assets"])]
+    report = {"required": list(required), "missing": missing, "repaired_assets": []}
+    if not missing:
+        return report
+    by_id = {a["id"]: a for a in used}
+    current = {a["id"]: a for a in result["assets"]}
+    all_facts = {f["id"] for f in evidence["facts"]}
+    banners = {b["scene_key"]: b for b in result["banners"]}
+
+    def check(value):
+        assets = value.get("assets")
+        if not isinstance(assets, list) or not assets or any(not isinstance(a, dict) for a in assets):
+            return ["assets must be a non-empty array of the rewritten asset objects"]
+        ids = [a.get("id") for a in assets]
+        if len(set(ids)) != len(ids) or not set(ids) <= set(by_id) or len(ids) > len(missing) + 1:
+            return [f"Rewrite at most {len(missing) + 1} distinct existing assets, chosen from " + " ".join(by_id)]
+        chosen = {i: contexts[i] for i in ids}
+        keys = {c["scene_key"] for rows in chosen.values() for c in rows}
+        errors = validator([by_id[i] for i in ids], chosen, all_facts)(
+            {"assets": assets, "banners": [banners[k] for k in keys if k in banners]})
+        still = [name for name in missing if name.casefold() not in shown_people(assets)]
+        if still:
+            errors.append("Not depicted in any rewritten asset's people_in_frame: " + ", ".join(still))
+        return errors
+
+    packet = {**base, "missing_people": missing,
+              "current_assets": [{k: a.get(k) for k in ("id", "purpose", "visual_message", "prompt", "people_in_frame")}
+                                 for a in result["assets"]]}
+    repair = (task + " Repair only: the people in missing_people appear in no asset of this chapter. Choose the asset(s) "
+              "whose narration and facts best support showing each of them and rewrite those assets so the person is "
+              "visibly depicted, keeping each asset's visual_message meaning. Return {assets:[...]} with only the "
+              "rewritten assets, each complete with every field the original has.")
+    try:
+        value = models.loop("scene-image-prompts-cast", repair, packet, check, experimental=experimental)
+    except Exception as exc:
+        report["error"] = f"{type(exc).__name__}: {exc}"[:300]
+        if hasattr(models, "store"):
+            models.store.event("image-prompts", "cast_coverage_failed", report)
+        return report
+    for asset in value["assets"]:
+        current[asset["id"]] = asset
+    result["assets"] = [current[a["id"]] for a in result["assets"]]
+    report["repaired_assets"] = [a["id"] for a in value["assets"]]
+    if hasattr(models, "store"):
+        models.store.event("image-prompts", "cast_coverage_repaired", report)
+    return report
+
+
+def make_image_prompts(models, library, films, evidence, orientations, experimental=True, message_recovery=False, batch_size=8, person_references=False, classify_review=False, film_cast=None, required_people=None):
     """Bind prompts to actual spoken scenes, including reuse and banner intent."""
     contexts = {}
     scene_ids = set()
@@ -288,7 +344,14 @@ def make_image_prompts(models, library, films, evidence, orientations, experimen
                  "ancient ruler or use a modern actor as their likeness. Limit a scene to at most six named figures. "
                  "Keep the scene prompt under 2600 characters to leave room for appearance-reference conditioning. "
                  "Research will source these references and attach a labeled card; describe the actual scene and "
-                 "treatment rather than requesting a contact sheet or raster name labels.")
+                 "treatment rather than requesting a contact sheet or raster name labels. "
+                 "This is a historical documentary, so show the real people involved where the sources place them "
+                 "(meetings, briefings, public appearances, documented places); empty rooms and distant anonymous "
+                 "figures in every scene take the realism out of the film. Keep violence, wounds and death indirect, "
+                 "but do not leave the people out.")
+        if required_people:
+            task += (" required_people must each be visibly depicted, listed in people_in_frame, in at least one asset "
+                     "of this chapter; pick the asset whose narration and facts best support showing them.")
         if film_cast:
             task += (" film_cast lists the film's people with canonical names, birth years and reference kinds: every "
                      "people_in_frame entry must use one of these names, birth_year and reference_kind exactly. Do not "
@@ -354,6 +417,8 @@ def make_image_prompts(models, library, films, evidence, orientations, experimen
             "composition_by_asset": composition, "creative_brief": library.get("creative_brief")}
     if person_references and film_cast:
         base["film_cast"] = [{k: p.get(k) for k in ("name", "birth_year", "reference_kind", "appearance_context")} for p in film_cast]
+        if required_people:
+            base["required_people"] = list(required_people)
     if not message_recovery:
         result = models.loop("scene-image-prompts", task, base,
                              validator(used, contexts, {f["id"] for f in evidence["facts"]}), experimental=experimental)
@@ -392,6 +457,9 @@ def make_image_prompts(models, library, films, evidence, orientations, experimen
         if errors:
             raise ValueError(f"Combined image prompt batches failed validation: {errors}")
         result["planning_batches"] = len(batches)
+    if person_references and film_cast and required_people:
+        result["cast_coverage"] = cover_required_people(models, task, base, result, used, contexts, evidence,
+                                                        validator, required_people, experimental)
     if message_recovery:
         for asset in result["assets"]:
             for context in contexts[asset["id"]]:

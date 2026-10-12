@@ -203,6 +203,16 @@ out of the long-film identity, one place for image endpoints, Wikimedia 403 on p
 - The planner (10.8.0.5) and reviewer (Spark) each serve one request at a time (`--parallel 1`); the 10.8.0.5 slot is
   shared with the FSSAI portal, the Spark slot with Lesson Studio narration audits and the night digest.
 
+## Cast must be seen (Neptune Spear review, 2026-10-12)
+
+- [x] **No person appeared in the whole film.** bin Laden was cast for 5 chapters (references fetched), yet every scene was
+  an empty room, a corridor or a distant figure; C04 left his death "undepicted". No rule caused it: Haiku's caution
+  on a killing spread to the whole film. User: a historical documentary must show the people involved; restraint
+  applies to violence, not to depiction. Fix: the cast gives each person `show_in` chapters (fallback: their first
+  chapter); the image-prompt task carries a documentary rule and `required_people`; if a chapter's prompts still leave
+  someone out, one targeted repair (`scene-image-prompts-cast`) rewrites only the assets the planner picks (advisory on
+  failure, recorded as `cast_coverage` in `scene-image-prompts.json`).
+
 ## Low priority: livelier visuals (user, 2026-10-11)
 
 - [ ] **Camera motion is very mild** (`renderer/src/Video.tsx`: zoom 1→5.5%, 24 px drift, hard cuts). Options, cheapest first:

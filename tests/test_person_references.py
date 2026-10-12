@@ -195,6 +195,57 @@ class PersonReferenceTests(unittest.TestCase):
         self.assertEqual(result['assets'][0]['people_in_frame'], [PERSON])
         self.assertEqual(result['assets'][1]['people_in_frame'], [])
 
+    def test_required_cast_left_out_gets_a_targeted_repair_of_chosen_assets_only(self):
+        fixture = PromptBatchTests(); library, film, evidence = fixture.fixture(2)
+        cast = [{**PERSON, 'chapters': ['C01'], 'show_in': ['C01']}]
+        stages = []
+        def loop(stage, task, context, validator, **kwargs):
+            stages.append(stage)
+            if stage == 'scene-image-prompts-cast':
+                self.assertEqual(context['missing_people'], ['Albert Einstein'])
+                self.assertIn('Repair only', task)
+                original = next(a for a in context['current_assets'] if a['id'] == 'A002')
+                fixed = {**self.planned[1], 'prompt': 'Einstein at his desk. ' + original['prompt'], 'people_in_frame': [PERSON]}
+                self.assertTrue(validator({'assets': [{**fixed, 'people_in_frame': []}]}))   # still missing → error
+                self.assertTrue(validator({'assets': [fixed, self.planned[0], self.planned[0]]}))
+                self.assertEqual(validator({'assets': [fixed]}), [])
+                return {'assets': [fixed]}
+            self.assertIn('historical documentary', task); self.assertEqual(context['required_people'], ['Albert Einstein'])
+            assets = copy.deepcopy(context['used_assets'])
+            for asset in assets:
+                asset.update(visual_message='A grounded informative meaning for the illustration.',
+                             setting='A concrete subject-appropriate setting.', visual_style='Documentary illustration.',
+                             people_in_frame=[])
+            self.planned = assets
+            return {'style': context['style'], 'assets': assets,
+                    'banners': [{'scene_key': c['scene_key'], 'text': '', 'reason': ''}
+                                for rows in context['scene_contexts_by_asset'].values() for c in rows]}
+        result = make_image_prompts(Mock(loop=Mock(side_effect=loop), spec=['loop']), library, [film], evidence, ['landscape'],
+                                    message_recovery=True, person_references=True, film_cast=cast,
+                                    required_people=['Albert Einstein'])
+        self.assertEqual(stages[-1], 'scene-image-prompts-cast')
+        self.assertEqual([a['people_in_frame'] for a in result['assets']], [[], [PERSON]])
+        self.assertEqual(result['cast_coverage']['repaired_assets'], ['A002'])
+        self.assertEqual(result['scene_contexts_by_asset']['A002'][0]['visual_message'], result['assets'][1]['visual_message'])
+
+    def test_failed_cast_repair_keeps_the_prompts(self):
+        fixture = PromptBatchTests(); library, film, evidence = fixture.fixture(1)
+        def loop(stage, task, context, validator, **kwargs):
+            if stage == 'scene-image-prompts-cast':
+                raise RuntimeError('exhausted')
+            assets = copy.deepcopy(context['used_assets'])
+            for asset in assets:
+                asset.update(visual_message='A grounded informative meaning for the illustration.',
+                             setting='A concrete subject-appropriate setting.', visual_style='Documentary illustration.', people_in_frame=[])
+            return {'style': context['style'], 'assets': assets,
+                    'banners': [{'scene_key': c['scene_key'], 'text': '', 'reason': ''}
+                                for rows in context['scene_contexts_by_asset'].values() for c in rows]}
+        result = make_image_prompts(Mock(loop=Mock(side_effect=loop), spec=['loop']), library, [film], evidence, ['landscape'],
+                                    message_recovery=True, person_references=True,
+                                    film_cast=[{**PERSON, 'chapters': ['C01']}], required_people=['Albert Einstein'])
+        self.assertEqual(result['assets'][0]['people_in_frame'], [])
+        self.assertIn('exhausted', result['cast_coverage']['error'])
+
     def test_pipeline_orders_source_cards_before_generation_and_preserves_review_off(self):
         from types import SimpleNamespace
         from test_creative import example

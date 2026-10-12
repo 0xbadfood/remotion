@@ -18,9 +18,21 @@ TASK = (
     "integer (negative for BCE; best known estimate). reference_kind is photograph when authentic photographs exist, "
     "historical_portrait for figures before photography. appearance_context gives the life period, age and role in "
     "this film, from the facts only; do not invent injuries, clothing or physical details. "
+    "This is a historical documentary: the principal people of the story must be seen, not only named. show_in lists "
+    "the chapters (at least one, all from chapters) where a scene must visibly depict the person: give the central "
+    "figures several chapters and minor figures the one where they matter most. Choose chapters whose facts support a "
+    "non-violent depiction (a meeting, a briefing, a public appearance, a documented place); violent moments stay "
+    "indirect, but the people stay in the film. "
     "Return {people:[{name, birth_year, reference_kind:'photograph'|'historical_portrait', appearance_context, "
-    "chapters:[chapter ids], fact_ids:[supporting fact ids]}]}."
+    "chapters:[chapter ids], show_in:[chapter ids], fact_ids:[supporting fact ids]}]}."
 )
+
+
+def required_in_chapter(cast, chapter_id):
+    """Cast names a chapter's images must show. Casts made before show_in existed fall back to the person's first chapter,
+    so everyone in the cast is seen at least once."""
+    return [p["name"] for p in cast or []
+            if chapter_id in (p.get("show_in") or p.get("chapters", [])[:1])]
 
 
 def _tokens(name):
@@ -52,6 +64,10 @@ def cast_errors(value, corpus, chapter_ids, maximum):
             errors.append(f"people[{index}] {name!r}: appearance_context must be 5-240 characters")
         if not isinstance(person.get("chapters"), list) or not set(person["chapters"]) <= chapter_ids:
             errors.append(f"people[{index}] {name!r}: chapters must be chapter ids")
+        elif (not isinstance(person.get("show_in"), list) or not person["show_in"]
+              or not set(person["show_in"]) <= set(person["chapters"])):
+            errors.append(f"people[{index}] {name!r}: show_in must list at least one of the person's chapters "
+                          "where a scene depicts them")
     return errors
 
 

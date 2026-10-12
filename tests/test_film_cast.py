@@ -4,7 +4,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 from infofilm.core import write
-from infofilm.film_cast import cast_errors, make_cast
+from infofilm.film_cast import cast_errors, make_cast, required_in_chapter
 
 CORPUS = "Colonel Claus von Stauffenberg carried the bomb. General Ludwig Beck led the plotters. Fromm hesitated."
 
@@ -12,7 +12,7 @@ CORPUS = "Colonel Claus von Stauffenberg carried the bomb. General Ludwig Beck l
 class FilmCastTests(unittest.TestCase):
     def person(self, name, **extra):
         return {'name': name, 'birth_year': 1907, 'reference_kind': 'photograph', 'appearance_context': '1944, colonel',
-                'chapters': ['C01'], **extra}
+                'chapters': ['C01'], 'show_in': ['C01'], **extra}
 
     def test_names_must_come_from_the_scripts_or_facts(self):
         self.assertEqual(cast_errors({'people': [self.person('Claus von Stauffenberg'), self.person('Ludwig Beck')]},
@@ -24,6 +24,15 @@ class FilmCastTests(unittest.TestCase):
         errors = cast_errors({'people': [self.person('Ludwig Beck', birth_year='1880', chapters=['C09'])]}, CORPUS, {'C01'}, 12)
         self.assertTrue(any('birth_year' in e for e in errors)); self.assertTrue(any('chapter ids' in e for e in errors))
         self.assertTrue(cast_errors({'people': [self.person('Ludwig Beck')] * 3}, CORPUS, {'C01'}, 2))
+
+    def test_show_in_names_chapters_where_the_person_is_seen(self):
+        self.assertTrue(any('show_in' in e for e in cast_errors({'people': [self.person('Ludwig Beck', show_in=[])]}, CORPUS, {'C01'}, 12)))
+        self.assertTrue(any('show_in' in e for e in cast_errors({'people': [self.person('Ludwig Beck', show_in=['C02'])]}, CORPUS, {'C01', 'C02'}, 12)))
+        cast = [self.person('Ludwig Beck', chapters=['C01', 'C02'], show_in=['C02']),
+                {'name': 'Old Cast', 'chapters': ['C03', 'C04']}]                   # made before show_in: first chapter
+        self.assertEqual(required_in_chapter(cast, 'C02'), ['Ludwig Beck'])
+        self.assertEqual(required_in_chapter(cast, 'C01'), [])
+        self.assertEqual(required_in_chapter(cast, 'C03'), ['Old Cast'])
 
     def test_cast_reads_every_chapter_script_and_evidence(self):
         with tempfile.TemporaryDirectory() as directory:

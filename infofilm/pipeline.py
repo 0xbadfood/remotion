@@ -295,12 +295,15 @@ def finish_visuals(args, config, store, models, evidence, sources, brief, films,
     orientations = ["landscape", "portrait"] if args.orientation == "both" else [args.orientation]
     stage("images", "running", task="Scene prompts and image rendering", image_review=config.get('image_review', True))
     from .person_references import reference_settings, prepare_person_references
+    from .film_cast import required_in_chapter
     reference_enabled = reference_settings(config)['enabled']
     prompts = make_image_prompts(models, library, films, evidence, orientations, experimental=experimental,
                                  message_recovery=config.get("image_recovery_mode") == "message_v1",
                                  **({'classify_review': True} if config.get('image_classify_review', False) else {}),
                                  **({'person_references': True} if reference_enabled else {}),
-                                 **({'film_cast': config['film_cast']} if reference_enabled and config.get('film_cast') else {}))
+                                 **({'film_cast': config['film_cast']} if reference_enabled and config.get('film_cast') else {}),
+                                 **({'required_people': required_in_chapter(config['film_cast'], chapter_context['chapter']['id'])}
+                                    if reference_enabled and config.get('film_cast') and chapter_context else {}))
     if reference_enabled:
         prompts = prepare_person_references(config, store, prompts)
     write(store.root/"scene-image-prompts.json", prompts)
