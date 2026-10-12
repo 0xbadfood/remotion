@@ -236,6 +236,19 @@ out of the long-film identity, one place for image endpoints, Wikimedia 403 on p
 - [ ] "Save configuration" in LLM settings saves the last saved roles, not the selected ones (same as the Lesson Studio
   bug); worked around by clicking "Save roles" first.
 
+## First film on the Spark (GPS short, 2026-10-12)
+
+- [x] Whole chain works on the Spark: research (ARM Obscura), Haiku/Luna, local VibeVoice (159 s, 11 points), MMS
+  alignment, scenes, 13 images on the amdserver factory (12 accepted, 1 via Gemini terminal rescue, tagged for review),
+  ACE-Step music, ARM Remotion render; claims file 11/11 points sourced.
+- [x] Fixed on the way: shared-GPU housekeeping called the remote image service before narration (502 while the factory
+  was starting); Whisper audit worker script and its offline models were missing from the Spark's quiz replica;
+  `image_terminal_recovery` still named the local Flux (127.0.0.1:8000 = unrelated ImageStudio on the Spark).
+- [ ] Research found only 2 sources for "How does GPS know where you are?" (thin for an evergreen topic); check the
+  agent's searches/fetches on the Spark (Tavily fallback key, Obscura fetch failures, budget).
+- [ ] The factory must be up before images: `~/startamd.sh` on amdserver after a power cut; a readiness check could
+  start or wait for it (gpu-mode API :8099).
+
 ## After the cloud migration (user, 2026-10-12)
 
 - [ ] **Plan repair asks only for the flagged chapters.** Today the targeted repair (`external_planner.py`,
