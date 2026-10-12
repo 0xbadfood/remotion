@@ -73,7 +73,7 @@
   "silence_keep_pause_seconds": 1.25,
   "image_terminal_recovery": {
     "enabled": true,
-    "provider": "flux_dev_local",
+    "provider": "cloud_premium",
     "max_candidates": 1
   },
   "shared_gpu_services": [
