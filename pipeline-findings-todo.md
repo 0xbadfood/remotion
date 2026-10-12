@@ -116,6 +116,11 @@ rescue chapters; the film ran 46% long.
   the image rules forbid panels. Haiku followed the rule, Luna enforced the direction, six reviews failed. The
   image-prompt task now states that code-owned image rules override visual direction (panels/labels become native
   overlays), and the parent plan's visual_direction must not ask the generator for panels or text.
+- [x] Narration still ~15% over plan with scripts on budget: delivered chapters run 113-134 wpm (1221 words in
+  608 s = 120.5) against the 129.7 calibration (one continuous passage), and scripts land +4..+12% over budget.
+  Beat-sheet budgets now use calibration x `narration_rate_factor` (0.92). Re-measure on the next film.
+- Images: 46 of 52 first-take passes, no tagged image in five finished chapters; every required person shown (the
+  coverage repair added 4 people in C02 and Oppenheimer in C03).
 - Cast survived with code ids R01-R12 and C01:F03 refs; 10 of 12 referenced. C02 must show 8 people.
 
 ## Manhattan Project trial (15-min long film, 2026-10-13): stopped for the build, to be redone

@@ -769,8 +769,11 @@ def create_long(args):
                 from .beat_sheet import chapter_slice, make_beat_sheet
                 event('chapters', 'running', phase='evidence', chapters=[r['chapter']['id'] for _, r in scripted])
                 run_all(scripted, 'evidence')
-                event('beat-sheet', 'running', narrator_words_per_minute=round(rate, 1))
-                sheet = make_beat_sheet(models, plan, records, rate, tolerance=settings.get('script_length_tolerance', 0.25),
+                # The calibration times one continuous passage; delivered chapters (separate points, pauses) run
+                # slower (Manhattan: 120.5 wpm delivered vs 129.7 calibrated), so budgets use the effective rate.
+                effective = rate * settings.get('narration_rate_factor', 1.0)
+                event('beat-sheet', 'running', narrator_words_per_minute=round(rate, 1), effective_words_per_minute=round(effective, 1))
+                sheet = make_beat_sheet(models, plan, records, effective, tolerance=settings.get('script_length_tolerance', 0.25),
                                         experimental=args.review_mode == 'experimental')
                 for frame in sheet['chapters']:
                     frame['length_tolerance'] = settings.get('script_length_tolerance', 0.25)

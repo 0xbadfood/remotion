@@ -22,5 +22,6 @@
     "production_readiness": 0.1
   },
   "beat_sheet": true,
-  "script_length_tolerance": 0.25
+  "script_length_tolerance": 0.25,
+  "narration_rate_factor": 0.92
 }
