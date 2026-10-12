@@ -1,0 +1,40 @@
+{
+  "schema_version": "infofilm.image-animation-providers.v1",
+  "providers": {
+    "luna": {
+      "adapter": "openai_responses",
+      "url": "https://api.openai.com/v1",
+      "model": "gpt-6-luna",
+      "reasoning_effort": "medium",
+      "max_output_tokens": 24000,
+      "timeout_seconds": 300
+    },
+    "local": {
+      "adapter": "local_chat_completions",
+      "url_config_key": "planner_url",
+      "max_output_tokens": 24000
+    },
+    "local-reviewer": {
+      "adapter": "local_chat_completions",
+      "url_config_key": "reviewer_url",
+      "max_output_tokens": 16000
+    }
+  },
+  "activities": {
+    "research": "local",
+    "classification": "local",
+    "parent": "local",
+    "evidence": "local",
+    "teaching": "luna",
+    "narration": "luna",
+    "canvas": "luna",
+    "grounding": "local-reviewer",
+    "motion": "luna",
+    "review": "local-reviewer"
+  },
+  "limits": {
+    "max_format_attempts": 2,
+    "max_images": 8,
+    "max_image_bytes": 20971520
+  }
+}

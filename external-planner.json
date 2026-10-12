@@ -3,19 +3,22 @@
   "max_chapters": 12,
   "max_topics": 32,
   "max_attempts": 3,
-  "draft_max_tokens": 9500,
+  "draft_max_tokens": 14000,
   "review_max_tokens": 3500,
   "max_brief_bytes": 50000,
   "max_request_bytes": 110000,
-  "recommended_chapter_seconds": [60, 180],
+  "recommended_chapter_seconds": [
+    60,
+    180
+  ],
   "review_min_score": 82,
-  "planner_role": "reviewer",
+  "planner_role": "planner",
   "rubric_weights": {
     "grounding": 0.25,
-    "coverage": 0.20,
+    "coverage": 0.2,
     "chapter_coherence": 0.15,
-    "global_flow": 0.20,
-    "mood_fit": 0.10,
-    "production_readiness": 0.10
+    "global_flow": 0.2,
+    "mood_fit": 0.1,
+    "production_readiness": 0.1
   }
 }

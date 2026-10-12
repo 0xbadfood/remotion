@@ -55,7 +55,9 @@ def make_evidence(models, extraction, subject="How the Indian monsoon works", au
         errors = []
         facts = value.get("facts", [])
         if not 8 <= len(facts) <= 20:
-            errors.append("Provide 8–20 distinct, useful facts")
+            errors.append(f"Provide 8–20 distinct, useful facts: this draft has {len(facts)}" +
+                          ("; merge overlapping facts or drop the least useful ones, keeping every fact the narration needs"
+                           if len(facts) > 20 else "; add verified facts from the sources"))
         if len({f.get("id") for f in facts}) != len(facts):
             errors.append("Fact IDs must be unique")
         for fact in facts:
@@ -118,6 +120,10 @@ def make_script(models, evidence, duration, rate=135, experimental=True, suffix=
                  "Only film_conclusion answers the film-wide central question and closes the narrative. "
                  "Advance the owned topics; respect exclusions and avoid repeating previous chapters. "
                  "The outline gives research intentions, not additional factual evidence; use verified chapter facts for narration.")
+        if evidence["chapter_context"].get("continuity_notes"):
+            task += (" chapter_context.continuity_notes lists problems a continuity review found between the previous chapter's "
+                     "accepted script and this chapter: resolve each one (chronology, scope, duplicated exposition, handoff) "
+                     "while keeping this chapter's own facts and roles. The previous chapter will not change.")
     if correction:
         context["measured_duration_feedback"] = correction
     return models.loop(f"script-{duration}{suffix}", task, context, lambda x: script_errors(x, evidence, budget), experimental=experimental)
@@ -203,7 +209,7 @@ def image_prompt_evidence(evidence, fact_ids):
     return result
 
 
-def make_image_prompts(models, library, films, evidence, orientations, experimental=True, message_recovery=False, batch_size=8, person_references=False):
+def make_image_prompts(models, library, films, evidence, orientations, experimental=True, message_recovery=False, batch_size=8, person_references=False, classify_review=False, film_cast=None):
     """Bind prompts to actual spoken scenes, including reuse and banner intent."""
     contexts = {}
     scene_ids = set()
@@ -251,6 +257,15 @@ def make_image_prompts(models, library, films, evidence, orientations, experimen
             "Do not label a generic illustrative landscape as an exact photographed location. Avoid split panels and atmospheric features that imply a wrong mechanism. "
             "Return {style, assets:[{id,purpose,prompt,acceptance:[string],fact_ids:[string]}], banners:[{scene_key,text:'at most 8 words',reason}]}. "
             "Exactly cover the supplied used assets and image scene keys; an empty banner text is allowed if a banner adds no useful context.")
+    if classify_review:
+        task += (" Additionally classify each asset with review_profile: 'scientific_diagram', "
+                 "'explanatory_apparatus', 'narrative' or 'symbolic'. Classify the concrete image, not the "
+                 "film subject. scientific_diagram depicts literal components, anatomy or a scientific "
+                 "mechanism; explanatory_apparatus depicts equipment whose counts/relationships teach the "
+                 "lesson. narrative covers people, places and historical scenes; symbolic covers metaphors. "
+                 "A science film can include narrative scenes; a historical film can include a scientific "
+                 "diagram. This classification activates component-count and source-placement review only "
+                 "for the first two profiles. Choose based on what the current prompt actually depicts.")
     if message_recovery:
         task += (" Additionally every asset must include visual_message, setting and visual_style. "
                  "visual_message is the informative meaning the illustration supports, independent of its chosen staging. "
@@ -261,17 +276,23 @@ def make_image_prompts(models, library, films, evidence, orientations, experimen
                  "Use a simpler subject-specific scene rather than an overloaded diagram or generic symbolism. "
                  "These fields remain available through reviews and repairs, allowing staging to change while meaning stays fixed.")
     if person_references:
-        task += (" Additionally every asset must include people_in_frame:[{name,appearance_context,reference_kind}]. "
+        task += (" Additionally every asset must include people_in_frame:[{name,appearance_context,reference_kind,birth_year}]. "
                  "List only recognizable real public/historical figures who are visibly depicted in this concrete scene; "
                  "a person merely mentioned in narration does not belong in the list. Use [] for scenery, objects, "
                  "generic crowds and unnamed people. Use consistent canonical full names across batches and films. "
                  "appearance_context gives the sourced life period/age/role needed in this scene, with consistent "
                  "wording for the same appearance across scenes. reference_kind is photograph when authentic photos "
-                 "exist, or historical_portrait for figures before photography. Do not fabricate a photograph of an "
+                 "exist, or historical_portrait for figures before photography. birth_year is the person's birth year as an integer "
+                 "(negative for BCE; best known estimate). People born before 1850 get no reference search, because "
+                 "reliable photographs of them are rare; describe them from the evidence. Do not fabricate a photograph of an "
                  "ancient ruler or use a modern actor as their likeness. Limit a scene to at most six named figures. "
                  "Keep the scene prompt under 2600 characters to leave room for appearance-reference conditioning. "
                  "Research will source these references and attach a labeled card; describe the actual scene and "
                  "treatment rather than requesting a contact sheet or raster name labels.")
+        if film_cast:
+            task += (" film_cast lists the film's people with canonical names, birth years and reference kinds: every "
+                     "people_in_frame entry must use one of these names, birth_year and reference_kind exactly. Do not "
+                     "depict a named person who is not in film_cast; show them generically instead.")
     def validator(batch_assets, batch_contexts, allowed_facts):
         batch_scene_ids = {c["scene_key"] for rows in batch_contexts.values() for c in rows}
         def validate(value):
@@ -280,8 +301,13 @@ def make_image_prompts(models, library, films, evidence, orientations, experimen
             if not isinstance(assets, list) or any(not isinstance(a, dict) for a in assets):
                 return ["assets must be an array of objects"]
             if [a.get("id") for a in assets] != [a["id"] for a in batch_assets]:
-                errors.append("Final prompts must retain exactly the used asset IDs and order")
+                errors.append("Final prompts must retain exactly the used asset IDs and order: expected " +
+                              " ".join(a["id"] for a in batch_assets) + ", got " + " ".join(str(a.get("id")) for a in assets))
             for a in assets:
+                if classify_review:
+                    from .educational_review import PROFILES
+                    if a.get('review_profile') not in PROFILES:
+                        errors.append(f"{a.get('id')} needs a supported review_profile")
                 if (not isinstance(a.get("prompt"), str) or not a["prompt"].strip() or len(a["prompt"]) > 3500
                         or not isinstance(a.get("acceptance"), list) or not a["acceptance"]
                         or not isinstance(a.get("fact_ids"), list)
@@ -295,24 +321,39 @@ def make_image_prompts(models, library, films, evidence, orientations, experimen
                             errors.append(f"{asset.get('id')} needs a bounded {field}")
             if person_references:
                 from .person_references import person_errors
+                cast_names = {p["name"].casefold() for p in film_cast or []}
                 for asset in assets:
                     errors.extend(f"{asset.get('id')}: {error}" for error in person_errors(asset.get('people_in_frame')))
+                    if cast_names and isinstance(asset.get('people_in_frame'), list):
+                        errors.extend(f"{asset.get('id')}: {person.get('name')!r} is not in film_cast; use a cast name or depict them generically"
+                                      for person in asset['people_in_frame']
+                                      if isinstance(person, dict) and str(person.get('name', '')).casefold() not in cast_names)
                     if len(asset.get('prompt', '')) > 2600:
                         errors.append(f"{asset.get('id')}: leave prompt space for reference conditioning")
             banners = value.get("banners", [])
             if not isinstance(banners, list) or any(not isinstance(b, dict) for b in banners):
                 errors.append("banners must be an array of objects")
             else:
-                if len(banners) != len(batch_scene_ids) or {b.get("scene_key") for b in banners} != batch_scene_ids:
-                    errors.append("Banner entries must exactly cover image scenes")
-                if any(not isinstance(b.get("text"), str) or word_count(b.get("text", "")) > 8 for b in banners):
-                    errors.append("Banner text must be a string of at most eight words")
+                keys = [b.get("scene_key") for b in banners]
+                if len(banners) != len(batch_scene_ids) or set(keys) != batch_scene_ids:
+                    missing, extra = sorted(batch_scene_ids - set(keys)), sorted(set(keys) - batch_scene_ids)
+                    errors.append("Banner entries must exactly cover image scenes (one each)" +
+                                  (f"; missing {missing}" if missing else "") + (f"; not in this batch {extra}" if extra else "") +
+                                  ("; duplicated scene keys" if len(keys) != len(set(keys)) else ""))
+                for b in banners:
+                    if not isinstance(b.get("text"), str):
+                        errors.append(f"{b.get('scene_key')}: banner text must be a string")
+                    elif word_count(b["text"]) > 8:
+                        errors.append(f"{b.get('scene_key')}: banner {b['text']!r} counts {word_count(b['text'])} words; at most 8 "
+                                      "(times like 10:30, abbreviations like p.m. and dates count each part); no source tags in banners")
             return errors
         return validate
 
     base = {"subject": evidence["title"], "evidence": evidence, "style": library["style"],
             "used_assets": used, "scene_contexts_by_asset": contexts, "orientations": orientations,
             "composition_by_asset": composition, "creative_brief": library.get("creative_brief")}
+    if person_references and film_cast:
+        base["film_cast"] = [{k: p.get(k) for k in ("name", "birth_year", "reference_kind", "appearance_context")} for p in film_cast]
     if not message_recovery:
         result = models.loop("scene-image-prompts", task, base,
                              validator(used, contexts, {f["id"] for f in evidence["facts"]}), experimental=experimental)

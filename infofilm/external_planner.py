@@ -41,6 +41,8 @@ CONTRACT = {
            'rationale': 'Evidence and narrative reason'},
   'music': {'direction': '<specific instruments, energy, motif development and transition for this chapter; instrumental under speech>', 'bpm': 80},
   'visual_direction': 'Scenes and explanatory overlays suited to this chapter; image count is planned only after MFA',
+  'production': {'kind': 'illustrated', 'rationale': 'Why this visual medium serves the chapter objective',
+                 'animation_brief': None},
   'section_card': {'title': 'Chapter title', 'date_label': '',
                    'image_selection_brief': 'Later select a relevant approved asset from the incoming chapter'}}],
  'assembly': {'chapter_order': ['C01'], 'section_card_seconds': 2.0,
@@ -52,6 +54,68 @@ CONTRACT = {
 
 def finite_number(value):
     return type(value) in {int, float} and math.isfinite(value)
+
+
+ANIMATION_BRIEF = {'learning_objective': 'What viewers should understand at the end',
+    'demonstrations': ['Observable changes or comparisons that explain the concept'],
+    'assumptions': ['Explicit teaching simplifications, supported by sources'],
+    'success_criteria': ['What the demonstration must make clear']}
+
+ANIMATION_ROUTING_TASK = (
+ 'Animation chapters are enabled. For each chapter choose production.kind illustrated or animation, and explain why. '
+ 'Use animation when movement, changing relationships, mechanisms, flows or controlled comparisons teach the objective '
+ 'better than illustrated narration. Do not choose it merely because a subject is scientific. A chapter may contain '
+ 'multiple related demonstrations and reuse components; avoid a separate chapter for every tiny action. '
+ 'Choose the smallest useful set of independently understandable chapters. For a focused five-to-six-minute '
+ 'mechanism explainer, two or three substantial chapters are often clearer than five small ones; this is guidance, '
+ 'not a runtime constraint. Keep setup, changing variables and a recap together when they teach one connected '
+ 'mechanism. Do not split independent axes, constant horizontal speed and vertical acceleration into separate '
+ 'chapters if they can be demonstrated coherently in one shared workspace. '
+ 'For animation provide animation_brief with learning_objective, demonstrations, assumptions and success_criteria. '
+ 'State visible cause/effect and important misconceptions, not generic "show an animation" instructions. '
+ 'Demonstrations, assumptions and success criteria are factual instructions, not decorative prose: qualify '
+ 'what is held constant, what changes, where a measured quantity applies, and which comparisons are '
+ 'hypothetical. Label metaphors and distinguish them from the underlying quantities. Avoid shorthand '
+ 'that changes the science, even if the chapter objective is otherwise correct. '
+ 'This is a handoff to a frontier chapter planner: it owns the teaching sequence, narration, detailed canvas, '
+ 'asset requests, placement and timing after speech/MFA. Do not prescribe coordinates, component IDs, '
+ 'motion primitives, scripts or timing. SVG creation can pause for missing assets; that is a supported workflow, '
+ 'not a reason to reject a useful demonstration. Preserve grounded facts and scope and expose research gaps. '
+ 'For illustrated chapters animation_brief must be null. Section cards may reuse a rendered animation checkpoint.')
+
+
+def production_kind(chapter):
+    """Old plans stay illustrated; a declared route must still pass plan validation."""
+    value = chapter.get('production')
+    return value.get('kind', 'illustrated') if isinstance(value, dict) else 'illustrated'
+
+
+def production_errors(chapter, request):
+    value = chapter.get('production')
+    if value is None:
+        return ['Choose a production kind for this chapter'] if request.get('animation_chapters') else []
+    if not isinstance(value, dict) or value.get('kind') not in {'illustrated', 'animation'}:
+        return ['production needs kind illustrated or animation']
+    errors = []
+    if not text(value.get('rationale')):
+        errors.append('production needs a concrete rationale')
+    brief = value.get('animation_brief')
+    if value['kind'] == 'illustrated':
+        if brief is not None: errors.append('Illustrated chapters use null animation_brief')
+        return errors
+    if not request.get('animation_chapters'):
+        errors.append('Animation chapters are disabled for this request')
+    if not isinstance(brief, dict):
+        return errors + ['Animation chapters need an animation_brief']
+    if not text(brief.get('learning_objective')):
+        errors.append('Animation brief needs a learning_objective')
+    for key in ('demonstrations', 'assumptions', 'success_criteria'):
+        rows = brief.get(key)
+        if not isinstance(rows, list) or len(rows) > 12 or any(not text(row) for row in rows):
+            errors.append('Animation brief needs a bounded ' + key + ' list')
+        elif key != 'assumptions' and not rows:
+            errors.append('Animation brief needs nonempty ' + key)
+    return errors
 
 
 def text(value, limit=1800):
@@ -128,6 +192,14 @@ def enrich_plan(raw, brief):
         changes.append({'field': 'schema_version', 'before': None, 'after': SCHEMA,
                         'reason': 'Generated response uses the requested contract; full validation still follows'})
     anchors = {anchor['id']: anchor for anchor in brief['anchors']}
+    for topic in topics:
+        if isinstance(topic, dict) and topic.get('priority') == 'important':
+            # Preserve the strongest coverage intent; never demote or discard a
+            # topic because the model supplied this common priority synonym.
+            changes.append({'field': f'coverage.{topic.get("id")}.priority',
+                            'before': 'important', 'after': 'essential',
+                            'reason': 'Conservative priority alias; question, grounding and ownership are unchanged'})
+            topic['priority'] = 'essential'
     for index, chapter in enumerate(chapters):
         if not isinstance(chapter, dict):
             continue
@@ -212,8 +284,10 @@ def plan_errors(plan, request, brief, settings):
     anchors = {a['id']: a for a in brief['anchors']}
     seen_anchors, owners = set(), {}
     for topic in topics:
-        if not text(topic.get('question')) or topic.get('priority') not in {'essential', 'supporting'}:
-            errors.append(f'Invalid coverage question/priority: {topic["id"]}')
+        if not text(topic.get('question')):
+            errors.append(f'coverage.{topic["id"]}.question must be nonempty text of at most 1800 characters')
+        if topic.get('priority') not in {'essential', 'supporting'}:
+            errors.append(f'coverage.{topic["id"]}.priority={topic.get("priority")!r}; use exactly "essential" or "supporting"')
         refs = topic.get('anchor_ids')
         if not isinstance(refs, list) or not refs or any(not isinstance(a, str) or a not in anchors for a in refs):
             errors.append(f'Invalid coverage anchors: {topic["id"]}')
@@ -232,6 +306,7 @@ def plan_errors(plan, request, brief, settings):
     chronological = structure == 'chronological'
     for index, chapter in enumerate(chapters):
         cid = chapter['id']
+        errors.extend(cid + ': ' + error for error in production_errors(chapter, request))
         for key in ['title', 'objective', 'entry_context', 'exit_handoff', 'visual_direction']:
             if not text(chapter.get(key)):
                 errors.append(f'{cid}.{key} needs concise text')
@@ -416,6 +491,7 @@ DRAFT_TASK = (
  'Any supplied classification/profile is planning guidance, not a list of mandatory chapters or permission to expand the user scope. '
  'Runtime is advisory: retain important coverage and natural delivery. Usually 60–180 seconds per chapter suits the child pipeline; unresolved scope is a research gap. '
  'Build a coverage ledger from source anchors, with each explanatory question owned by one chapter. Cover required anchors and preserve qualifications. '
+ 'Each coverage.priority must be exactly essential or supporting; do not invent intermediate priority labels. '
  'Choose useful boundaries supported by sources. Optional user year bounds constrain scope, not structure: '
  'a bounded subject can be thematic or hybrid, and an undated historical request can be chronological. '
  'Use optional chapter years only where useful and supported; either endpoint can independently be null if unknown or irrelevant. Do not invent dates for timeless concepts. '
@@ -429,7 +505,7 @@ DRAFT_TASK = (
  'Match narration mood to evidence, stakes and explanatory purpose; avoid simplistic moral or emotional labels. '
  'Preserve a common narrator, generated visual style and instrumental musical identity. Give actionable chapter-specific delivery, '
  'instruments, energy, motif development and transitions; do not copy contract placeholders. '
- 'All imagery is generated. Native explanatory overlays are available; do not depend on actual footage, scanned artwork or archival assets. '
+ 'Illustrated imagery is generated. Native explanatory overlays and, when enabled, code-drawn animation chapters are available; do not depend on actual footage, scanned artwork or archival assets. '
  'Identify illustrations and reconstructions appropriately; do not portray them as observed evidence. '
  'Plan visual direction, not image counts: scene planning follows narration and MFA. '
  'Section cards reuse approved incoming-chapter images and native title/optional date overlays. Keep clean narration and music stems separate. '
@@ -454,13 +530,42 @@ REVIEW_TASK = (
  'Required anchors and source cautions are authoritative. Optional phrasing and stylistic preferences are advisory, not blockers. '
  'Runtime is advisory; do not impose word counts, equal chapter lengths or exact runtime matching. '
  'Require actionable mood/music directions and feasible generated visuals with native overlays. '
+ 'For animation routes, scrutinize every demonstration and success criterion as a factual instruction. '
+ 'A correct objective does not excuse a misleading comparison, missing qualifier, unlabelled metaphor '
+ 'or claim attached to the wrong component or location. Flag these concrete defects for repair. '
  'Music is creative accompaniment, not a factual claim about authentic historical sound. '
  'Code checks references, order and data shapes separately. Do not invent schema fixes or enums. '
  'When revision findings are supplied, verify evidence-backed defects were actually resolved, not merely reworded. '
+ 'Do not ask for facts, reasons or details the supplied sources do not contain: a plan that leaves an unsupplied detail '
+ 'unstated (or says it is not supplied) is correct. Implied or approximate precision (a year bound, a section date) is '
+ 'minor unless the plan explicitly states an unsupported fact. Only demonstrable contradictions of the sources are major. '
+ 'When prior_findings are supplied, check each against the CURRENT candidate before repeating it; drop resolved ones. '
  'Pass only when no major/blocker issue remains. Each issue must identify field, evidence and actionable correction. '
  'Return {pass:boolean,rubric:{grounding:0..100,coverage:0..100,chapter_coherence:0..100,global_flow:0..100,mood_fit:0..100,production_readiness:0..100},'
  'issues:[{severity:"minor"|"major"|"blocker",field,problem,evidence,correction}],strengths:[string]}.'
 )
+
+
+def flagged_chapters(plan, issues):
+    """Chapter ids named by review findings ("chapters[C05].scope", "chapters[2].title", "C05.objective")."""
+    ids = [c.get('id') for c in plan.get('chapters', [])]
+    found = []
+    for issue in issues:
+        for token in re.findall(r'chapters\[([^\]]+)\]|\b(C\d{2})\b', str(issue.get('field', ''))):
+            value = token[0] or token[1]
+            chapter = value if value in ids else (ids[int(value)] if value.isdigit() and int(value) < len(ids) else None)
+            if chapter and chapter not in found:
+                found.append(chapter)
+    return found
+
+
+def keep_unflagged_chapters(previous, candidate, flagged):
+    """Restore every chapter the repair was not asked to change (same ids in the same order only)."""
+    before = {c.get('id'): c for c in previous.get('chapters', [])}
+    after = candidate.get('chapters', [])
+    if not flagged or [c.get('id') for c in after] != list(before):
+        return candidate
+    return {**candidate, 'chapters': [c if c.get('id') in flagged else before[c['id']] for c in after]}
 
 
 def plan_film(config, store, request, brief, settings, *, models=None, compare=True, seed_plan=None, seed_feedback=None, subject_handoff=None):
@@ -496,7 +601,8 @@ def plan_film(config, store, request, brief, settings, *, models=None, compare=T
         config['planner_url'], config['reviewer_url'] = config['reviewer_url'], config['planner_url']
     models = models or Models(config, store)
     policy_sha = digest({'draft_task': DRAFT_TASK, 'review_task': REVIEW_TASK, 'contract': CONTRACT,
-                         'validation': 'subject-autonomous-structure-optional-endpoints-format-recovery-v7'})
+                         'animation_routing': ANIMATION_ROUTING_TASK, 'animation_brief': ANIMATION_BRIEF,
+                         'validation': 'subject-autonomous-animation-routing-v9-priority-alias'})
     signature = digest({'request': request, 'brief': brief, 'settings': settings, 'planner': config['planner_url'], 'reviewer': config['reviewer_url'], 'policy_sha': policy_sha,
                         'seed_plan': seed_plan, 'seed_feedback': seed_feedback})
     if subject_handoff is not None:
@@ -515,10 +621,16 @@ def plan_film(config, store, request, brief, settings, *, models=None, compare=T
         write(store.root / 'baseline-feedback.json', seed_feedback)
     started = time.monotonic()
     history, previous, feedback, selected = [], seed_plan, seed_feedback, None
+    prior_findings = []
     for attempt in range(settings['max_attempts']):
         context = {'request': request, 'orientation_brief': brief, 'contract': CONTRACT,
                    'available_moods': sorted(set(MOODS) - {'auto'})}
         draft_task = DRAFT_TASK
+        routing_task = ANIMATION_ROUTING_TASK if request.get('animation_chapters') else (
+            'Animation chapters are disabled. Use production.kind illustrated with animation_brief null.')
+        draft_task += ' ' + routing_task
+        if request.get('animation_chapters'):
+            context['animation_brief_shape'] = ANIMATION_BRIEF
         if subject_handoff is not None:
             # The rendered shape already contains the sourced brief and contract.
             draft_task += '\n\n' + '\n\n'.join(m['content'] for m in subject_handoff['messages'])
@@ -526,19 +638,45 @@ def plan_film(config, store, request, brief, settings, *, models=None, compare=T
             context.pop('contract')
         if previous is not None:
             context.update(previous_plan=previous, repair_feedback=feedback)
+            if (feedback or {}).get('repair_scope', {}).get('chapters'):
+                draft_task += (' TARGETED REPAIR: change only the chapters and fields in repair_feedback.repair_scope and '
+                               'copy every other chapter and field unchanged from previous_plan. Fix a finding by removing or '
+                               'qualifying unsupported precision (e.g. a null year bound, "date not supplied"); never add facts, '
+                               'reasons or details that the orientation brief does not contain.')
         raw = bounded_call(models, 'planner', f'chapter-plan-{signature[:8]}-{attempt}', draft_task, context, settings, settings['draft_max_tokens'])
         write(store.root / f'raw-candidate-{attempt}.json', raw)
         candidate, enrichment = enrich_plan(raw, brief)
+        if isinstance(candidate.get('film'), dict):
+            # Request-owned fields are copied by code, never a reason for a repair round (e.g. a tidied subject).
+            for key in ('subject', 'language', 'orientation', 'narrator_id', 'advisory_seconds'):
+                if key in request and candidate['film'].get(key) != request[key]:
+                    enrichment.append({'field': 'film.' + key, 'before': candidate['film'].get(key), 'after': request[key],
+                                       'reason': 'Requested value restored by code'})
+                    candidate['film'][key] = request[key]
+        if previous is not None and (feedback or {}).get('repair_scope'):
+            candidate = keep_unflagged_chapters(previous, candidate, feedback['repair_scope']['chapters'])
         write(store.root / f'structural-enrichment-{attempt}.json', enrichment)
         write(store.root / f'candidate-{attempt}.json', candidate)
         errors = plan_errors(candidate, request, brief, settings)
         if seed_plan is not None:
             errors += revision_errors(candidate, seed_plan, seed_feedback)
-        review = bounded_call(models, 'reviewer', f'chapter-review-{signature[:8]}-{attempt}', REVIEW_TASK,
+        review = bounded_call(models, 'reviewer', f'chapter-review-{signature[:8]}-{attempt}', REVIEW_TASK + ' ' + routing_task,
             {'request_scope': {k: v for k, v in request.items() if k != 'advisory_seconds'}, 'orientation_brief': brief,
              'candidate': semantic_view(candidate), 'scope_warnings': scope_warnings(candidate, request),
              **({'subject_guidance': subject_handoff['subject_guidance']} if subject_handoff is not None else {}),
-             **({'editorial_findings_to_verify': seed_feedback} if seed_feedback else {})}, settings, settings['review_max_tokens'])
+             **({'editorial_findings_to_verify': seed_feedback} if seed_feedback else {}),
+             **({'prior_findings': prior_findings} if prior_findings else {})}, settings, settings['review_max_tokens'])
+        scope = (feedback or {}).get('repair_scope') if previous is not None else None
+        if scope and isinstance(review.get('issues'), list):
+            # Chapters locked in a targeted round were already reviewed: a new finding about them alone is advisory.
+            locked = {c.get('id') for c in candidate.get('chapters', [])} - set(scope['chapters'])
+            for issue in review['issues']:
+                named = flagged_chapters(candidate, [issue]) if isinstance(issue, dict) else []
+                if named and set(named) <= locked and issue.get('severity') in {'major', 'blocker'}:
+                    issue.update(severity='minor', downgraded='finding about a chapter locked in this targeted repair')
+            if review.get('pass') is not True and not any(isinstance(i, dict) and i.get('severity') in {'major', 'blocker'}
+                                                          for i in review['issues']):
+                review['pass'] = True
         write(store.root / f'review-{attempt}.json', review)
         score = review_score(review, settings)
         accepted = not errors and passing_review(review, settings)
@@ -550,8 +688,14 @@ def plan_film(config, store, request, brief, settings, *, models=None, compare=T
             write(store.root / 'chapter-plan.json', candidate)
             break
         previous = candidate
+        blocking = [i for i in review.get('issues') or [] if isinstance(i, dict) and i.get('severity') in {'major', 'blocker'}]
+        prior_findings = [{k: i.get(k) for k in ('severity', 'field', 'problem')} for i in blocking]
         feedback = {'code_errors': errors, 'semantic_review': review,
                     'repair_instruction': 'Address concrete defects while preserving useful correct material; do not chase cosmetic changes or runtime matching.'}
+        flagged = flagged_chapters(candidate, blocking)
+        if flagged and not errors:
+            # Targeted repair: only the chapters the review names change; code restores the rest.
+            feedback['repair_scope'] = {'chapters': flagged, 'fields': [i.get('field') for i in blocking]}
     comparison = None
     if selected is not None and compare:
         initial = seed_plan if seed_plan is not None else read(store.root / 'candidate-0.json')
@@ -646,6 +790,7 @@ def main():
     parser.add_argument('--settings', type=Path, default=ROOT / 'external-planner.json')
     parser.add_argument('--planner-role', choices=['planner', 'reviewer'], help='Swap LLM roles to evaluate the larger-context model as planner')
     parser.add_argument('--no-comparison', action='store_true')
+    parser.add_argument('--animation-chapters', action='store_true', help='Let the planner route suitable chapters to the frontier animation pipeline')
     parser.add_argument('--revise-plan', type=Path, help='Preserve this existing plan as baseline and revise it in a new output directory')
     parser.add_argument('--feedback', type=Path, help='JSON object with concrete editorial/reviewer findings for --revise-plan')
     args = parser.parse_args()
@@ -661,6 +806,8 @@ def main():
     request = {'subject': args.subject.strip(), 'advisory_seconds': args.duration_seconds,
                'start_year': args.start_year, 'end_year': args.end_year,
                'orientation': args.orientation, 'narrator_id': args.narrator, 'language': args.language}
+    if args.animation_chapters:
+        request['animation_chapters'] = True
     store = Store(args.output)
     try:
         _, report = plan_film(configuration(args.config), store, request, read(args.brief), settings, compare=not args.no_comparison,

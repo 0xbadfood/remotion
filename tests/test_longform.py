@@ -14,7 +14,7 @@ import numpy as np
 from PIL import Image
 
 from infofilm.core import ROOT, Store, configuration, digest, read, write
-from infofilm.longform import ChapterLogRelay, chapter_context, chapter_creative, create_long, continuity_review, make_orientation, planner_settings, run_chapter, year_bounds
+from infofilm.longform import ChapterLogRelay, chapter_context, chapter_creative, create_long, continuity_review, make_orientation, planner_settings, run_chapter, year_bounds, child_stage
 from infofilm.longform_video import assemble
 from infofilm.media import audio_info
 from infofilm.queue import Queue
@@ -41,7 +41,39 @@ def checked_stub(project, orientation='landscape', duration=120):
     write(project/'sources.json',{'results':[{'url':'https://example.org/chapter','raw_content':'Evidence'}]})
 
 
+
+def script_stub(payload, project):
+    """Phase A stand-in: the chapter's accepted script."""
+    write(Path(project) / f"film-{payload['durations'][0]}" / 'script.json', {'points': [{'id': 'P01', 'narration': 'Stub.'}]})
+    return Path(project) / 'attempts/script'
+
+
+def pair_ok(models, plan, rows):
+    return [{'left': rows[0]['chapter']['id'], 'right': rows[-1]['chapter']['id'], 'accepted': True, 'score': 90, 'issues': []}]
+
+
 class LongformTests(unittest.TestCase):
+    def setUp(self):
+        # Long films calibrate the voice once at film level before phase A; no voice server in unit tests.
+        calibration = patch('infofilm.pipeline.voice_calibration', return_value=150); calibration.start(); self.addCleanup(calibration.stop)
+
+    def test_animation_beat_progress_survives_parent_stage_and_heartbeat_reporting(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);store=Store(root)
+            try:
+                store.event('pipeline:animation','running',{'beat_id':'turn'})
+                beat={'orientation':'landscape','beat_id':'turn','position':2,'total':4,'phase':'animation','selected_objects':5}
+                write(root/'animation/state.json',{'execution_mode':'beats','beat_progress':beat,'private':'not progress'})
+                current=child_stage(root)
+                self.assertEqual(current,{'stage':'animation','state':'running','execution_mode':'beats','beat_progress':beat})
+                parent=Mock()
+                with patch('infofilm.longform.time.monotonic',return_value=0):
+                    relay=ChapterLogRelay(root,root,parent,'C02',2,4);relay.poll()
+                with patch('infofilm.longform.time.monotonic',return_value=61):relay.poll()
+                self.assertEqual(parent.event.call_args.args[2]['beat_progress'],beat)
+                self.assertTrue(parent.event.call_args.args[2]['heartbeat'])
+            finally:store.db.close()
+
     def test_model_assignment_is_configuration_not_a_historical_title_heuristic(self):
         settings=read(ROOT/'external-planner.json')
         self.assertEqual(planner_settings({'longform_settings':settings})['planner_role'],settings['planner_role'])
@@ -151,6 +183,104 @@ class LongformTests(unittest.TestCase):
         self.assertEqual(chapter_creative(shared,chapter,'warm')['resolved_mood'],'warm')
         self.assertEqual(shared,creative())
 
+    def test_animation_asset_pause_continues_other_chapters_and_resumes_only_the_waiting_one(self):
+        from infofilm.production_state import ProductionPaused
+        plan,brief=accepted_plan()
+        for chapter in plan['chapters']:
+            chapter['production']={'kind':'illustrated','rationale':'A narrative illustrated chapter','animation_brief':None}
+        plan['chapters'][1]['production']={'kind':'animation','rationale':'A changing relationship explains this point',
+            'animation_brief':{'learning_objective':'Explain the changing relationship','demonstrations':['Show that relationship change'],
+                               'assumptions':[],'success_criteria':['The relationship is visible']}}
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);ref=root/'reference.wav';ref.write_bytes(b'reference')
+            args=SimpleNamespace(config=write(root/'config.json',{'planner_url':'http://p','reviewer_url':'http://r','reference_audio':str(ref)}),
+                project=root/'parent',subject=plan['film']['subject'],durations=[900],orientation='landscape',reference_audio=None,
+                reference_transcript=None,language='en_indian',tts_engine='vibevoice',omni_speed=.8,mood='auto',mood_intensity='restrained',
+                visual_balance='auto',music_engine='none',review_mode='experimental',animation_chapters=True,
+                sources=None,orientation_brief=write(root/'brief.json',brief),chapter_plan=write(root/'plan.json',plan),until='video')
+            calls=[]
+            def child(payload,project,store,cid,*extra):
+                if payload.get('until')=='script':return script_stub(payload,project)   # phase A (scripts) stub
+                calls.append(cid)
+                if cid=='C02':
+                    self.assertEqual(payload['generation_mode'],'animation')
+                    self.assertEqual(payload['queue_owner_project'],str(args.project))
+                    self.assertTrue(read(payload['chapter_context'])['orientation_sources'])
+                    raise ProductionPaused('waiting_for_assets','Draw the missing SVG')
+                checked_stub(project);return project/'attempts/test'
+            with patch('infofilm.creative.make_creative_brief',return_value=creative()),patch('infofilm.longform.run_chapter',side_effect=child),\
+                 patch('infofilm.longform.continuity_review',side_effect=pair_ok),patch('infofilm.longform_video.assemble') as assembly:
+                with self.assertRaises(ProductionPaused):create_long(args)
+                self.assertEqual(calls,[c['id'] for c in plan['chapters']])
+                state=read(args.project/'longform-status.json')
+                self.assertEqual(state['completed'],6);self.assertEqual(state['failed'],0)
+                self.assertEqual(state['chapters'][1]['status'],'waiting_for_assets')
+                assembly.assert_not_called()
+            calls.clear()
+            def recovered(payload,project,store,cid,*extra):
+                if payload.get('until')=='script':return script_stub(payload,project)   # phase A (scripts) stub
+                calls.append(cid);checked_stub(project);return project/'attempts/recovered'
+            with patch('infofilm.longform.run_chapter',side_effect=recovered),patch('infofilm.longform.continuity_review',side_effect=pair_ok),\
+                 patch('infofilm.longform_video.assemble',return_value={'video':'checked.mp4'}),patch('infofilm.delivery.preview'):
+                create_long(args)
+            self.assertEqual(calls,['C02'])
+
+    def test_all_scripts_and_the_continuity_gate_come_before_any_media(self):
+        plan,brief=accepted_plan()
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);ref=root/'reference.wav';ref.write_bytes(b'reference')
+            config=write(root/'config.json',{'planner_url':'http://p','reviewer_url':'http://r',
+                'reference_audio':str(ref),'language':'en_indian','tts_url':'http://v','image_url':'http://i'})
+            args=SimpleNamespace(config=config,project=root/'parent',subject=plan['film']['subject'],durations=[900],
+                orientation='landscape',reference_audio=None,reference_transcript=None,language='en_indian',
+                tts_engine='vibevoice',omni_speed=.8,mood='auto',mood_intensity='restrained',visual_balance='auto',music_engine='none',
+                review_mode='experimental',sources=write(root/'sources.json',{'results':[{'url':'https://example.org','raw_content':'E'}]}),
+                orientation_brief=write(root/'brief.json',brief),chapter_plan=write(root/'plan.json',plan),until='video')
+            order=[]
+            def child(payload,project,store,cid,*extra):
+                order.append((payload['until'],cid))
+                if payload['until']=='script':return script_stub(payload,project)
+                checked_stub(project);return project/'attempts/test'
+            def review(models,plan_,rows):
+                order.append(('continuity',rows[1]['chapter']['id']));return pair_ok(models,plan_,rows)
+            with patch('infofilm.creative.make_creative_brief',return_value=creative()),patch('infofilm.longform.run_chapter',side_effect=child),\
+                 patch('infofilm.longform.continuity_review',side_effect=review),\
+                 patch('infofilm.longform_video.assemble',return_value={'video':'checked.mp4'}),patch('infofilm.delivery.preview',return_value=root/'out'):
+                create_long(args)
+            kinds=[k for k,_ in order]
+            last_script=max(i for i,k in enumerate(kinds) if k=='script')
+            first_media=kinds.index('video')
+            self.assertLess(last_script,first_media)
+            self.assertEqual(kinds[last_script+1:first_media],['continuity']*(len(plan['chapters'])-1))
+            self.assertEqual(read(args.project/'continuity-report.json')['stage'],'scripts')
+
+    def test_script_gate_redrafts_only_the_later_chapter_once(self):
+        from infofilm.longform import script_gate
+        plan,_=accepted_plan()
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);rows=[]
+            for chapter in plan['chapters'][:3]:
+                project=root/chapter['id'];write(project/'film-120/script.json',{'points':[]})
+                rows.append({'chapter':chapter,'project':str(project),'duration':120,'status':'script_ready'})
+            bad={'accepted':False,'score':45,'issues':[{'severity':'major','field':'C02.P01','problem':'Retells the coup failure','correction':'Start after it'}]}
+            reviews=[{**bad,'left':'C01','right':'C02'},{'left':'C01','right':'C02','accepted':True,'score':90,'issues':[]},
+                     {'left':'C02','right':'C03','accepted':True,'score':88,'issues':[]}]
+            models=Mock();models.store.root=root;notes={};redrafts=[]
+            with patch('infofilm.longform.continuity_review',side_effect=lambda m,p,r:[reviews.pop(0)]):
+                report=script_gate(models,plan,rows,notes,root/'notes.json',lambda position,row:redrafts.append(position),Mock())
+            self.assertEqual(redrafts,[2])
+            self.assertEqual(read(root/'notes.json')['C02'][0]['problem'],'Retells the coup failure')
+            self.assertTrue(report[0]['repaired']);self.assertTrue(report[1]['accepted'])
+
+    def test_cloud_llms_work_on_every_chapter_at_once_local_on_one(self):
+        from infofilm.longform import chapter_workers
+        local={'planner_url':'http://p','reviewer_url':'http://r'}
+        self.assertEqual(chapter_workers(local,6),1)
+        cloud={'planner_url':'https://a#h','reviewer_url':'https://b#l','llm_endpoints':{
+            'https://a#h':{'type':'openrouter','url':'https://a'},'https://b#l':{'type':'openai_responses','url':'https://b'}}}
+        self.assertEqual(chapter_workers(cloud,6),6)
+        self.assertEqual(chapter_workers({**cloud,'chapter_workers':3},6),3)
+
     def test_failed_chapter_continues_and_resume_skips_successful_chapters(self):
         plan,brief=accepted_plan()
         with tempfile.TemporaryDirectory() as directory:
@@ -166,6 +296,7 @@ class LongformTests(unittest.TestCase):
                 image_review=True)
             calls=[]
             def child(payload,project,store,cid,position,total,*extra):
+                if payload.get('until')=='script':return script_stub(payload,project)   # phase A (scripts) stub
                 calls.append(cid)
                 self.assertTrue(payload['image_review'])
                 if cid=='C02':raise RuntimeError('Image provider exhausted its budget')
@@ -173,26 +304,27 @@ class LongformTests(unittest.TestCase):
                 self.assertEqual(read(payload['chapter_context'])['chapter']['id'],cid)
                 checked_stub(project);return project/'attempts/test'
             with patch('infofilm.creative.make_creative_brief',return_value=creative()),patch('infofilm.longform.run_chapter',side_effect=child),\
-                 patch('infofilm.longform.continuity_review') as continuity,patch('infofilm.longform_video.assemble') as join:
+                 patch('infofilm.longform.continuity_review',side_effect=pair_ok) as continuity,patch('infofilm.longform_video.assemble') as join:
                 with self.assertRaisesRegex(RuntimeError,'C02'):
                     create_long(args)
                 self.assertEqual(calls,[c['id'] for c in plan['chapters']])
                 states=read(args.project/'longform-status.json')
                 self.assertEqual(states['completed'],6);self.assertEqual(states['failed'],1)
                 self.assertFalse((args.project/'delivery.json').exists())
-                continuity.assert_not_called();join.assert_not_called()
+                self.assertEqual(continuity.call_count,6);join.assert_not_called()   # scripts gate, before media
             calls.clear()
             # A visual-tail control must not invalidate the saved parent outline.
             args.image_review = False
             def recovered(payload,project,store,cid,*extra):
+                if payload.get('until')=='script':return script_stub(payload,project)   # phase A (scripts) stub
                 self.assertFalse(payload['image_review'])
                 calls.append(cid);checked_stub(project);return project/'attempts/recovered'
-            with patch('infofilm.longform.run_chapter',side_effect=recovered),patch('infofilm.longform.continuity_review') as continuity,\
+            with patch('infofilm.longform.run_chapter',side_effect=recovered),patch('infofilm.longform.continuity_review',side_effect=pair_ok) as continuity,\
                  patch('infofilm.longform_video.assemble',return_value={'video':'checked.mp4'}) as join,\
                  patch('infofilm.delivery.preview',return_value=root/'output'):
                 create_long(args)
                 self.assertEqual(calls,['C02'])
-                continuity.assert_called_once();join.assert_called_once()
+                self.assertEqual(continuity.call_count,2);join.assert_called_once()  # only pairs touching C02
             self.assertEqual(read(args.project/'longform-status.json')['completed'],7)
             self.assertEqual(read(args.project/'delivery.json')['generation_mode'],'long')
             self.assertFalse(read(args.project/'delivery.json')['image_review'])
@@ -220,7 +352,7 @@ class LongformTests(unittest.TestCase):
             self.assertTrue((attempts[0]/'marker.json').exists())
             self.assertTrue((args.project/'chapter-plan.json').exists())
 
-    def test_continuity_rejects_premature_conclusions_before_assembly(self):
+    def test_continuity_reports_premature_conclusions_without_blocking_assembly(self):
         plan,_=accepted_plan()
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory);rows=[]
@@ -229,12 +361,15 @@ class LongformTests(unittest.TestCase):
                 write(p/'film-120/script.json',{'requested_seconds':120,'points':[{'narration':'In conclusion, goodbye.'}]})
                 write(p/'evidence-final.json',{'facts':[]})
                 rows.append({'chapter':chapter,'project':str(p),'duration':120})
-            models=Mock();models.call.return_value={'pass':True,'score':99,'issues':[{'severity':'major','problem':'Premature conclusion'}]}
-            with self.assertRaisesRegex(RuntimeError,'continuity'):
-                continuity_review(models,plan,rows)
-            models.call.return_value={'pass':True,'score':88,'issues':[{'severity':'minor','problem':'Optional wording improvement'}]}
-            continuity_review(models,plan,rows)
-            prompt=models.call.call_args.args[2]
+            models=Mock();models.store.root=root
+            models.call_json.return_value={'pass':True,'score':99,'issues':[{'severity':'major','problem':'Premature conclusion'}]}
+            report=continuity_review(models,plan,rows)
+            self.assertFalse(report[0]['accepted'])
+            self.assertEqual(read(root/'continuity-report.json')['pairs'][0]['issues'][0]['problem'],'Premature conclusion')
+            models.call_json.return_value={'pass':True,'score':88,'issues':[{'severity':'minor','problem':'Optional wording improvement'}]}
+            self.assertTrue(continuity_review(models,plan,rows)[0]['accepted'])
+            self.assertEqual(models.call_json.call_args.kwargs['max_tokens'],6000)
+            prompt=models.call_json.call_args.args[2]
             self.assertNotIn('"advisory_seconds"',prompt)
             self.assertNotIn('"requested_seconds"',prompt)
 

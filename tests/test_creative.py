@@ -6,7 +6,8 @@ from unittest.mock import patch
 from types import SimpleNamespace
 
 from infofilm.core import Store, digest, write
-from infofilm.creative import beat_errors, library_from_beats, resolved_scenes, visual_guidance, visual_metrics
+from infofilm.creative import (beat_errors, library_from_beats, make_visual_beats, resolved_scenes, sentence_timing,
+                               visual_guidance, visual_metrics)
 from infofilm.planning import make_image_prompts
 from infofilm.video import compile_timeline
 from test_audio import wav
@@ -139,3 +140,29 @@ class VisualBeatTests(unittest.TestCase):
                 self.assertEqual(json.loads((root/'source.json').read_text())['audio_sha256'],digest(master.read_bytes()))
                 self.assertEqual(digest((root/'narration.wav').read_bytes()),digest(audio.read_bytes()))
             store.db.close()
+
+
+class SentenceTimingTests(unittest.TestCase):
+    WORDS = [{'id': f'w{i:04d}', 'word': w, 'start': i * 0.5, 'end': i * 0.5 + 0.4} for i, w in
+             enumerate(['Dr.', 'Beck', 'waited.', 'Then', 'Fromm', 'arrived', 'at', '4', 'p.m.', 'He', 'acted.'], 1)]
+
+    def test_point_splits_into_timed_sentences_at_real_sentence_ends(self):
+        point = {'point_id': 'P01', 'word_ids': [w['id'] for w in self.WORDS]}
+        rows = sentence_timing(point, self.WORDS, 7.0)
+        self.assertEqual([r['text'] for r in rows], ['Dr. Beck waited.', 'Then Fromm arrived at 4 p.m.', 'He acted.'])
+        self.assertEqual([r['start_word_id'] for r in rows], ['w0001', 'w0004', 'w0010'])
+        self.assertEqual(rows[0]['seconds'], 1.5); self.assertEqual(rows[-1]['seconds'], 2.0)
+
+    def test_planner_gets_sentence_timing_not_word_alignment(self):
+        captured = {}
+        models = SimpleNamespace(loop=lambda stage, task, context, validator, **kw: captured.update(context=context) or {})
+        timing = {'points': [{'point_id': 'P01', 'start': 0.5, 'end': 5.9, 'word_ids': [w['id'] for w in self.WORDS]}],
+                  'words': self.WORDS, 'audio_info': {'duration_seconds': 6.0}}
+        film = {'requested_seconds': 120, 'actual_seconds': 6.0, 'timing': timing,
+                'script': {'points': [{'id': 'P01', 'narration': 'Dr. Beck waited. Then Fromm arrived at 4 p.m. He acted.', 'fact_ids': []}]}}
+        make_visual_beats(models, film, {'facts': []}, {'visual_balance': 'balanced', 'resolved_mood': 'serious'}, experimental=False)
+        context = captured['context']
+        self.assertNotIn('aligned_words', context); self.assertNotIn('aligned_points', context)
+        self.assertNotIn('narration', context['script']['points'][0])
+        self.assertEqual(len(context['narration_points'][0]['sentences']), 3)
+

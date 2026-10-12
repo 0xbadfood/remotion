@@ -1,0 +1,92 @@
+{
+  "sources": [
+    {
+      "id": "S1",
+      "title": "4.3 Projectile Motion - University Physics Volume 1 | OpenStax",
+      "url": "https://openstax.org/books/university-physics-volume-1/pages/4-3-projectile-motion",
+      "excerpts": [
+        "**Projectile motion** is the motion of an object thrown or projected into the air, subject only to acceleration as a result of gravity. The applications of projectile motion in physics and engineering are numerous. Some examples include meteors as they enter Earth’s atmosphere, fireworks, and the motion of any ball in sports. Such objects are called *projectiles* and their path is called a trajectory. The motion of falling objects as discussed in [Motion Along a Straight Line](3-introduction) is a simple one-dimensional type of projectile motion in which there is no horizontal movement. In this section, we consider two-dimensional projectile motion, and our treatment neglects the effects of air resistance.",
+        "The most important fact to remember here is that *motions along perpendicular axes are independent* and thus can be analyzed separately. We discussed this fact in [Displacement and Velocity Vectors](4-1-displacement-and-velocity-vectors), where we saw that vertical and horizontal motions are independent. The key to analyzing two-dimensional projectile motion is to break it into two motions: one along the horizontal axis and the other along the vertical. (This choice of axes is the most sensible because acceleration resulting from gravity is vertical; thus, there is no acceleration along the horizontal axis when air resistance is negligible.) As is customary, we call the horizontal axis the *x*-axis and the vertical axis the *y*-axis. It is not required that we use this choice of axes; it is simply convenient in the case of gravitational acceleration. In other cases we may choose a different set of axes. [Figure 4.11](4-3-projectile-motion#CNX_UPhysics_04_03_Soccer) illustrates the notation for displacement, where we define to be the total displacement, and and are its component vectors along the horizontal and vertical axes, respectively. The magnitudes of these vectors are *s*, *x*, and *y*.",
+        "To describe projectile motion completely, we must include velocity and acceleration, as well as displacement. We must find their components along the *x-* and *y*-axes. Let’s assume all forces except gravity (such as air resistance and friction, for example) are negligible. Defining the positive direction to be upward, the components of acceleration are then very simple:",
+        "1. Resolve the motion into horizontal and vertical components along the *x*- and *y*-axes. The magnitudes of the components of displacement along these axes are *x* and *y.* The magnitudes of the components of velocity are where *v* is the magnitude of the velocity and *θ* is its direction relative to the horizontal, as shown in [Figure 4.12](4-3-projectile-motion#CNX_UPhysics_04_03_2DMotion).\n2. Treat the motion as two independent one-dimensional motions: one horizontal and the other vertical. Use the kinematic equations for horizontal and vertical motion presented earlier.\n3. Solve for the unknowns in the two separate motions: one horizontal and one vertical. Note that the only common variable between the motions is time *t*. The problem-solving procedures here are the same as those for one-dimensional kinematics and are illustrated in the following solved examples.\n4. Recombine quantities in the horizontal and vertical directions to find the total displacement and velocity Solve for the magnitude and direction of the displacement and velocity using  \n     \n    where *Φ* is the direction of the displacement",
+        "Figure  4.12   (a) We analyze two-dimensional projectile motion by breaking it into two independent one-dimensional motions along the vertical and horizontal axes. (b) The horizontal motion is simple, because and is a constant. (c) The velocity in the vertical direction begins to decrease as the object rises. At its highest point, the vertical velocity is zero. As the object falls toward Earth again, the vertical velocity increases again in magnitude but points in the opposite direction to the initial vertical velocity. (d) The *x* and *y* motions are recombined to give the total velocity at any given point on the trajectory.",
+        "Note that because up is positive, the initial vertical velocity is positive, as is the maximum height, but the acceleration resulting from gravity is negative. Note also that the maximum height depends only on the vertical component of the initial velocity, so that any projectile with a 67.6-m/s initial vertical component of velocity reaches a maximum height of 233 m (neglecting air resistance). The numbers in this example are reasonable for large fireworks displays, the shells of which do reach such heights before exploding. In practice, air resistance is not completely negligible, so the initial velocity would have to be somewhat larger than that given to reach the same height.",
+        "(c) Because air resistance is negligible, and the horizontal velocity is constant, as discussed earlier. The horizontal displacement is the horizontal velocity multiplied by time as given by where is equal to zero. Thus,"
+      ]
+    }
+  ],
+  "anchors": [
+    {
+      "id": "F01",
+      "claim": "Projectile motion describes an object moving under gravity alone in a model that neglects air resistance.",
+      "source_ids": [
+        "S1"
+      ]
+    },
+    {
+      "id": "F02",
+      "claim": "Horizontal and vertical motions can be analyzed independently.",
+      "source_ids": [
+        "S1"
+      ]
+    },
+    {
+      "id": "F03",
+      "claim": "Near Earth, gravity produces downward acceleration and no horizontal acceleration in this model.",
+      "source_ids": [
+        "S1"
+      ]
+    },
+    {
+      "id": "F04",
+      "claim": "Horizontal velocity stays constant when air resistance is negligible.",
+      "source_ids": [
+        "S1"
+      ]
+    },
+    {
+      "id": "F05",
+      "claim": "An angled launch initially has both horizontal and vertical velocity components.",
+      "source_ids": [
+        "S1"
+      ]
+    },
+    {
+      "id": "F06",
+      "claim": "At the highest point of an upward projectile, its vertical velocity is zero.",
+      "source_ids": [
+        "S1"
+      ]
+    },
+    {
+      "id": "F07",
+      "claim": "During descent the downward vertical velocity grows in magnitude.",
+      "source_ids": [
+        "S1"
+      ]
+    },
+    {
+      "id": "F08",
+      "claim": "Horizontal and vertical motions share the same elapsed time; vertical motion governs time in the air.",
+      "source_ids": [
+        "S1"
+      ]
+    }
+  ],
+  "required_anchor_ids": [
+    "F01",
+    "F02",
+    "F03",
+    "F04",
+    "F05",
+    "F06",
+    "F07",
+    "F08"
+  ],
+  "coverage_requirements": [
+    "Explain the causal mechanism clearly for casual viewers and junior students."
+  ],
+  "cautions": [
+    "This is a manually curated orientation brief for a planning smoke test, not full chapter research. Preserve the limits of the simplified model."
+  ]
+}

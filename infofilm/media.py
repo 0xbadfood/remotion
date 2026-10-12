@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import contextlib
 import json
+import os
 import math
 import re
 import shutil
@@ -15,7 +16,7 @@ from pathlib import Path
 
 import httpx
 
-from .core import ROOT, digest, gpu_lease, read, write
+from .core import ROOT, digest, gpu_lease, read, write, resource_slot
 from .composition import asset_composition
 from .planning import word_count
 
@@ -24,7 +25,7 @@ class AlignmentError(RuntimeError):
     """The bounded MFA attempts could not produce validated word timing."""
 
 
-def mfa_numeric_text(text):
+def mfa_numeric_text(text, *, context=None, offset=0, natural_years=True):
     """Shared explicit numeric wording for English synthesis and MFA.
 
     Only provider/alignment input is expanded; source scripts and captions retain
@@ -32,6 +33,7 @@ def mfa_numeric_text(text):
     """
     from num2words import num2words
     from .audio_audit import spoken_numeric_text
+    from .numeric_speech import year_text
 
     value = unicodedata.normalize("NFKC", str(text or ""))
     # A hyphen in mid-1970s joins a compound; it is not a negative number.
@@ -42,12 +44,35 @@ def mfa_numeric_text(text):
         return year[:-1] + "ies" if year.endswith("y") else year + "s"
 
     value = re.sub(r"(?<![\w.])([12]\d{2}0)s(?!\w)", decade, value, flags=re.I)
+    if natural_years:
+        value = year_text(value, context=context, offset=offset)
     return spoken_numeric_text(value)
 
 
 def request(config, service, method, path, **kwargs):
-    with httpx.Client(timeout=kwargs.pop("timeout", 90)) as client:
-        response = client.request(method, config[service + "_url"] + path, **kwargs)
+    """A provider queue that is full (429), busy with another job (409 from a single-job server) or briefly
+    unavailable (503) answers "wait your turn": retry after its Retry-After (or with backoff) for up to
+    `provider_wait_seconds`, so parallel chapters queue instead of failing."""
+    deadline, delay = time.monotonic() + config.get("provider_wait_seconds", 7200), 5
+    timeout = kwargs.pop("timeout", 90)
+    while True:
+        for value in kwargs.get("files") or []:      # rewind uploads before a retry
+            handle = value[1][1] if isinstance(value, tuple) and isinstance(value[1], tuple) else None
+            if hasattr(handle, "seek"):
+                handle.seek(0)
+        with httpx.Client(timeout=timeout) as client:
+            response = client.request(method, config[service + "_url"] + path, **kwargs)
+        # A single-job server (Spark VibeVoice) answers 409 "A render job is (already) active" while it serves another
+        # chapter: that is a queue, not an error. ("Job X is already active" — our own job — still stands.)
+        busy = response.status_code == 409 and "A render job is" in response.text
+        if (response.status_code in {429, 503} or busy) and time.monotonic() < deadline:
+            try:
+                wait = min(300, max(1, float(response.headers.get("retry-after"))))
+            except (TypeError, ValueError):
+                wait = delay
+            time.sleep(wait)
+            delay = min(delay * 2, 120)
+            continue
         response.raise_for_status()
         return response.json()
 
@@ -97,7 +122,7 @@ def render_audio(config, store, text, name):
     record_path = directory / "provider.json"
     job_id = "infofilm_" + identity[:28]
     started = time.monotonic()
-    with gpu_lease(config):
+    with gpu_lease(config, "voice"):
         health = request(config, "tts", "GET", "/health")
         if health.get("queued_or_running_jobs") and not record_path.exists():
             raise RuntimeError("VibeVoice has other queued/running work; leave it undisturbed")
@@ -145,13 +170,15 @@ def audit_audio(config, store, audio, text, points=None):
     return audit_with_escalation(config, store, audio, text, points=points)
 
 
-def map_source_words(points, aligned, tokenize):
+def map_source_words(points, aligned, tokenize, source_tokenize=None):
     """Rejoin MFA clitics/hyphens, retaining source spelling and precise spans."""
     words, boundaries, cursor = [], [], 0
     for point in points:
         first = len(words)
-        for display in re.findall(r"\S+", point["narration"]):
-            expected = "".join(tokenize(display))
+        for match in re.finditer(r"\S+", point["narration"]):
+            display = match.group()
+            expected = "".join(source_tokenize(display, point, match.start())
+                               if source_tokenize else tokenize(display))
             if not expected:
                 continue
             start, actual = cursor, ""
@@ -189,7 +216,7 @@ def _mfa_adapter(config):
     return module, module_path
 
 
-def align_audio(config, store, audio, script, name):
+def align_audio(config, store, audio, script, name, *, spoken_points=None):
     from .audio_audit import spoken_numeric_text
 
     text = "\n\n".join(p["narration"] for p in script["points"])
@@ -200,10 +227,25 @@ def align_audio(config, store, audio, script, name):
     legacy_identity = digest({**dependencies,
         **({"mfa_orthography": lexicon_text} if lexicon_text != text else {})})
     legacy = store.root / "alignment" / legacy_identity[:20]
-    spoken_text = re.sub(r"[ \t]+", " ", mfa_numeric_text(lexicon_text)).strip()
-    # Reuse existing validated numeric timing whenever its orthography is
-    # unchanged. Only the newly supported decade input needs a new identity.
-    alignment_policy = ("spoken-decades-v2" if mfa_numeric_text(lexicon_text) != spoken_numeric_text(lexicon_text)
+    # Saved provider wording belongs to the saved recording. In particular,
+    # do not force old cardinal-year speech through a new split-year transcript.
+    year_styles = {}
+    for point in script["points"]:
+        source = point["narration"]
+        recorded = (spoken_points or {}).get(point["id"])
+        current = mfa_numeric_text(source)
+        prior = mfa_numeric_text(source, natural_years=False)
+        if recorded is not None and recorded not in {source, current, prior}:
+            raise ValueError("Saved synthesis wording does not match its source point")
+        year_styles[point["id"]] = recorded is None or recorded == current
+    expanded = "\n\n".join(mfa_numeric_text(p["narration"], natural_years=year_styles[p["id"]])
+                           for p in script["points"])
+    expanded = "".join(c for c in unicodedata.normalize("NFKD", expanded) if not unicodedata.combining(c))
+    spoken_text = re.sub(r"[ \t]+", " ", expanded).strip()
+    alignment_policy = ("natural-years-v3" if any(year_styles[p["id"]] and
+                        mfa_numeric_text(p["narration"]) != mfa_numeric_text(p["narration"], natural_years=False)
+                        for p in script["points"]) else
+                        "spoken-decades-v2" if spoken_text != spoken_numeric_text(lexicon_text)
                         else "spoken-numbers-v1")
 
     def profile(strategy, transcript, beam=160, retry_beam=320):
@@ -221,11 +263,19 @@ def align_audio(config, store, audio, script, name):
         profiles = [original, primary]
     else:
         profiles = [primary, profile("wider_search", primary["text"], 320, 640)]
-    for candidate in reversed(profiles):
-        path = candidate["directory"] / "timing.json"
+    cached_paths = [candidate["directory"] / "timing.json" for candidate in reversed(profiles)]
+    prior_text = re.sub(r"[ \t]+", " ", mfa_numeric_text(lexicon_text, natural_years=False)).strip()
+    if prior_text != spoken_text:
+        prior_policy = "spoken-decades-v2" if prior_text != spoken_numeric_text(lexicon_text) else "spoken-numbers-v1"
+        for beam, retry_beam in [(160, 320), (320, 640)]:
+            prior_identity = digest({**dependencies, "mfa_orthography": prior_text,
+                                     "alignment_policy": prior_policy, "beam": beam, "retry_beam": retry_beam})
+            cached_paths.append(store.root / "alignment" / prior_identity[:20] / "timing.json")
+    for path in cached_paths:
         if path.exists():
             cached = read(path)
-            if [p["point_id"] for p in cached["points"]] == [p["id"] for p in script["points"]]:
+            if (cached.get("audio_sha256") == dependencies["audio"] and cached.get("text_sha256") == digest(text)
+                    and [p["point_id"] for p in cached["points"]] == [p["id"] for p in script["points"]]):
                 return cached
 
     module, module_path = _mfa_adapter(config)
@@ -248,11 +298,13 @@ def align_audio(config, store, audio, script, name):
                 payload = read(raw)
                 metadata = read(directory / "mfa-metadata.json") if (directory / "mfa-metadata.json").exists() else {"resumed_preserved_raw_alignment": True}
             else:
-                # The adapter also retries decoder failures with wider beams.
-                payload, _, metadata = module.run_mfa_alignment(
-                    module.DEFAULT_MFA_BIN, module.DEFAULT_MAMBA_BIN, module.DEFAULT_MFA_ROOT, Path(audio), candidate["text"],
-                    module.DEFAULT_ACOUSTIC_MODEL, module.DEFAULT_DICTIONARY_MODEL, module.DEFAULT_G2P_MODEL,
-                    directory / "work", beam=candidate["beam"], retry_beam=candidate["retry_beam"])
+                # The adapter also retries decoder failures with wider beams. MFA is CPU-heavy: parallel chapters
+                # share a fixed number of alignment slots (a queue), instead of oversubscribing the cores.
+                with resource_slot("mfa", config.get("mfa_slots", max(2, (os.cpu_count() or 8) // 8))):
+                    payload, _, metadata = module.run_mfa_alignment(
+                        module.DEFAULT_MFA_BIN, module.DEFAULT_MAMBA_BIN, module.DEFAULT_MFA_ROOT, Path(audio), candidate["text"],
+                        module.DEFAULT_ACOUSTIC_MODEL, module.DEFAULT_DICTIONARY_MODEL, module.DEFAULT_G2P_MODEL,
+                        directory / "work", beam=candidate["beam"], retry_beam=candidate["retry_beam"])
                 write(raw, payload)
                 write(directory / "mfa-metadata.json", metadata)
             aligned = [{"id": f"mfa{i+1:04d}", "word": str(entry[2]), "start": float(entry[0]), "end": float(entry[1])}
@@ -265,7 +317,14 @@ def align_audio(config, store, audio, script, name):
                     value = mfa_numeric_text(value)
                 return module.tokenize(value)
 
-            words, points = map_source_words(script["points"], aligned, normalized_tokens)
+            def source_tokens(value, point, offset):
+                if candidate["text"] != lexicon_text:
+                    value = mfa_numeric_text(value, context=point["narration"], offset=offset,
+                                             natural_years=year_styles[point["id"]])
+                value = "".join(c for c in unicodedata.normalize("NFKD", value) if not unicodedata.combining(c))
+                return module.tokenize(value)
+
+            words, points = map_source_words(script["points"], aligned, normalized_tokens, source_tokens)
             prior = 0
             for word in words:
                 if word["start"] < prior - 1e-6 or not 0 <= word["start"] <= word["end"] <= info["duration_seconds"] + .001:
@@ -333,10 +392,11 @@ def image_source_context(project, library):
 
 
 def review_scene_image(models, library, asset, candidate, params, name, source_context, *, attempt_history=None, provider_id=None, review_stage="final"):
+    from .educational_review import review_guidance, component_checks_enabled, normalize_inventory
     from .person_references import reference_review_kwargs
     reference_kwargs = reference_review_kwargs(asset)
     from .image_providers import IMAGE_REVIEW_REASONS, image_review_errors
-    prompt = (
+    prompt = review_guidance(asset) + (
         "Inspect this actual educational illustration against the asset specification, narrated passage and full subject/source context. "
         "Judge the intended subject, historical era, geography, clear educational meaning, composition, obvious artifacts and text-safe area. "
         "The overall subject and source facts apply even when the local narrated passage does not repeat its date or location. "
@@ -401,7 +461,8 @@ def review_scene_image(models, library, asset, candidate, params, name, source_c
     for format_attempt in range(2):
         call_name = name if not format_attempt else name + "-format-repair"
         review = models.call("reviewer", call_name, prompt + feedback, image_path=candidate, max_tokens=2500, **reference_kwargs)
-        errors = image_review_errors(review)
+        review = normalize_inventory(review)
+        errors = image_review_errors(review, require_inventory=component_checks_enabled(asset), reference_available=bool(reference_kwargs))
         if not errors:
             return review
         feedback = "\nPrevious response failed the JSON contract. Reinspect this same image and return corrected JSON. Errors:\n" + json.dumps(errors)
@@ -503,7 +564,7 @@ def generate_images_single(config, store, library, models, *, on_progress=None):
                                       "remaining_images": len(pending), "max_attempts": max_attempts})
     if not pending:
         return output
-    with gpu_lease(config), contextlib.ExitStack() as services:
+    with gpu_lease(config, "images"), contextlib.ExitStack() as services:
         if studio and config.get("image_park_idle_services"):
             services.enter_context(park_idle_gpu_services(config, store))
         else:

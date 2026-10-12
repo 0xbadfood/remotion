@@ -74,8 +74,8 @@ def generation_prompt(case, scene):
             "\nScene: " + scene + reference_addendum(case['library']['assets'][0]))
 
 
-def review_errors(value, message):
-    errors = image_review_errors(value)
+def review_errors(value, message, *, require_inventory=False, reference_available=None):
+    errors = image_review_errors(value, require_inventory=require_inventory, reference_available=reference_available)
     if not isinstance(value, dict):
         return errors
     if value.get("visual_message") != message:
@@ -99,12 +99,13 @@ def review_errors(value, message):
 
 
 def current_image_review(models, case, candidate, prompt, name, max_json_attempts=2):
+    from .educational_review import review_guidance, component_checks_enabled, normalize_inventory
     from .person_references import reference_review_kwargs
     asset = case['library']['assets'][0]
     reference_kwargs = reference_review_kwargs(asset)
     message = case["visual_message"]
     packet = {"visual_message": message, "current_prompt": prompt}
-    task = (
+    task = review_guidance(asset) + (
         "Inspect the attached actual image against only this current prompt and visual_message. "
         "There is no prior review history. Judge concrete visible meaning, factual contradictions, usability and framing. "
         "The image supports narration; it need not prove causation or encode every date, number or legal detail by itself. "
@@ -141,7 +142,8 @@ def current_image_review(models, case, candidate, prompt, name, max_json_attempt
         except ValueError as exc:
             errors = ["Return one valid JSON review object: " + str(exc)]
         else:
-            errors = review_errors(value, message)
+            value = normalize_inventory(value)
+            errors = review_errors(value, message, require_inventory=component_checks_enabled(asset), reference_available=bool(reference_kwargs))
         if not errors:
             return value
         feedback = "\nCorrect the response schema for this same current image. Errors: " + json.dumps(errors)
@@ -237,7 +239,7 @@ def repair_scene(models, case, last_scene, last_prompt, review, name, max_json_a
 
 @contextlib.contextmanager
 def provider_session(config, store):
-    with gpu_lease(config), contextlib.ExitStack() as stack:
+    with gpu_lease(config, "images"), contextlib.ExitStack() as stack:
         studio = bool(config.get("image_engine"))
         if studio and config.get("image_park_idle_services"):
             stack.enter_context(park_idle_gpu_services(config, store))
@@ -310,7 +312,7 @@ def run_message_loop(config, store, root, case, models, settings, progress):
         "takes": [], "status": "running", "repairs": []}
     if state["visual_message"] != message:
         raise ValueError("Checkpoint message changed")
-    for take in state["takes"]:
+    for take in state["takes"] + ([state['pending_review']] if state.get('pending_review') else []):
         if digest(Path(take["candidate"]).read_bytes()) != take["sha256"]:
             raise ValueError("Saved candidate missing or changed")
     if state["status"] != "running":
@@ -354,6 +356,12 @@ def run_message_loop(config, store, root, case, models, settings, progress):
                     "max_attempts": settings["max_image_attempts"], "provider": settings["provider"],
                     "dimensions": settings["full_size"], "steps": config["image_steps"], "visual_message": message})
         candidate = render_take(config, store, take_root, params, f"{case['asset_id']} {progress['position']}/{progress['planned_images']} take {ordinal+1}/{settings['max_image_attempts']}")
+        take = {"visual_message": message, "provider": settings["provider"], "stage": "final", "scene": scene,
+                "settings": params, "candidate": str(candidate), "sha256": digest(candidate.read_bytes())}
+        # Generation is complete even if the critic returns invalid JSON. Keep
+        # this candidate available for resumed review and terminal scoring.
+        state['pending_review'] = take
+        write(state_path, state)
         review_path = take_root / "review.json"
         if review_path.exists():
             review = read(review_path)
@@ -363,9 +371,9 @@ def run_message_loop(config, store, root, case, models, settings, progress):
             review = current_image_review(models, case, candidate, params["prompt"], f"message-review-{case['asset_id']}-{root.name}-{ordinal}",
                                           settings["max_json_attempts"])
             write(review_path, review)
-        take = {"visual_message": message, "provider": settings["provider"], "stage": "final", "scene": scene,
-                "settings": params, "review": review, "candidate": str(candidate), "sha256": digest(candidate.read_bytes())}
+        take['review'] = review
         state["takes"].append(take)
+        state.pop('pending_review', None)
         store.event(case["asset_id"], "accepted" if review["pass"] else "rejected", {
             **progress, "attempt": ordinal + 1, "visual_message": message, "repair_mode": review["repair_mode"],
             "reason_keys": review["reason_keys"], "issues": review["issues"], "correction": review["correction"]})
@@ -390,7 +398,7 @@ def run_message_loop(config, store, root, case, models, settings, progress):
 
 
 def generate_message_images(config, store, library, models, *, on_progress=None):
-    from .image_terminal import recover, selectable, terminal_settings, needs_generation
+    from .image_terminal import recover, selectable, terminal_settings, needs_generation, terminal_candidates
     terminal = terminal_settings(config)
     registry = config.get("image_provider_registry", {})
     provider_id = config.get("image_recovery_provider", "qwen_local")
@@ -434,7 +442,7 @@ def generate_message_images(config, store, library, models, *, on_progress=None)
         else:
             saved = read(root / 'message-state.json') if (root / 'message-state.json').exists() else None
             prior = previous_failures.get(str(root), {})
-            if terminal['enabled'] and saved and saved.get('takes') and (
+            if terminal['enabled'] and saved and terminal_candidates(saved) and (
                     saved.get('status') in {'exhausted', 'best_available'} or prior.get('status') == 'repair_blocked'):
                 rescue_pending.append((position, case, root))
             else:
@@ -471,12 +479,13 @@ def generate_message_images(config, store, library, models, *, on_progress=None)
                                            "attempts": len(state["takes"]), "checkpoint": str(root)})
             except RepairContractError as exc:
                 # Keep the pending review/repair checkpoint resumable; continue other assets.
-                if terminal['enabled'] and (root / 'message-state.json').exists() and read(root / 'message-state.json').get('takes'):
+                if terminal['enabled'] and (root / 'message-state.json').exists() and terminal_candidates(read(root / 'message-state.json')):
                     rescue_pending.append((position, case, root))
                 else:
                     unresolved.append({"asset": case["asset_id"], "status": "repair_blocked",
                                        "error": str(exc), "checkpoint": str(root)})
-                store.event(case["asset_id"], "repair_blocked", {**progress, "error": str(exc)})
+                store.event(case["asset_id"], "repair_blocked", {**progress, "error": str(exc),
+                            "terminal_recovery_queued": any(c['asset_id'] == case['asset_id'] for _, c, _ in rescue_pending)})
             store.event("images", "progress", {**progress, "completed_images": len(output)+len(unresolved),
                         "accepted_images": len(output), "blocked_images": len(unresolved),
                         "remaining_images": total-len(output)-len(unresolved)})

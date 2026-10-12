@@ -43,6 +43,42 @@ class MusicRevision(BaseModel):
     music_engine: Literal["none", "acestep"] = "acestep"
 
 
+class LLMConnection(BaseModel):
+    id: str | None = Field(default=None, max_length=60)
+    type: str = Field(max_length=40)
+    label: str = Field(max_length=80)
+    url: str = Field(max_length=300)
+    model: str = Field(default="", max_length=200)
+    vision: bool = False
+    timeout: int = 900
+    max_concurrency: int | None = None
+    reasoning_effort: str | None = None
+    key_env: str | None = Field(default=None, max_length=80)
+    api_key: str | None = Field(default=None, max_length=500)
+
+
+class LLMRef(BaseModel):
+    id: str = Field(max_length=60)
+
+
+class LLMRoles(BaseModel):
+    planner: str = Field(max_length=60)
+    reviewer: str = Field(max_length=60)
+
+
+class LLMConfiguration(BaseModel):
+    label: str = Field(min_length=1, max_length=60)
+    note: str = Field(default="", max_length=400)
+    roles: LLMRoles | None = None
+
+
+class LLMDetect(BaseModel):
+    type: str = Field(max_length=40)
+    url: str = Field(max_length=300)
+    id: str | None = Field(default=None, max_length=60)
+    api_key: str | None = Field(default=None, max_length=500)
+
+
 class ResumeRequest(BaseModel):
     image_review: bool | None = Field(default=None, strict=True)
 
@@ -53,10 +89,12 @@ class FilmRequest(BaseModel):
     generation_mode: Literal["short", "long"] = "short"
     production_target: Literal['video', 'audio'] = 'video'
     subject_graph: bool = Field(default=False, strict=True)
+    animation_chapters: bool = Field(default=False, strict=True)
     orientation: Literal["landscape", "portrait", "both"] = "landscape"
     review_mode: Literal["off", "experimental"] = "experimental"
     image_review: bool = Field(default=True, strict=True)
     voice_id: str = "default"
+    llm_configuration: str | None = Field(default=None, max_length=60)
     tts_engine: Literal["vibevoice", "omnivoice"] = "vibevoice"
     omni_speed: float = Field(default=.8, ge=.5, le=2)
     mood: Literal["auto", "professional", "warm", "funny", "curious", "serious", "reflective", "inspiring"] = "auto"
@@ -81,6 +119,10 @@ class FilmRequest(BaseModel):
 
     @model_validator(mode="after")
     def generation_limits(self):
+        if self.animation_chapters and self.generation_mode != 'long':
+            raise ValueError('Animation chapter routing requires long generation')
+        if self.animation_chapters and self.tts_engine != 'vibevoice':
+            raise ValueError('Animation chapters currently require VibeVoice narration')
         if self.subject_graph and self.generation_mode != "long":
             raise ValueError("Subject graph planning requires long generation")
         if self.generation_mode == "long":
@@ -91,22 +133,34 @@ class FilmRequest(BaseModel):
         return self
 
 
-def readiness(config):
-    headers = {"Authorization": "Bearer " + os.environ["VLLM_API_KEY"]} if os.environ.get("VLLM_API_KEY") else {}
+def readiness(config, llm_root=None):
+    from .llm_settings import Registry, api_key, endpoint
+    headers = {}
+    if llm_root is not None:
+        try:
+            config = Registry(llm_root, dict(config)).freeze(dict(config))
+        except ValueError:
+            pass
+    for role in ("planner", "reviewer"):
+        connection = endpoint(config, role)
+        key = (os.environ.get("VLLM_API_KEY") if connection.get("legacy") else
+               api_key(config.get("llm_secrets_root"), connection.get("id"), connection))
+        headers[role] = {"Authorization": "Bearer " + key} if key else {}
+        config = {**config, role + "_check": connection["url"]}
     image_endpoint = config["image_url"] + "/api/status"
     registry = config.get("image_provider_registry")
     if registry:
         policy = registry["policies"][config.get("image_provider_policy", registry["default_policy"])]
         provider = registry["providers"][policy["tiers"][0]["provider"]]
         image_endpoint = provider["url"].rstrip("/") + ("/api/models" if provider["adapter"] == "imagestudio_sdapi" else "/api/status")
-    endpoints = [("planner", "Planner LLM", config["planner_url"] + "/models"),
-                 ("reviewer", "Reviewer LLM", config["reviewer_url"] + "/models"),
+    endpoints = [("planner", "Planner LLM", config["planner_check"] + "/models"),
+                 ("reviewer", "Reviewer LLM", config["reviewer_check"] + "/models"),
                  ("audio", "Narration", config["tts_url"] + "/health"),
                  ("images", "Images", image_endpoint)]
     def check(entry):
         key, label, url = entry
         try:
-            response = httpx.get(url, headers=headers if key in {"planner", "reviewer"} else None, timeout=5)
+            response = httpx.get(url, headers=headers.get(key), timeout=5)
             response.raise_for_status()
             data = response.json()
             busy = bool(data.get("busy") or data.get("queued_or_running_jobs") or data.get("active_job"))
@@ -140,6 +194,9 @@ def readiness(config):
                          "detail": "Available" if available else "Not on PATH"})
     services.append({"id": "research_key", "label": "Research credentials", "ready": bool(os.environ.get("TAVILY_API_KEY")),
         "busy": False, "detail": "Available" if os.environ.get("TAVILY_API_KEY") else "TAVILY_API_KEY is missing from the service environment"})
+    animation_key=bool(os.environ.get('OPENAI_API_KEY') or os.environ.get('OPENAI_TOKEN'))
+    services.append({'id':'animation_planner','label':'Luna · optional animation planner','ready':animation_key,
+                     'optional':True,'busy':False,'detail':'Configured' if animation_key else 'API key missing from service environment'})
     return {"checked_at": time.time(), "ready": all(s["ready"] for s in services if not s.get("optional")), "services": services}
 
 
@@ -238,12 +295,17 @@ def create_app(config_path=ROOT / "config.json", directory=ROOT / "artifacts/int
             publication = read(marker)
         except (ValueError, OSError):
             raise HTTPException(404)
-        if publication.get("schema_version") != "infofilm.public-experiment-report.v1" or name not in publication.get("files", []):
+        if not isinstance(publication, dict) or publication.get("schema_version") != "infofilm.public-experiment-report.v1":
+            raise HTTPException(404)
+        files = publication.get("files", [])
+        if not isinstance(files, list) or any(not isinstance(item, str) for item in files) or name not in files:
             raise HTTPException(404)
         target = (base / name).resolve()
-        if not target.is_relative_to(base) or target.suffix.lower() not in {".html", ".json", ".png", ".jpg"} or not target.is_file():
+        media_types = {".html": "text/html", ".json": "application/json", ".png": "image/png", ".jpg": "image/jpeg",
+                       ".mp4": "video/mp4", ".wav": "audio/wav", ".vtt": "text/vtt"}
+        if not target.is_relative_to(base) or target.suffix.lower() not in media_types or not target.is_file():
             raise HTTPException(404)
-        return FileResponse(target)
+        return FileResponse(target, media_type=media_types[target.suffix.lower()])
 
     @app.get("/api/session")
     def session(request: Request):
@@ -300,7 +362,9 @@ def create_app(config_path=ROOT / "config.json", directory=ROOT / "artifacts/int
 
     @app.get("/api/settings")
     def settings():
-        return {"voices": voices(), "default_duration": 60, "default_subject_graph": False, "language": "Indian English",
+        from .animation_production import provider_settings
+        return {"voices": voices(), "default_duration": 60, "default_subject_graph": False,
+                'default_animation_chapters': False, 'animation_model': provider_settings(configuration(config_path))['model'], "language": "Indian English",
                 "generation_modes": [{"id": "short", "label": "Short film · 30–180 seconds"}, {"id": "long", "label": "Long film · chapters · 5–30 minutes"}],
                 "production_targets": [{'id': 'video', 'label': 'Complete video'}, {'id': 'audio', 'label': 'Audio first'}],
                 "long_duration_minutes": {"min": 5, "max": 30, "default": 15},
@@ -310,10 +374,63 @@ def create_app(config_path=ROOT / "config.json", directory=ROOT / "artifacts/int
                    [("moods", MOODS), ("mood_intensities", INTENSITIES), ("visual_balances", BALANCES), ("music_engines", MUSIC)]},
                 "tts_engines": [{"id": "vibevoice", "label": "VibeVoice"}, {"id": "omnivoice", "label": "OmniVoice"}]}
 
+    def llm_registry():
+        from .llm_settings import Registry
+        return Registry(queue.root, configuration(config_path))
+
+    def llm_change(action):
+        try:
+            action(llm_registry())
+        except ValueError as exc:
+            raise HTTPException(422, str(exc))
+        health_cache["time"] = 0
+        return llm_registry().public()
+
+    @app.get("/api/llm-settings")
+    def llm_settings():
+        return llm_registry().public()
+
+    @app.post("/api/llm-settings/connections")
+    def llm_save_connection(body: LLMConnection):
+        return llm_change(lambda r: r.upsert(body.model_dump()))
+
+    @app.post("/api/llm-settings/connections/delete")
+    def llm_delete_connection(body: LLMRef):
+        return llm_change(lambda r: r.delete(body.id))
+
+    @app.post("/api/llm-settings/roles")
+    def llm_assign(body: LLMRoles):
+        return llm_change(lambda r: r.assign(body.model_dump()))
+
+    @app.post("/api/llm-settings/configurations")
+    def llm_save_configuration(body: LLMConfiguration):
+        return llm_change(lambda r: r.save_configuration(body.label, body.note, body.roles.model_dump() if body.roles else None))
+
+    @app.post("/api/llm-settings/configurations/apply")
+    def llm_apply_configuration(body: LLMRef):
+        return llm_change(lambda r: r.apply_configuration(body.id))
+
+    @app.post("/api/llm-settings/configurations/delete")
+    def llm_delete_configuration(body: LLMRef):
+        return llm_change(lambda r: r.delete_configuration(body.id))
+
+    @app.post("/api/llm-settings/detect")
+    def llm_detect(body: LLMDetect):
+        from .llm_settings import TYPES, api_key, detect_models
+        if body.type not in TYPES:
+            raise HTTPException(422, "Unknown connection type")
+        saved = llm_registry().load()["connections"].get(body.id or "", {})
+        key = body.api_key or (api_key(queue.root, body.id, {**saved, "type": body.type}) if body.id else
+                               api_key(queue.root, None, {"type": body.type, "key_env": TYPES[body.type].get("key_env")}))
+        try:
+            return {"models": detect_models(body.url, key)[:400]}
+        except (httpx.HTTPError, ValueError) as exc:
+            raise HTTPException(422, f"Could not list models: {str(exc).replace(key, '[redacted]') if key else exc}"[:400])
+
     @app.get("/api/readiness")
     def check_readiness():
         if time.time() - health_cache["time"] > 20:
-            health_cache["value"] = readiness(configuration(config_path))
+            health_cache["value"] = readiness(configuration(config_path), queue.root)
             health_cache["time"] = time.time()
         return health_cache["value"]
 
@@ -351,6 +468,8 @@ def create_app(config_path=ROOT / "config.json", directory=ROOT / "artifacts/int
     @app.post("/api/jobs", status_code=202)
     def submit(body: FilmRequest):
         config = configuration(config_path)
+        if body.animation_chapters and not (os.environ.get('OPENAI_API_KEY') or os.environ.get('OPENAI_TOKEN')):
+            raise HTTPException(422,'The animation planner API key is not configured in the webapp service')
         profiles = narrator_profiles(config)
         if body.voice_id in profiles:
             profile = profiles[body.voice_id]
@@ -441,7 +560,7 @@ def create_app(config_path=ROOT / "config.json", directory=ROOT / "artifacts/int
                 base = project.resolve()
                 target = (project / "chapter-plan.json").resolve()
             elif kind == "chapter":
-                match = re.fullmatch(r"(C\d{2})/(review/.+|audio\.wav|script\.txt)", name)
+                match = re.fullmatch(r"(C\d{2})/(review/.+|animation/.+|audio\.wav|script\.txt)", name)
                 if not match:
                     raise HTTPException(404)
                 value = read(project / "longform-status.json")
@@ -452,7 +571,16 @@ def create_app(config_path=ROOT / "config.json", directory=ROOT / "artifacts/int
                 if not chapter_project.is_relative_to((project / "chapters").resolve()):
                     raise HTTPException(404)
                 part = match[2]
-                if part.startswith("review/"):
+                if part.startswith('animation/'):
+                    base=(chapter_project/'animation').resolve()
+                    relative=part.removeprefix('animation/')
+                    publication=read(base/'public-report.json')
+                    if publication.get('schema_version')!='infofilm.public-experiment-report.v1':raise HTTPException(404)
+                    if relative not in publication.get('files',[]):raise HTTPException(404)
+                    target=(base/relative).resolve()
+                    if not target.is_relative_to(base) or target.suffix.lower() not in {'.html','.json','.txt','.mp4','.png','.jpg','.wav'}:
+                        raise HTTPException(404)
+                elif part.startswith("review/"):
                     if row.get("status") != "succeeded":
                         raise HTTPException(404)
                     base = (ROOT / "output" / chapter_project.name).resolve()

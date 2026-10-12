@@ -44,6 +44,30 @@ def review(passing=True):
 
 
 class ExternalPlannerTests(unittest.TestCase):
+    def test_animation_route_is_explicit_grounded_and_opt_in(self):
+        from infofilm.animation_frontier import chapter_requirement
+        from infofilm.longform import chapter_context
+        settings,request,brief,plan=fixture()
+        chapter=plan['chapters'][0]
+        chapter['production']={'kind':'animation','rationale':'A moving comparison explains the mechanism',
+            'animation_brief':{'learning_objective':'Compare the changing quantities',
+                'demonstrations':['Compare two quantities changing together'],'assumptions':[],
+                'success_criteria':['Their causal relationship is visible']}}
+        self.assertTrue(any('disabled' in e for e in plan_errors(plan,request,brief,settings)))
+        request['animation_chapters']=True
+        self.assertEqual(plan_errors(plan,request,brief,settings),[])
+        context=chapter_context(plan,chapter,{},brief)
+        requirement=chapter_requirement(context)
+        self.assertIn('Compare two quantities',requirement['scene_requirement'])
+        self.assertEqual(requirement['facts'],[brief['anchors'][0]['claim']])
+        self.assertEqual(context['orientation_sources'],brief['sources'])
+        chapter['production']['animation_brief']['demonstrations']=[]
+        self.assertTrue(plan_errors(plan,request,brief,settings))
+        chapter.pop('production')
+        self.assertTrue(any('production kind' in e for e in plan_errors(plan,request,brief,settings)))
+        request.pop('animation_chapters')
+        self.assertEqual(plan_errors(plan,request,brief,settings),[])
+
     def test_graph_shape_guides_draft_and_review_without_duplicate_sources(self):
         from infofilm.graph_planning import freeze_graph, classify_subject, make_handoff
         settings, request, brief, plan = fixture()
@@ -209,6 +233,28 @@ class ExternalPlannerTests(unittest.TestCase):
         enriched,_=enrich_plan(original,brief)
         self.assertTrue(plan_errors(enriched,request,brief,settings))
 
+    def test_important_priority_is_audited_and_preserves_coverage(self):
+        settings, request, brief, original = fixture()
+        original['coverage'][0]['priority'] = 'important'
+        enriched, changes = enrich_plan(original, brief)
+        expected = copy.deepcopy(original)
+        expected['coverage'][0]['priority'] = 'essential'
+        self.assertEqual(enriched, expected)
+        self.assertEqual(original['coverage'][0]['priority'], 'important')
+        self.assertEqual(changes[0]['field'], 'coverage.T01.priority')
+        self.assertEqual(changes[0]['before'], 'important')
+        self.assertEqual(changes[0]['after'], 'essential')
+        self.assertEqual(plan_errors(enriched, request, brief, settings), [])
+
+    def test_unknown_priority_and_empty_question_have_actionable_feedback(self):
+        settings, request, brief, plan = fixture()
+        plan['coverage'][0].update(priority='optional', question='')
+        enriched, changes = enrich_plan(plan, brief)
+        self.assertEqual(changes, [])
+        errors = plan_errors(enriched, request, brief, settings)
+        self.assertTrue(any('coverage.T01.question' in e for e in errors))
+        self.assertTrue(any('priority=\'optional\'' in e and '"essential" or "supporting"' in e for e in errors))
+
     def test_semantic_reviewer_cannot_impose_absolute_runtime(self):
         _, _, _, plan=fixture()
         viewed=semantic_view(plan)
@@ -331,3 +377,16 @@ class ExternalPlannerTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'different inputs'):
                 plan_film({'planner_url':'http://one','reviewer_url':'http://two'},store,{**request,'advisory_seconds':600},brief,settings,models=models)
             store.db.close()
+
+
+class TargetedPlanRepairTests(unittest.TestCase):
+    def test_review_fields_name_the_chapters_to_repair_and_the_rest_are_restored(self):
+        from infofilm.external_planner import flagged_chapters, keep_unflagged_chapters
+        before = {'chapters': [{'id': 'C01', 'title': 'Old one'}, {'id': 'C02', 'title': 'Old two'}, {'id': 'C03', 'title': 'Old three'}]}
+        issues = [{'field': 'chapters[C02].scope; chapters[C02].sections'}, {'field': 'coverage[T08]'}, {'field': 'chapters[2].title'}]
+        self.assertEqual(flagged_chapters(before, issues), ['C02', 'C03'])
+        after = {'chapters': [{'id': 'C01', 'title': 'Drifted'}, {'id': 'C02', 'title': 'Fixed'}, {'id': 'C03', 'title': 'Also fixed'}]}
+        kept = keep_unflagged_chapters(before, after, ['C02', 'C03'])
+        self.assertEqual([c['title'] for c in kept['chapters']], ['Old one', 'Fixed', 'Also fixed'])
+        renumbered = {'chapters': [{'id': 'C01'}, {'id': 'C02'}]}          # structure changed: keep the new plan as is
+        self.assertIs(keep_unflagged_chapters(before, renumbered, ['C02']), renumbered)

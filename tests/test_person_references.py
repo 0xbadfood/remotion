@@ -170,7 +170,7 @@ class PersonReferenceTests(unittest.TestCase):
         self.assertIn('panel 1: Albert Einstein', prompt)
         self.assertIn('one composed scene', prompt)
         models = Mock(); models.call.return_value = {'visual_message': case['visual_message'], 'pass': True,
-            'reason_keys': [], 'issues': [], 'limitations': [], 'correction': '', 'repair_mode': 'none'}
+            'reason_keys': [], 'issues': [], 'limitations': [], 'correction': '', 'repair_mode': 'none', 'component_inventory': []}
         current_image_review(models, case, self.portrait, prompt, 'review')
         self.assertEqual(models.call.call_args.kwargs['reference_image_paths'], [Path(card['file'])])
         self.assertIn('first image', models.call.call_args.args[2])
@@ -251,6 +251,46 @@ class PortraitResearchTests(unittest.TestCase):
             self.assertTrue(selection_errors({**self.selection, **changed}, [self.candidate], PERSON))
         nbsp = {**self.candidate, 'caption': self.candidate['caption'].replace(' ', '\u00a0')}
         self.assertEqual(selection_errors(self.selection, [nbsp], PERSON), [])
+
+    def test_same_person_in_other_scenes_reuses_film_wide_portrait_without_new_search(self):
+        from infofilm import person_reference_worker as worker
+        folder = tempfile.TemporaryDirectory(); self.addCleanup(folder.cleanup); self.root = Path(folder.name)
+        self.person, self.settings = copy.deepcopy(PERSON), reference_settings({'person_references': {'enabled': True}})
+        portrait = self.root/'portrait.png'; portrait.write_bytes(pixels())
+        self.ref = {'file': str(portrait), 'sha256': digest(portrait.read_bytes()), 'status': 'ready',
+                    'depiction_kind': 'photograph', 'source_url': 'https://example.org/archive/einstein'}
+        later = {**self.person, 'appearance_context': 'Elderly scientist at Princeton, 1950s'}
+        request = write(self.root/'request.json', {'people': {'a': self.person}, 'settings': self.settings,
+            'directory': str(self.root/'run-a'), 'cache_root': str(self.root/'film-refs'),
+            'project': str(self.root/'project'), 'model_config': {'planner_url': 'p', 'reviewer_url': 'r'}})
+        def research(person, settings, archive, models, store, tavily_factory, search_root):
+            self.assertEqual(search_root.parent.parent.name, 'people-by-name')
+            return {**self.ref, 'person': person}
+        with patch.object(worker, 'research_person', side_effect=research) as researched, \
+             patch.object(worker.sys, 'argv', ['worker', str(request)]):
+            worker.main()
+            write(request, {**read(request), 'people': {'b': later}, 'directory': str(self.root/'run-b')})
+            worker.main()
+        self.assertEqual(researched.call_count, 1)
+        reused = read(self.root/'run-b'/'result.json')['people']['b']
+        self.assertEqual(reused['person'], later)
+        self.assertEqual(reused['sha256'], self.ref['sha256'])
+
+    def test_people_born_before_1850_get_no_reference_search(self):
+        from infofilm import person_reference_worker as worker
+        folder = tempfile.TemporaryDirectory(); self.addCleanup(folder.cleanup); root = Path(folder.name)
+        napoleon = {'name': 'Napoleon Bonaparte', 'appearance_context': 'First Consul, 1800', 'reference_kind': 'historical_portrait',
+                   'birth_year': 1769}
+        self.assertEqual(person_errors([napoleon]), [])
+        self.assertTrue(person_errors([{**napoleon, 'birth_year': '1769'}]))
+        request = write(root/'request.json', {'people': {'n': napoleon}, 'settings': reference_settings({}),
+            'directory': str(root/'run'), 'cache_root': str(root/'refs'), 'project': str(root/'project'),
+            'model_config': {'planner_url': 'p', 'reviewer_url': 'r'}})
+        with patch.object(worker, 'research_person') as researched, patch.object(worker.sys, 'argv', ['worker', str(request)]):
+            worker.main()
+        researched.assert_not_called()
+        result = read(root/'run'/'result.json')['people']['n']
+        self.assertEqual(result['status'], 'unavailable'); self.assertIn('1850', result['reason'])
 
     def test_reference_download_failure_tries_other_documented_candidate_and_saves_provenance(self):
         with tempfile.TemporaryDirectory() as folder:

@@ -9,6 +9,7 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
+from .llm_settings import llm_config
 from .core import ROOT, digest, read, write
 
 PROTOCOL = 'infofilm.person-references.v1'
@@ -41,11 +42,17 @@ def person_errors(people):
                 errors.append(f'Visible person needs a bounded {key}')
         if person.get('reference_kind') not in {'photograph', 'historical_portrait'}:
             errors.append('reference_kind must be photograph or historical_portrait')
+        if 'birth_year' in person and (type(person['birth_year']) is not int or not -3000 <= person['birth_year'] <= 2030):
+            errors.append('birth_year must be an integer year (negative for BCE)')
         name = str(person.get('name', '')).casefold().strip()
         if name in names:
             errors.append('Do not duplicate a person within one scene')
         names.add(name)
     return errors
+
+
+# Reliable photographs are rare for people born before this year; they are drawn from the evidence without a reference.
+PHOTO_ERA_BIRTH_YEAR = 1850
 
 
 def person_key(person):
@@ -159,7 +166,7 @@ def prepare_person_references(config, store, library):
         interpreter = Path(config.get('person_reference_python', sys.executable))
         request_file = write(archive / 'request.json', {'people': unique, 'settings': settings,
             'directory': str(archive), 'cache_root': str(cache_root), 'project': str(store.root),
-            'model_config': {k: config[k] for k in ['planner_url', 'reviewer_url']}})
+            'model_config': llm_config(config)})
         subprocess.run([str(interpreter), '-u', '-m', 'infofilm.person_reference_worker', str(request_file)],
                        cwd=ROOT, check=True)
     people = read(result_file)['people'] if unique else {}

@@ -1,7 +1,7 @@
 'use strict';
 const $ = id => document.getElementById(id);
 const state = {selected: null, jobs: [], signatures: {}, polling: false, authenticated: false};
-const statusNames = {queued: 'Queued', running: 'Creating', succeeded: 'Ready', audio_ready: 'Audio ready', failed: 'Needs attention', interrupted: 'Interrupted'};
+const statusNames = {queued: 'Queued', running: 'Creating', succeeded: 'Ready', audio_ready: 'Audio ready', failed: 'Needs attention', interrupted: 'Interrupted', waiting_for_assets: 'Waiting for assets', waiting_for_capabilities: 'Waiting for motion support'};
 function el(tag, text, className) { const node = document.createElement(tag); if (text !== undefined) node.textContent = text; if (className) node.className = className; return node; }
 function link(text, url, download = false) { const a = el('a', text); a.href = url; if (download) a.download = ''; return a; }
 function showLogin() { state.authenticated = false; $('login-screen').hidden = false; $('app').hidden = true; }
@@ -17,13 +17,14 @@ async function api(path, options = {}) {
 }
 function post(path, body = {}) { return api(path, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)}); }
 function durationLabel(values) { return values.map(v => `${v}s`).join(' + '); }
-function generationLabel(job) { return (job.settings.generation_mode === 'long' ? `${job.settings.durations[0] / 60} min · chapters` : durationLabel(job.settings.durations)) + (job.settings.production_target === 'audio' ? ' · audio first' : ''); }
+function generationLabel(job) { return (job.settings.generation_mode === 'long' ? `${job.settings.durations[0] / 60} min · chapters` : durationLabel(job.settings.durations)) + (job.settings.production_target === 'audio' ? ' · audio first' : '') + (job.settings.llm_configuration?.label ? ` · ${job.settings.llm_configuration.label}` : ''); }
 function updateGeneration() {
   const long = $('generation-mode').value === 'long';
   $('short-length-row').hidden = long; $('duration').disabled = long;
   $('long-length-row').hidden = !long; $('long-duration').disabled = !long; $('long-duration').required = long;
   $('long-options').hidden = !long;
   $('subject-graph').disabled = !long;
+  $('animation-chapters').disabled = !long;
   $('second-version-row').hidden = long;
   $('second-duration-row').hidden = long || !$('second-version').checked;
   $('second-duration').disabled = long || !$('second-version').checked;
@@ -123,6 +124,7 @@ async function refreshSelected() {
   const mood = job.creative_brief?.resolved_mood || job.settings.mood || 'auto';
   $('run-meta').textContent = `${generationLabel(job)} advisory · ${job.settings.orientation} · ${job.settings.tts_engine === 'omnivoice' ? 'OmniVoice' : 'VibeVoice'} · ${mood} · ${job.settings.music_engine === 'acestep' ? 'ACE-Step score' : 'no score'}`;
   if (job.settings.generation_mode === 'long') $('run-meta').textContent += ` · subject graph ${job.settings.subject_graph ? 'on' : 'off'}`;
+  if (job.settings.animation_chapters) $('run-meta').textContent += ' · animation chapters enabled';
   $('run-meta').textContent += ` · image review ${job.settings.image_review === false ? 'off' : 'on'}`;
   const resumeSettings = JSON.stringify([job.id, job.settings.image_review]);
   if (state.signatures.resumeSettings !== resumeSettings) {
@@ -134,12 +136,23 @@ async function refreshSelected() {
     const li = el('li', undefined, s.state); li.append(el('span', s.state === 'succeeded' ? '✓' : s.state === 'skipped' ? '–' : String(i + 1), 'stage-icon'), el('span', s.label)); return li;
   }));
   const event = job.latest_event;
+  const beatStatus = beat => beat && beat.beat_id ? ` · beat ${beat.position}/${beat.total} · ${beat.beat_id}${beat.phase ? ' · ' + beat.phase : ''}` : '';
   $('run-event').textContent = job.status === 'succeeded' ? 'Your film is ready. Watch it here or open the full review page.'
     : job.status === 'queued' ? 'Waiting for the current run to finish.'
-    : event ? `${event.stage.replace(/^pipeline:/, '').replaceAll('-', ' ')} · ${event.state}${event.detail.state ? ' · ' + event.detail.state : ''}${event.detail.elapsed_seconds !== undefined ? ' · ' + event.detail.elapsed_seconds + 's elapsed' : ''}`
+    : event ? `${event.stage.replace(/^pipeline:/, '').replaceAll('-', ' ')} · ${event.state}${event.detail.state ? ' · ' + event.detail.state : ''}${beatStatus(event.detail.beat_progress || event.detail)}${event.detail.elapsed_seconds !== undefined ? ' · ' + event.detail.elapsed_seconds + 's elapsed' : ''}`
     : 'Starting the saved pipeline…';
-  $('run-error').hidden = !['failed', 'interrupted'].includes(job.status);
+  const paused = ['waiting_for_assets', 'waiting_for_capabilities'].includes(job.status);
+  $('run-error').hidden = !['failed', 'interrupted', 'waiting_for_assets', 'waiting_for_capabilities'].includes(job.status);
   $('run-error-text').textContent = job.error || '';
+  $('resume').textContent = paused ? 'Resume after cache fill' : 'Resume saved run';
+  $('resume').disabled = job.status === 'waiting_for_assets' && !job.can_resume_assets;
+  $('asset-waits').replaceChildren(...(job.asset_waits || []).map(wait => {
+    const section = el('section');
+    section.append(el('h3', `${wait.chapter} · ${wait.kind === 'assets' ? (wait.ready ? 'Assets ready' : 'Drawing assets needed') : 'Motion support needed'}`));
+    const list = el('ul');
+    for (const request of wait.unresolved || wait.requests) list.append(el('li', request.description || request.reason || request.requested_asset_id || request.asset_id || JSON.stringify(request)));
+    section.append(list); return section;
+  }));
   $('chapter-plan-link').replaceChildren();
   if (job.chapter_plan_url) $('chapter-plan-link').append(link('Download chapter plan', job.chapter_plan_url, true));
   $('chapter-progress').textContent = job.chapter_progress ? `${job.chapter_progress.completed} / ${job.chapter_progress.total} chapters ready${job.chapter_progress.failed ? ` · ${job.chapter_progress.failed} need attention` : ''}` : '';
@@ -152,10 +165,14 @@ async function refreshSelected() {
       const scopeLabel = c.scope.start_year == null && c.scope.end_year == null ? 'Undated focus' : c.scope.start_year == null ? `Through ${c.scope.end_year}` : c.scope.end_year == null ? `From ${c.scope.start_year}` : `${c.scope.start_year}–${c.scope.end_year}`;
       card.append(badge, el('h3', `${c.id} · ${c.title}`), el('p', `${scopeLabel} · ${c.advisory_seconds}s advisory · ${c.mood}`, 'hint'));
       if (c.stage) card.append(el('p', `Current step: ${c.stage}`, 'hint'));
+      if (c.beat_progress) card.append(el('p', `${c.beat_progress.orientation || ''}${beatStatus(c.beat_progress)}`, 'hint'));
+      if (c.production_kind === 'animation') card.append(el('p', 'Animation chapter · Luna', 'hint'));
       if (c.error) card.append(el('p', c.error, 'error'));
       if (c.audio_url) { const audio = el('audio'); audio.controls = true; audio.preload = 'none'; audio.src = c.audio_url; card.append(audio); }
       const downloads = el('p');
       if (c.script_url) downloads.append(link('Read script', c.script_url));
+      if (c.animation_report_url) { downloads.append(document.createTextNode(' · ')); const a = link('Animation plan & preview', c.animation_report_url); a.target = '_blank'; a.rel = 'noopener'; downloads.append(a); }
+      if (c.asset_requests_url) { downloads.append(document.createTextNode(' · '), link('Download asset demands', c.asset_requests_url, true)); }
       if (c.review_url) { downloads.append(document.createTextNode(' · ')); const a = link('Watch chapter', c.review_url); a.target = '_blank'; a.rel = 'noopener'; downloads.append(a); }
       card.append(downloads); return card;
     }));
@@ -210,8 +227,95 @@ async function enter() {
   }
   $('mood').value = settings.default_mood; $('omni-speed').value = settings.default_omni_speed;
   const hash = new URLSearchParams(location.hash.slice(1)); state.selected = hash.get('run');
-  await Promise.all([services(), refresh()]);
+  await Promise.all([services(), refresh(), loadLLM()]);
 }
+// ---------------------------------------------------------------- LLM settings
+function option(value, label) { const node = el('option', label); node.value = value; return node; }
+function connectionName(id) { const c = state.llm?.connections[id]; return c ? `${c.label} · ${c.model || 'server model'}` : id; }
+async function loadLLM() { try { renderLLM(await api('/api/llm-settings')); } catch (error) { $('llm-roles-error').textContent = error.message; } }
+function renderLLM(data) {
+  state.llm = data;
+  const ids = Object.keys(data.connections);
+  $('llm-roles').replaceChildren(...data.roles.map(role => {
+    const box = el('div', undefined, 'llm-role'); const label = el('label', role.label); label.htmlFor = `llm-role-${role.id}`;
+    const select = el('select'); select.id = `llm-role-${role.id}`;
+    select.replaceChildren(...ids.map(id => option(id, connectionName(id) + (role.needs_images && !data.connections[id].vision ? ' (no images)' : ''))));
+    select.value = data.assignments[role.id] || ''; box.append(label, select, el('p', role.description, 'hint')); return box;
+  }));
+  const configs = Object.entries(data.configurations);
+  $('llm-configs').replaceChildren(...(configs.length ? configs.map(([id, c]) => {
+    const row = el('div', undefined, 'llm-item'); const text = el('div');
+    text.append(el('strong', c.label + (data.active_configuration === id ? ' · active' : '')),
+                el('small', `Planner: ${connectionName(c.roles.planner)} · Reviewer: ${connectionName(c.roles.reviewer)}`));
+    if (c.note) text.append(el('small', c.note));
+    const actions = el('div', undefined, 'llm-actions');
+    const apply = el('button', 'Apply', 'secondary'); apply.type = 'button'; apply.onclick = () => llmAction('/api/llm-settings/configurations/apply', {id}, 'llm-config-error');
+    const remove = el('button', 'Delete', 'quiet'); remove.type = 'button'; remove.onclick = () => confirm(`Delete configuration "${c.label}"?`) && llmAction('/api/llm-settings/configurations/delete', {id}, 'llm-config-error');
+    actions.append(apply, remove); row.append(text, actions); return row;
+  }) : [el('p', 'No saved configurations yet.', 'hint')]));
+  $('llm-connections').replaceChildren(...ids.map(id => {
+    const c = data.connections[id], row = el('div', undefined, 'llm-item'), text = el('div');
+    const key = c.key_set === null ? 'no key needed' : c.key_set ? 'key set' : 'KEY MISSING';
+    text.append(el('strong', c.label), el('small', `${data.types[c.type].label} · ${c.url} · ${c.model || 'server model'}`),
+                el('small', `${c.vision ? 'images' : 'text only'} · ${c.max_concurrency || 1} at once · ${key}` + (c.in_use.length ? ` · in use: ${c.in_use.join(', ')}` : '')));
+    const actions = el('div', undefined, 'llm-actions');
+    const edit = el('button', 'Edit', 'secondary'); edit.type = 'button'; edit.onclick = () => editConnection(id);
+    const remove = el('button', 'Delete', 'quiet'); remove.type = 'button'; remove.onclick = () => confirm(`Delete connection "${c.label}"?`) && llmAction('/api/llm-settings/connections/delete', {id}, 'llm-form-error');
+    actions.append(edit, remove); row.append(text, actions); return row;
+  }));
+  if (!$('llm-type').options.length) $('llm-type').replaceChildren(...Object.entries(data.types).map(([id, t]) => option(id, t.label)));
+  const chosen = $('llm-configuration').value;
+  $('llm-configuration').replaceChildren(option('', `Current LLM settings (${connectionName(data.assignments.planner)} → ${connectionName(data.assignments.reviewer)})`),
+    ...configs.map(([id, c]) => option(id, c.label)));
+  $('llm-configuration').value = configs.some(([id]) => id === chosen) ? chosen : '';
+  if (!$('llm-id').value) resetConnectionForm();
+}
+async function llmAction(path, body, errorId) {
+  $(errorId).textContent = '';
+  try { renderLLM(await post(path, body)); return true; } catch (error) { $(errorId).textContent = error.message; return false; }
+}
+function updateConnectionType() {
+  const type = state.llm?.types[$('llm-type').value]; if (!type) return;
+  $('llm-key-row').hidden = !type.needs_key; $('llm-effort-row').hidden = $('llm-type').value !== 'openai_responses';
+  if (!$('llm-id').value) { $('llm-url').value = type.default_url; $('llm-concurrency').value = type.default_concurrency; }
+  $('llm-key-hint').textContent = type.needs_key ? `Saved keys stay on the server and are never shown again. Without one, ${type.key_env} from the service environment is used.` : '';
+}
+function resetConnectionForm() {
+  $('llm-id').value = ''; $('llm-form').reset(); $('llm-form-title').textContent = 'Add a connection'; $('llm-cancel').hidden = true;
+  $('llm-type').disabled = false; $('llm-timeout').value = 900; updateConnectionType();
+}
+function editConnection(id) {
+  const c = state.llm.connections[id]; $('llm-id').value = id; $('llm-form-title').textContent = `Edit “${c.label}”`; $('llm-cancel').hidden = false;
+  $('llm-type').value = c.type; $('llm-type').disabled = true; $('llm-label').value = c.label; $('llm-url').value = c.url; $('llm-model').value = c.model || '';
+  $('llm-concurrency').value = c.max_concurrency || 1; $('llm-timeout').value = c.timeout || 900; $('llm-vision').checked = !!c.vision;
+  $('llm-effort').value = c.reasoning_effort || 'low'; $('llm-key').value = ''; updateConnectionType();
+  $('llm-form').scrollIntoView({behavior: 'smooth', block: 'start'});
+}
+$('llm-open').addEventListener('click', () => { $('llm-view').hidden = false; document.querySelector('main.workspace').hidden = true; loadLLM(); });
+$('llm-close').addEventListener('click', () => { $('llm-view').hidden = true; document.querySelector('main.workspace').hidden = false; });
+$('llm-type').addEventListener('change', updateConnectionType);
+$('llm-cancel').addEventListener('click', resetConnectionForm);
+$('llm-save-roles').addEventListener('click', () => llmAction('/api/llm-settings/roles', {planner: $('llm-role-planner').value, reviewer: $('llm-role-reviewer').value}, 'llm-roles-error'));
+$('llm-save-config').addEventListener('click', async () => {
+  const roles = {planner: $('llm-role-planner').value, reviewer: $('llm-role-reviewer').value};   // what is selected now
+  if (await llmAction('/api/llm-settings/configurations', {label: $('llm-config-name').value, note: $('llm-config-note').value, roles}, 'llm-config-error')) { $('llm-config-name').value = ''; $('llm-config-note').value = ''; }
+});
+$('llm-detect').addEventListener('click', async event => {
+  event.target.disabled = true; $('llm-form-error').textContent = '';
+  try {
+    const data = await post('/api/llm-settings/detect', {type: $('llm-type').value, url: $('llm-url').value, id: $('llm-id').value || null, api_key: $('llm-key').value || null});
+    $('llm-model-list').replaceChildren(...data.models.map(id => option(id, id)));
+    $('llm-form-error').textContent = `${data.models.length} models listed; start typing in Model to pick one.`;
+  } catch (error) { $('llm-form-error').textContent = error.message; }
+  finally { event.target.disabled = false; }
+});
+$('llm-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  const body = {id: $('llm-id').value || null, type: $('llm-type').value, label: $('llm-label').value, url: $('llm-url').value,
+    model: $('llm-model').value, vision: $('llm-vision').checked, timeout: Number($('llm-timeout').value) || 900,
+    max_concurrency: Number($('llm-concurrency').value) || null, reasoning_effort: $('llm-effort').value, api_key: $('llm-key').value || null};
+  if (await llmAction('/api/llm-settings/connections', body, 'llm-form-error')) resetConnectionForm();
+});
 $('login-form').addEventListener('submit', async event => {
   event.preventDefault(); const button = event.submitter; button.disabled = true; $('login-error').textContent = '';
   const password = $('password').value; $('password').value = '';
@@ -240,6 +344,8 @@ $('create-form').addEventListener('submit', async event => {
       generation_mode: $('generation-mode').value,
       production_target: $('production-target').value,
       subject_graph: long && $('subject-graph').value === 'on',
+      animation_chapters: long && $('animation-chapters').value === 'on',
+      llm_configuration: $('llm-configuration').value || null,
       submission_id: (globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`)});
     state.jobs.unshift(job); await selectJob(job.id); await refresh();
     if (window.innerWidth < 820) $('run').scrollIntoView({behavior: 'smooth', block: 'start'});

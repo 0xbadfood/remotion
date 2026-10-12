@@ -24,6 +24,8 @@ def main():
     parser.add_argument("--generation-mode", choices=["short", "long"], default="short")
     parser.add_argument("--subject-graph", action=argparse.BooleanOptionalAction, default=False,
                         help="Use reviewed subject taxonomy guidance for long-film planning (default: off)")
+    parser.add_argument('--animation-chapters',action=argparse.BooleanOptionalAction,default=False,
+                        help='Let the long-film planner route useful chapters to Luna animation; missing SVGs pause for cache filling')
     parser.add_argument("--chapter-plan", type=Path, help="Reuse approved parent chapter JSON for a long film")
     parser.add_argument("--orientation-brief", type=Path, help="Prepared sourced parent orientation JSON for a long film")
     parser.add_argument("--project", type=Path, help="Project folder; new subjects get a unique folder when omitted")
@@ -57,6 +59,8 @@ def main():
     args.durations = list(dict.fromkeys(args.durations))
     if args.subject_graph and args.generation_mode != "long":
         parser.error("--subject-graph requires --generation-mode long")
+    if args.animation_chapters and (args.generation_mode != 'long' or args.tts_engine != 'vibevoice'):
+        parser.error('--animation-chapters requires --generation-mode long and --tts-engine vibevoice')
     if args.generation_mode == "long":
         if args.command != "create" or len(args.durations) != 1 or not 300 <= args.durations[0] <= 1800:
             parser.error("Long generation requires create and one advisory length between 300 and 1800 seconds")

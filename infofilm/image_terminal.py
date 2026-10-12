@@ -25,8 +25,8 @@ def terminal_settings(config):
     return {**value, 'protocol': PROTOCOL}
 
 
-def score_errors(value, message):
-    errors = image_review_errors(value)
+def score_errors(value, message, *, require_inventory=False, reference_available=None):
+    errors = image_review_errors(value, require_inventory=require_inventory, reference_available=reference_available)
     if not isinstance(value, dict):
         return errors
     if value.get('visual_message') != message:
@@ -43,6 +43,7 @@ def score_errors(value, message):
 
 
 def score_image(models, case, candidate, prompt, name):
+    from .educational_review import review_guidance, component_checks_enabled, normalize_inventory
     from .person_references import reference_review_kwargs
     asset = case['library']['assets'][0]
     reference_kwargs = reference_review_kwargs(asset)
@@ -51,7 +52,7 @@ def score_image(models, case, candidate, prompt, name):
     packet['source_facts'] = [f for f in case.get('source_context', {}).get('facts', []) if f['id'] in asset.get('fact_ids', [])]
     packet['rendering'] = {'orientations': case['library'].get('orientations'),
         'landscape_display': 'Center cover crop to 16:9; essential content must survive the crop.'}
-    task = (
+    task = review_guidance(asset) + (
         'Score the attached image against this shared target prompt and visual_message. '
         'You do not know its provider, earlier results, or other candidates. '
         'Give message_marks 0..50 for conveying the informative meaning, prompt_marks 0..30 for '
@@ -81,7 +82,8 @@ def score_image(models, case, candidate, prompt, name):
         try:
             review = models.call('reviewer', name + f'-json-{index}', task + feedback,
                                  image_path=candidate, max_tokens=2200, **reference_kwargs)
-            errors = score_errors(review, case['visual_message'])
+            review = normalize_inventory(review)
+            errors = score_errors(review, case['visual_message'], require_inventory=component_checks_enabled(asset), reference_available=bool(reference_kwargs))
         except ValueError as exc:
             errors = [str(exc)]
         if not errors:
@@ -102,9 +104,20 @@ def selectable(value):
     return value.get('review', {}).get('pass') is True
 
 
+def terminal_candidates(state):
+    """Include a generated candidate whose original review could not be parsed."""
+    candidates = list(state.get('takes', []))
+    if state.get('pending_review'):
+        candidates.append(state['pending_review'])
+    return candidates
+
+
 def checkpoint(config, root, case, policy):
     state = read(root / 'message-state.json')
-    target = state['takes'][-1]['settings']['prompt']
+    candidates = terminal_candidates(state)
+    if not candidates:
+        raise RuntimeError('No usable prior candidate for terminal recovery')
+    target = candidates[-1]['settings']['prompt']
     provider = config['image_provider_registry']['providers'][policy['provider']]
     identity = digest({'policy': policy, 'provider': provider, 'target_prompt': target,
                        'visual_message': case['visual_message']})
@@ -120,9 +133,10 @@ def needs_generation(config, root, case, policy):
 def recover(config, store, root, case, models, policy, *, session_managed=False):
     from .image_recovery import provider_session, render_take
     state = read(root / 'message-state.json')
-    if not state.get('takes'):
+    candidates = terminal_candidates(state)
+    if not candidates:
         raise RuntimeError('No usable prior candidate for terminal recovery')
-    target = state['takes'][-1]['settings']['prompt']
+    target = candidates[-1]['settings']['prompt']
     provider = config['image_provider_registry']['providers'][policy['provider']]
     premium = provider_config(config, policy['provider'], provider)
     rescue, identity = checkpoint(config, root, case, policy)
@@ -133,7 +147,6 @@ def recover(config, store, root, case, models, policy, *, session_managed=False)
             raise ValueError('Terminal selection changed')
         return value
     write(rescue / 'policy.json', {'settings': policy, 'target_prompt': target, 'visual_message': case['visual_message']})
-    candidates = list(state['takes'])
     # Optional explicit manual pilot candidates; never discover unrelated images
     # by subject or filename. Caller supplies the identity and actual prompt.
     for extra in config.get('image_terminal_extra_candidates', {}).get(case['asset_id'], []):

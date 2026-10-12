@@ -30,7 +30,7 @@ class ImageRecoveryTests(unittest.TestCase):
 
     def verdict(self, passed=True, mode='targeted'):
         return {'visual_message': self.message, 'pass': passed, 'reason_keys': [] if passed else ['unwanted_text'],
-                'issues': [] if passed else ['Generated caption'], 'limitations': [],
+                'issues': [] if passed else ['Generated caption'], 'limitations': [], 'component_inventory': [],
                 'repair_mode': 'none' if passed else mode, 'mode_reason': '' if passed else 'A small concrete fix.',
                 'correction': '' if passed else 'Use plain parchment.'}
 
@@ -158,6 +158,35 @@ class ImageRecoveryTests(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, 'Unknown Qwen'):
                     render_take({}, Mock(), root, params, 'A001 1/20')
                 request.assert_not_called()
+
+    def test_first_review_format_failure_keeps_candidate_and_enters_premium_recovery(self):
+        from infofilm.image_terminal import PROTOCOL as TERMINAL_PROTOCOL, REVIEW_TAG
+        config={**self.config,'image_terminal_recovery':{'enabled':True,'provider':'flux_dev_local','max_candidates':1}}
+        with tempfile.TemporaryDirectory() as folder:
+            store=Store(folder)
+            def terminal(config,store,root,case,models,policy,**kwargs):
+                state=read(root/'message-state.json')
+                self.assertEqual(state['takes'],[])
+                take=state['pending_review']
+                self.assertEqual(digest(Path(take['candidate']).read_bytes()),take['sha256'])
+                review={**self.verdict(False),'message_marks':40,'prompt_marks':24,
+                        'usability_marks':16,'score':80,'score_protocol':TERMINAL_PROTOCOL}
+                return {'asset':case['asset_id'],'file':take['candidate'],'sha256':take['sha256'],
+                        'visual_message':self.message,'review':review,'total_attempts':2,
+                        'selection_status':'best_available','needs_review':True,'review_tag':REVIEW_TAG,
+                        'terminal_recovery':{'protocol':TERMINAL_PROTOCOL}}
+            try:
+                with self.engine([RepairContractError('Invalid review JSON')]) as (_,render,_,_), \
+                     patch('infofilm.image_terminal.recover',side_effect=terminal) as rescue:
+                    output=generate_message_images(config,store,self.library,Mock())
+                self.assertEqual(render.call_count,1)
+                self.assertEqual(rescue.call_count,1)
+                self.assertTrue(output['A001']['needs_review'])
+                self.assertEqual(read(Path(folder)/'image-recovery-report.json')['unresolved'],[])
+                blocked=[json.loads(r[0]) for r in store.db.execute("SELECT detail FROM events WHERE state='repair_blocked'")]
+                self.assertTrue(blocked[0]['terminal_recovery_queued'])
+            finally:
+                store.db.close()
 
     def test_missing_message_or_unknown_provider_fails_before_gpu(self):
         with tempfile.TemporaryDirectory() as d:
@@ -317,6 +346,7 @@ class ImageRevisionTests(unittest.TestCase):
                                          'image_recovery_max_attempts':3})
             calls=[]
             def child(payload,project,store,cid,*extra):
+                if payload.get('until')=='script':return project/'attempts/script'   # phase A (scripts) stub
                 calls.append(cid);self.assertEqual(payload['resume_from'],'images')
                 self.assertEqual(read(payload['config'])['image_recovery_mode'],'message_v1')
                 if cid=='C02':raise RuntimeError('Visual failure')

@@ -28,8 +28,54 @@
   <div id="app" hidden>
     <header>
       <a class="brand" href="/">REMOTION<span>VIDEO</span></a>
-      <div class="header-actions"><span id="connection" class="connection">Connecting…</span><button id="logout" class="quiet">Sign out</button></div>
+      <div class="header-actions"><span id="connection" class="connection">Connecting…</span><button id="llm-open" class="quiet">LLM settings</button><button id="logout" class="quiet">Sign out</button></div>
     </header>
+    <section id="llm-view" class="llm-view" hidden>
+      <div class="section-heading"><div><p class="eyebrow">LLM SETTINGS</p><h2>Planner and reviewer.</h2></div><button id="llm-close" class="quiet" type="button">← Back to films</button></div>
+      <div class="llm-grid">
+        <div class="panel">
+          <h3>Roles</h3>
+          <p class="hint">Every new run freezes these two endpoints. Use different models for the planner and the reviewer (no self-review); the reviewer must accept images.</p>
+          <div id="llm-roles"></div>
+          <button id="llm-save-roles" class="primary" type="button">Save roles</button>
+          <p id="llm-roles-error" class="error" role="alert"></p>
+        </div>
+        <div class="panel">
+          <h3>Configurations</h3>
+          <p class="hint">Named planner + reviewer pairs. Apply one here, or choose it for a single run when creating a film.</p>
+          <div id="llm-configs" class="llm-list"></div>
+          <label for="llm-config-name">Save the current roles as</label>
+          <input id="llm-config-name" maxlength="60" placeholder="e.g. Haiku + Luna">
+          <input id="llm-config-note" maxlength="400" placeholder="Note (optional)">
+          <button id="llm-save-config" class="secondary" type="button">Save configuration</button>
+          <p id="llm-config-error" class="error" role="alert"></p>
+        </div>
+        <div class="panel llm-wide">
+          <h3>Connections</h3>
+          <div id="llm-connections" class="llm-list"></div>
+          <h4 id="llm-form-title">Add a connection</h4>
+          <form id="llm-form">
+            <input id="llm-id" type="hidden">
+            <div class="two-up">
+              <div><label for="llm-type">Type</label><select id="llm-type"></select></div>
+              <div><label for="llm-label">Name</label><input id="llm-label" maxlength="80" required placeholder="Claude Haiku 5.5 (OpenRouter)"></div>
+            </div>
+            <label for="llm-url">Base URL</label><input id="llm-url" maxlength="300" required placeholder="https://openrouter.ai/api/v1">
+            <label for="llm-model">Model</label>
+            <div class="upload-row"><input id="llm-model" maxlength="200" list="llm-model-list" placeholder="anthropic/claude-haiku-5.5"><datalist id="llm-model-list"></datalist><button id="llm-detect" class="quiet" type="button">List models</button></div>
+            <div id="llm-key-row"><label for="llm-key">API key</label><input id="llm-key" type="password" autocomplete="off" maxlength="500" placeholder="Leave empty to keep the saved key or use the service environment"><p id="llm-key-hint" class="hint"></p></div>
+            <div class="two-up">
+              <div><label for="llm-concurrency">Requests at once</label><input id="llm-concurrency" type="number" min="1" max="64"></div>
+              <div><label for="llm-timeout">Timeout (seconds)</label><input id="llm-timeout" type="number" min="30" max="3600" value="900"></div>
+            </div>
+            <div id="llm-effort-row" hidden><label for="llm-effort">Reasoning effort</label><select id="llm-effort"><option value="low">Low · fastest</option><option value="medium">Medium</option><option value="high">High</option></select></div>
+            <label class="check"><input id="llm-vision" type="checkbox"><span>Accepts images (required for the reviewer)</span></label>
+            <p id="llm-form-error" class="error" role="alert"></p>
+            <div class="upload-row"><button id="llm-save" class="primary" type="submit">Save connection</button><button id="llm-cancel" class="quiet" type="button" hidden>Cancel edit</button></div>
+          </form>
+        </div>
+      </div>
+    </section>
     <main class="workspace">
       <aside>
         <section class="create-panel panel">
@@ -58,6 +104,9 @@
               <label for="subject-graph">Subject graph planning</label>
               <select id="subject-graph"><option value="off">Off</option><option value="on">On</option></select>
               <p class="hint">On classifies the subject and uses its profile to guide research and chapter planning. The planner chooses the outline.</p>
+              <label for="animation-chapters">Explanatory animation chapters</label>
+              <select id="animation-chapters"><option value="off">Off · illustrated chapters</option><option value="on">Auto · let the planner choose animation where useful</option></select>
+              <p class="hint">Uses the OpenAI Luna API for animation chapters and VibeVoice narration. Missing drawing assets pause the chapter for cache filling; resume continues from the saved plan and audio.</p>
               <p class="hint">Plans connected chapters, researches and produces each one, then joins them with section cards and music transitions. A failed chapter stays saved while the remaining chapters continue.</p>
             </div>
             <label for="mood">Mood</label>
@@ -83,6 +132,8 @@
             <label for="image-review">Generated image review</label>
             <select id="image-review"><option value="on">On · review and repair images</option><option value="off">Off · generate planned images once</option></select>
             <p class="hint">Off skips image reviews, prompt repairs and premium recovery. Script and image planning reviews follow the separate review setting below.</p>
+            <label for="llm-configuration">LLM configuration</label>
+            <select id="llm-configuration"><option value="">Current LLM settings</option></select>
             <details class="advanced"><summary>Review options</summary><label class="check"><input id="review-mode" type="checkbox" checked><span>Use the second-model planning review loop</span></label><p class="hint">It reviews meaning and visual planning with bounded corrections. Saved measurements track its benefit and cost.</p></details>
             <p id="create-error" class="error" role="alert"></p>
             <button id="create-button" class="primary" type="submit">Create video <span aria-hidden="true">→</span></button>
@@ -102,6 +153,7 @@
           <p id="run-event" class="muted live-event" aria-live="polite"></p>
           <div id="run-error" class="run-error" hidden>
             <p id="run-error-text" class="error"></p>
+            <div id="asset-waits"></div>
             <label for="resume-image-review">Image review on resume</label>
             <select id="resume-image-review"><option value="on">On · review and repair images</option><option value="off">Off · generate planned images once</option></select>
             <button id="resume" class="secondary" type="button">Resume saved run</button>

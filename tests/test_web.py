@@ -48,6 +48,60 @@ class AuthTests(unittest.TestCase):
 
 
 class WebTests(unittest.TestCase):
+    def test_animation_chapters_wait_for_registered_assets_then_resume(self):
+        import copy
+        import shutil
+        from test_animation_objects import plan, SVG
+        from infofilm.animation_frontier import resolve_objects
+        from infofilm.animation_objects import register_object
+        from infofilm.core import ROOT, Store, read
+        self.login()
+        with patch.dict(os.environ,{'OPENAI_TOKEN':'test-only-dummy-key'}):
+            response=self.submit(generation_mode='long',durations=[360],animation_chapters=True)
+        self.assertEqual(response.status_code,202,response.text)
+        job=response.json();queue=self.app.state.queue;original=queue.get(job['id'])
+        self.assertTrue(job['settings']['animation_chapters'])
+        self.assertIn('animation_provider',read(original['request']['config']))
+        self.assertEqual(self.submit(animation_chapters=True).status_code,422)
+        self.assertEqual(self.submit(generation_mode='long',durations=[360],animation_chapters=True,tts_engine='omnivoice').status_code,422)
+        library=self.root/'animation-library';shutil.copytree(ROOT/'animation-library',library)
+        project=Path(original['project']);child=project/'chapters/c01';animation=child/'animation'
+        candidate=plan('geometry.web-demand.v1')
+        store=Store(animation)
+        try:
+            write(animation/'components-plan.json',candidate)
+            write(animation/'inputs.json',{'library':str(library)})
+            _,_,resolution=resolve_objects(store,candidate,library,None)
+        finally:store.db.close()
+        write(animation/'report.html',{'fixture':'Asset wait'})
+        # The media route only publishes an explicit allowlist.
+        (animation/'report.html').write_text('<h1>Asset wait</h1>')
+        write(animation/'public-report.json',{'schema_version':'infofilm.public-experiment-report.v1','files':['report.html','object-requests.json']})
+        chapter={'id':'C01','title':'One demonstration','scope':{'start_year':None,'end_year':None,'description':'A mechanism'},
+                 'mood':{'preset':'curious'},'production':{'kind':'animation'}}
+        write(project/'longform-status.json',{'chapters':[{'chapter':chapter,'project':str(child),'duration':120,'status':'waiting_for_assets'}],
+                                             'completed':0,'failed':0,'total':1})
+        queue._update(job['id'],status='running',run_id='asset-wait',pid=999999)
+        write(queue._result_path(queue.get(job['id'])),{'status':'waiting_for_assets','error':'Fill cache'})
+        self.assertFalse(queue._observe(queue.get(job['id'])))
+        self.assertEqual(queue.get(job['id'])['status'],'waiting_for_assets')
+        detail=self.client.get('/api/jobs/'+job['id']).json()
+        self.assertFalse(detail['can_resume_assets']);self.assertEqual(len(detail['asset_waits'][0]['unresolved']),1)
+        self.assertEqual(self.client.get(detail['chapters'][0]['asset_requests_url']).status_code,200)
+        self.assertEqual(self.client.get(detail['chapters'][0]['animation_report_url']).status_code,200)
+        self.assertEqual(self.client.get(f"/media/{job['id']}/chapter/C01/animation/inputs.json").status_code,404)
+        self.assertEqual(self.client.post(f"/api/jobs/{job['id']}/resume",json={}).status_code,409)
+        svg=self.root/'new.svg';svg.write_bytes(SVG)
+        metadata={'pivot':[.5,.5],'capabilities':['circular'],'provenance':'Original test asset'}
+        import hashlib
+        review={'pass':True,'asset_sha256':hashlib.sha256(SVG).hexdigest(),'assessed_capabilities':['circular']}
+        register_object(resolution['faults'],resolution['faults'][0]['request_id'],svg,metadata,review,library=library)
+        self.assertTrue(self.client.get('/api/jobs/'+job['id']).json()['can_resume_assets'])
+        resumed=self.client.post(f"/api/jobs/{job['id']}/resume",json={})
+        self.assertEqual(resumed.status_code,200,resumed.text)
+        self.assertEqual(queue.get(job['id'])['status'],'queued')
+        self.assertEqual(queue.get(job['id'])['request'],original['request'])
+
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         self.root = Path(self.temporary.name)
@@ -85,6 +139,36 @@ class WebTests(unittest.TestCase):
         value = {'subject':'Why volcanoes erupt','durations':[60],'orientation':'both','review_mode':'off',
                  'voice_id':'default','submission_id':'submission-test-01'} | overrides
         return self.client.post('/api/jobs', json=value)
+
+    def test_llm_settings_page_saves_connections_roles_and_freezes_a_run(self):
+        from infofilm.core import read
+        self.assertEqual(self.client.get('/api/llm-settings').status_code, 401)
+        self.login()
+        data = self.client.get('/api/llm-settings').json()
+        self.assertEqual(sorted(c['url'] for c in data['connections'].values()), ['http://planner/v1', 'http://reviewer/v1'])
+        haiku = {'type': 'openrouter', 'label': 'Haiku', 'url': 'https://openrouter.ai/api/v1', 'model': 'anthropic/claude-haiku-5.5',
+                 'vision': True, 'api_key': 'sk-or-web-secret'}
+        luna = {'type': 'openai_responses', 'label': 'Luna', 'url': 'https://api.openai.com/v1', 'model': 'gpt-6-luna',
+                'vision': True, 'api_key': 'sk-luna-web-secret'}
+        for body in (haiku, luna):
+            response = self.client.post('/api/llm-settings/connections', json=body)
+            self.assertEqual(response.status_code, 200); self.assertNotIn('web-secret', response.text)
+        bad = self.client.post('/api/llm-settings/roles', json={'planner': 'luna', 'reviewer': 'nope'})
+        self.assertEqual(bad.status_code, 422)
+        # Saving a configuration takes the roles selected on the page even if "Save roles" was not clicked first.
+        saved = self.client.post('/api/llm-settings/configurations',
+                                 json={'label': 'Haiku + Luna', 'roles': {'planner': 'haiku', 'reviewer': 'luna'}}).json()
+        self.assertEqual(saved['configurations']['haiku-luna']['roles'], {'planner': 'haiku', 'reviewer': 'luna'})
+        self.assertEqual(saved['assignments'], {'planner': 'haiku', 'reviewer': 'luna'})
+        self.assertEqual(saved['active_configuration'], 'haiku-luna')
+        job = self.submit().json()
+        self.assertEqual(job['settings']['llm_configuration']['label'], 'Haiku + Luna')
+        project = Path(self.app.state.queue.get(job['id'])['project'])
+        frozen = read(project / 'config-snapshot.json')
+        self.assertEqual(frozen['planner_url'], 'https://openrouter.ai/api/v1#haiku')
+        self.assertNotIn('web-secret', (project / 'config-snapshot.json').read_text())
+        unknown = self.submit(submission_id='submission-test-02', llm_configuration='missing')
+        self.assertEqual(unknown.status_code, 409)
 
     def test_image_review_switch_and_resume_preserve_upstream_settings(self):
         from infofilm.core import read

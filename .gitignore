@@ -1,6 +1,7 @@
 __pycache__/
 *.pyc
 .venv/
+.venv-manim-pilot/
 .env
 .env.*
 !.env.example
@@ -32,3 +33,6 @@ renderer/public/*
 *.log
 *.pem
 *.key
+
+# Dated local backups of config files
+*.bak-*

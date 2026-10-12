@@ -9,6 +9,7 @@ from types import SimpleNamespace
 
 from .core import read, write
 from .pipeline import create
+from .production_state import ProductionPaused
 
 
 def run(request_path, result_path):
@@ -20,6 +21,9 @@ def run(request_path, result_path):
         for field in ["project", "config", "sources", "reference_audio", "script_dir", "visual_plan_dir", "image_manifest", "chapter_context", "chapter_plan", "orientation_brief"]:
             setattr(args, field, Path(getattr(args, field)) if getattr(args, field, None) else None)
         create(args)
+    except ProductionPaused as exc:
+        write(result_path, {'status': exc.status, 'error': str(exc), 'details': exc.details, 'finished': time.time()})
+        return 0
     except (Exception, SystemExit) as exc:
         traceback.print_exc()
         try:

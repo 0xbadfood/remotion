@@ -20,7 +20,7 @@ from .gpu_release import release_vibevoice
 
 @contextmanager
 def vibe_service(config, store, root):
-    with gpu_lease(config):
+    with gpu_lease(config, "voice"):
         health = request(config, "tts", "GET", "/health")
         if health.get("active_job") or health.get("queued_or_running_jobs"):
             own_active = False
@@ -49,6 +49,15 @@ def vibe_service(config, store, root):
                 release_vibevoice(config, store, request_fn=request, allow_restart=complete)
 
 
+def job_known(config, job_id):
+    """False only when the voice server answers 404 for this id; any other answer or error counts as known."""
+    try:
+        with httpx.Client(timeout=30) as client:
+            return client.get(config["tts_url"] + "/jobs/" + job_id).status_code != 404
+    except (httpx.HTTPError, ValueError):
+        return True
+
+
 def _batch(config, store, root, tasks, reference, attempt, index, name):
     directory = root / "batches" / f"attempt-{attempt}-batch-{index}"
     record_path = directory / "provider.json"
@@ -58,6 +67,12 @@ def _batch(config, store, root, tasks, reference, attempt, index, name):
         body = record["body"]
         if [x["point_id"] for x in record["points"]] != [p["id"] for p in tasks]:
             raise RuntimeError("Saved VibeVoice batch is immutable; resume its original points")
+        if record.get("state") == "submission_started" and not (directory / "result.json").exists():
+            # The POST was never confirmed (e.g. refused while the single-job server served another chapter). If the
+            # server does not know this job id, it never accepted it: submit the saved body under the same id.
+            if not job_known(config, job_id):
+                response = request(config, "tts", "POST", "/render-batch", json=body)
+                write(record_path, {**record, "state": "submitted", "response": response})
     else:
         with reference.open("rb") as handle:
             staged = request(config, "tts", "POST", "/stage-speaker",
@@ -66,12 +81,12 @@ def _batch(config, store, root, tasks, reference, attempt, index, name):
         body = {"job_id": job_id, "lang_key": config["language"], "cfg_scale": 1.3,
             "items": [{"script": "Speaker 1: " + mfa_numeric_text(p["narration"]),
                        "voice_samples": [staged["voice_ref"]],
-                       "output_name": p["id"] + ".wav", "chunk_index": index*5+i}
+                       "output_name": p["id"] + ".wav", "chunk_index": index*40+i}
                       for i, p in enumerate(tasks)]}
         record = {"state": "submission_started", "job_id": job_id, "body": body,
                   "points": [{"point_id": p["id"], "text_sha256": digest(p["narration"]),
                               "spoken_text": mfa_numeric_text(p["narration"])} for p in tasks],
-                  "synthesis_text_policy": "explicit-spoken-numbers-v1"}
+                  "synthesis_text_policy": "contextual-spoken-years-v2"}
         write(record_path, record)
         response = request(config, "tts", "POST", "/render-batch", json=body)
         write(record_path, {**record, "state": "submitted", "response": response})
@@ -111,6 +126,15 @@ def _check_clip(config, project, point, clip, name):
     # CPU work uses its own SQLite connection; the GPU can render the next batch.
     store = Store(project)
     try:
+        spoken_points = {}
+        provider = clip.parent / "provider.json"
+        if provider.exists():
+            batch_path = read(provider).get("batch_record")
+            if batch_path:
+                batch = read(Path(batch_path))
+                for item in batch.get("points", []):
+                    if item["point_id"] == point["id"] and item.get("spoken_text") is not None:
+                        spoken_points[point["id"]] = item["spoken_text"]
         from .silence import cleanup
         try:
             clip, pauses = cleanup(clip, config, store, name + '-' + point['id'])
@@ -120,7 +144,8 @@ def _check_clip(config, project, point, clip, name):
         if audit["status"] != "passed":
             return {"audit": audit}
         try:
-            timing = align_audio(config, store, clip, {"points": [point]}, name + "-" + point["id"])
+            timing = align_audio(config, store, clip, {"points": [point]}, name + "-" + point["id"],
+                                 **({"spoken_points": spoken_points} if spoken_points else {}))
         except AlignmentError as exc:
             failure = {"audit": audit, "alignment_error": str(exc), "audio": str(clip)}
             write(clip.parent / "alignment-failure.json", failure)
@@ -159,8 +184,8 @@ def render_vibevoice(config, store, points, name):
     batch_size = config.get("vibe_batch_size", 4)
     attempts = config.get("vibe_max_attempts", 3)
     pause = config.get("vibe_pause_seconds", .18)
-    if isinstance(batch_size, bool) or not isinstance(batch_size, int) or not 1 <= batch_size <= 5:
-        raise ValueError("vibe_batch_size must be an integer between 1 and 5")
+    if isinstance(batch_size, bool) or not isinstance(batch_size, int) or not 1 <= batch_size <= 40:
+        raise ValueError("vibe_batch_size must be an integer between 1 and 40")
     if isinstance(attempts, bool) or not isinstance(attempts, int) or not 1 <= attempts <= 5:
         raise ValueError("vibe_max_attempts must be an integer between 1 and 5")
     if isinstance(pause, bool) or not isinstance(pause, (int, float)) or not 0 <= pause <= 1:

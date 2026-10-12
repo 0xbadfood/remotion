@@ -1,0 +1,22 @@
+{
+  "schema_version": "infofilm.animation-requirement.v1",
+  "id": "gravity-cannon-explanation-v1",
+  "subject": "Gravity after a horizontal launch",
+  "visual_message": "A horizontally launched ball curves downward because gravity changes its vertical motion. A second ball dropped simultaneously from the same height has the same vertical motion and reaches the ground at the same time, ignoring air resistance.",
+  "scene_requirement": "Explain this concept with a clear animated cannon-and-ball demonstration suitable for a casual viewer or junior student. Show the horizontal launch and downward acceleration, then compare a launched ball with a dropped ball. Let the narration determine the sequence. Choose the components, their arrangement, and their motion yourself.",
+  "audience": "Casual viewers and junior students",
+  "facts": [
+    "Near Earth's surface, uniform gravitational acceleration is approximately 9.81 metres per second squared downward.",
+    "With air resistance ignored, horizontal velocity remains constant after release.",
+    "A horizontal launch has zero initial vertical velocity.",
+    "With the same starting height and zero initial vertical velocity, simultaneous released balls have equal vertical displacement at every instant.",
+    "A launched ball and a dropped ball can land in different places at the same time."
+  ],
+  "constraints": [
+    "Keep the starting height, gravity and simultaneous release consistent in the comparison.",
+    "Represent freely falling balls using the deterministic projectile primitive; do not replace acceleration with constant-speed linear motion.",
+    "Use short, readable visual labels. Narration captions are added from the frozen transcript by code.",
+    "Preserve the assumptions of uniform gravity and ignored air resistance.",
+    "Request a missing component explicitly. Do not silently replace it with an unrelated asset."
+  ]
+}

@@ -88,7 +88,7 @@ def _generate(config, store, request_path, name):
     env = {**os.environ, "PYTHONUNBUFFERED": "1", "PYTHONDONTWRITEBYTECODE": "1",
            "HF_HUB_OFFLINE": "1", "TRANSFORMERS_OFFLINE": "1"}
     command = [config["acestep_python"], "-u", "-m", "infofilm.music_worker", str(request_path)]
-    with gpu_lease(config) as lease:
+    with gpu_lease(config, "music") as lease:
         if (request_path.parent / "worker-result.json").exists() and (request_path.parent / "music.wav").is_file():
             return
         release_services(config)

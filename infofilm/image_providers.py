@@ -27,7 +27,7 @@ IMAGE_REVIEW_REASONS = {
 }
 
 
-def image_review_errors(review):
+def image_review_errors(review, *, require_inventory=False, reference_available=None):
     """New reviews must use the code-owned vocabulary, not free-form reasons."""
     if not isinstance(review, dict):
         return ["Expected one image-review JSON object"]
@@ -47,6 +47,11 @@ def image_review_errors(review):
         errors.append("Rejection needs concrete visible evidence in issues")
     if not isinstance(review.get("correction"), str):
         errors.append("correction must be a string")
+    from .educational_review import inventory_errors, inventory_failures
+    inventory_problems = inventory_errors(review, required=require_inventory, reference_available=reference_available)
+    errors.extend(inventory_problems)
+    if not inventory_problems and review.get('pass') is True and inventory_failures(review):
+        errors.append('A component count or placement contradiction cannot pass; give concrete issues and correction')
     return errors
 
 

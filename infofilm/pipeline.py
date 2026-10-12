@@ -4,7 +4,7 @@ import json
 import subprocess
 from pathlib import Path
 
-from .core import ROOT, Store, configuration, digest, read, write
+from .core import ROOT, Store, configuration, digest, read, write, resource_slot
 from .llm import Models
 from .media import align_audio, audit_audio, generate_images, render_audio
 from .omni_media import render_omnivoice
@@ -15,15 +15,25 @@ from .creative import (MOODS, BALANCES, INTENSITIES, MUSIC, make_creative_brief,
                        make_visual_beats, library_from_beats, beat_errors, visual_metrics)
 from .music import prepare_music
 from .narrators import select_reference
+from .llm_settings import endpoint, llm_config
 from .planning import make_evidence, make_library, make_script, make_storyboard, make_image_prompts, library_errors, storyboard_errors, script_text, word_count
 from .video import compile_timeline, render
 
 
-def research(config, store, subject, *, subject_guidance=None):
-    """Run kbagent with its existing dependencies; archive and resume fetched evidence."""
+def agent_role(config):
+    """The research agent calls tools through chat completions: the reviewer as before, unless the reviewer is a
+    Responses-API connection, then the planner."""
+    return "reviewer" if endpoint(config, "reviewer")["type"] != "openai_responses" else "planner"
+
+
+def research(config, store, subject, *, subject_guidance=None, budget=None):
+    """Run kbagent with its existing dependencies; archive and resume fetched evidence. `budget` ({max_searches,
+    max_fetches}) widens film-level research, whose digest every chapter builds on."""
     identity = digest({"subject":subject, "model_url":config["reviewer_url"], "policy":"primary-evergreen-v1"})
     if subject_guidance is not None:
         identity = digest({'legacy_identity': identity, 'subject_guidance': subject_guidance})
+    if budget:
+        identity = digest({'identity': identity, 'budget': budget})
     directory = store.root / "research" / identity[:16]
     output = directory / "extracted.json"
     if output.exists() and (directory / "answer.txt").exists():
@@ -33,6 +43,8 @@ def research(config, store, subject, *, subject_guidance=None):
         raise RuntimeError(f"Research Python environment is missing: {interpreter}")
     request = write(directory/"request.json", {"subject":subject,"directory":str(directory),
         "kbagent_root":config["kbagent_root"],"model_url":config["reviewer_url"],
+        **({"llm": llm_config(config), "agent_role": agent_role(config)} if config.get("llm_endpoints") else {}),
+        **({"budget": budget} if budget else {}),
         **({'subject_guidance': subject_guidance} if subject_guidance is not None else {})})
     store.event("research","running",{"subject":subject,"python":str(interpreter)})
     try:
@@ -47,6 +59,24 @@ def research(config, store, subject, *, subject_guidance=None):
     sources = read(output)
     store.event("research","succeeded",{"fetched_sources":len(sources["results"]),"archive":str(directory)})
     return sources
+
+
+def voice_calibration(config, store):
+    """Words per minute of the narrator on the configured voice engine (one short take, cached)."""
+    calibration = store.root / "voice_calibration.json"
+    ref_hash = digest(Path(config["reference_audio"]).read_bytes())
+    calibration_key = digest({"reference_audio_sha256": ref_hash, "tts_engine": config["tts_engine"],
+                              "reference_transcript": config.get("reference_transcript") if config["tts_engine"] == "omnivoice" else None,
+                              **({"omni_speed": config.get("omni_speed", .8)} if config["tts_engine"] == "omnivoice" else {})})
+    existing_calibration = read(calibration) if calibration.exists() else {}
+    legacy_vibe_calibration = (config["tts_engine"] == "vibevoice" and not existing_calibration.get("calibration_key")
+                               and existing_calibration.get("reference_audio_sha256") == ref_hash)
+    if existing_calibration.get("calibration_key") != calibration_key and not legacy_vibe_calibration:
+        text = "A clear explanation starts with the main idea. We then explore how it works, why it matters, and which details need care. Each step should connect naturally, giving the listener enough time to understand."
+        audio, info = (render_omnivoice(config, store, [{"id": "calibration", "narration": text}], "voice-calibration")
+                       if config["tts_engine"] == "omnivoice" else render_audio(config, store, text, "voice-calibration"))
+        write(calibration, {"audio": str(audio), **info, "calibration_key": calibration_key})
+    return read(calibration)["observed_words_per_minute"]
 
 
 def prepare_audio(config, store, models, evidence, duration, rate, experimental, supplied_script=None, creative_brief=None):
@@ -118,6 +148,9 @@ def prepare_audio(config, store, models, evidence, duration, rate, experimental,
 
 
 def create(args):
+    if getattr(args, 'generation_mode', 'short') == 'animation':
+        from .animation_production import create_animation
+        return create_animation(args)
     if getattr(args, "generation_mode", "short") == "long":
         from .longform import create_long
         return create_long(args)
@@ -187,21 +220,16 @@ def create(args):
         brief = make_creative_brief(models, evidence, mood, intensity, balance, experimental=experimental)
     write(store.root / "creative-brief.json", brief)
     stage("creative", "succeeded", resolved_mood=brief["resolved_mood"], visual_balance=brief["visual_balance"])
-    calibration = store.root / "voice_calibration.json"
     stage("narration", "running", task="Voice calibration")
-    ref_hash = digest(Path(config["reference_audio"]).read_bytes())
-    calibration_key = digest({"reference_audio_sha256": ref_hash, "tts_engine": config["tts_engine"],
-                              "reference_transcript": config.get("reference_transcript") if config["tts_engine"] == "omnivoice" else None,
-                              **({"omni_speed": config.get("omni_speed", .8)} if config["tts_engine"] == "omnivoice" else {})})
-    existing_calibration = read(calibration) if calibration.exists() else {}
-    legacy_vibe_calibration = (config["tts_engine"] == "vibevoice" and not existing_calibration.get("calibration_key")
-                               and existing_calibration.get("reference_audio_sha256") == ref_hash)
-    if existing_calibration.get("calibration_key") != calibration_key and not legacy_vibe_calibration:
-        text = "A clear explanation starts with the main idea. We then explore how it works, why it matters, and which details need care. Each step should connect naturally, giving the listener enough time to understand."
-        audio, info = (render_omnivoice(config, store, [{"id": "calibration", "narration": text}], "voice-calibration")
-                       if config["tts_engine"] == "omnivoice" else render_audio(config, store, text, "voice-calibration"))
-        write(calibration, {"audio": str(audio), **info, "calibration_key": calibration_key})
-    rate = read(calibration)["observed_words_per_minute"]
+    rate = voice_calibration(config, store)
+    if args.until == "script":
+        # Long films, phase A: stop after the accepted script. The media phase reuses it from the cache.
+        for duration in args.durations:
+            script = make_script(models, evidence, duration, rate, experimental=experimental, creative_brief=brief)
+            write(store.root / f"film-{duration}" / "script.json", script)
+            (store.root / f"film-{duration}" / "script.txt").write_text(script_text(script) + "\n")
+            stage("script", "succeeded", requested_seconds=duration, points=len(script["points"]))
+        return
     films = []
     for duration in args.durations:
         supplied = read(args.script_dir/f"script-{duration}.json") if args.script_dir else None
@@ -212,7 +240,8 @@ def create(args):
         stage("timing", "running", requested_seconds=duration)
         film["timing"] = (align_vibevoice(config, store, film["audio"], film["script"], film["audio_info"], f"alignment-{duration}")
                           if config["tts_engine"] == "vibevoice" and film["audio_info"].get("point_clips") else
-                          align_audio(config, store, film["audio"], film["script"], f"alignment-{duration}"))
+                          align_audio(config, store, film["audio"], film["script"], f"alignment-{duration}",
+                                      spoken_points=film["audio_info"].get("spoken_points")))
         write(store.root / f"film-{duration}" / "timing.json", film["timing"])
         stage("timing", "succeeded", requested_seconds=duration)
         films.append(film)
@@ -269,7 +298,9 @@ def finish_visuals(args, config, store, models, evidence, sources, brief, films,
     reference_enabled = reference_settings(config)['enabled']
     prompts = make_image_prompts(models, library, films, evidence, orientations, experimental=experimental,
                                  message_recovery=config.get("image_recovery_mode") == "message_v1",
-                                 **({'person_references': True} if reference_enabled else {}))
+                                 **({'classify_review': True} if config.get('image_classify_review', False) else {}),
+                                 **({'person_references': True} if reference_enabled else {}),
+                                 **({'film_cast': config['film_cast']} if reference_enabled and config.get('film_cast') else {}))
     if reference_enabled:
         prompts = prepare_person_references(config, store, prompts)
     write(store.root/"scene-image-prompts.json", prompts)
@@ -277,6 +308,8 @@ def finish_visuals(args, config, store, models, evidence, sources, brief, films,
     for asset in library["assets"]:
         if asset["id"] in asset_by_id and "visual_message" in asset_by_id[asset["id"]]:
             asset.update({k: asset_by_id[asset["id"]][k] for k in ["visual_message", "setting", "visual_style"]})
+        if asset['id'] in asset_by_id and 'review_profile' in asset_by_id[asset['id']]:
+            asset['review_profile'] = asset_by_id[asset['id']]['review_profile']
         if reference_enabled and asset['id'] in asset_by_id:
             asset.update({k: asset_by_id[asset['id']][k] for k in ['people_in_frame', 'person_reference_status', 'reference_card']
                           if k in asset_by_id[asset['id']]})
@@ -286,6 +319,8 @@ def finish_visuals(args, config, store, models, evidence, sources, brief, films,
         for scene in film["storyboard"]["scenes"]:
             if scene.get("asset_id") in asset_by_id and "visual_message" in asset_by_id[scene["asset_id"]]:
                 scene["visual_message"] = asset_by_id[scene["asset_id"]]["visual_message"]
+            if scene.get('asset_id') in asset_by_id and 'review_profile' in asset_by_id[scene['asset_id']]:
+                scene['review_profile'] = asset_by_id[scene['asset_id']]['review_profile']
             if reference_enabled and scene.get('asset_id') in asset_by_id:
                 asset = asset_by_id[scene['asset_id']]
                 scene['people_in_frame'] = asset['people_in_frame']
@@ -318,7 +353,8 @@ def finish_visuals(args, config, store, models, evidence, sources, brief, films,
             delivery_config = {**config, "width": 1080 if orientation == "portrait" else 1920,
                                "height": 1920 if orientation == "portrait" else 1080}
             root, timeline = compile_timeline(delivery_config, store, film["script"], film["timing"], film["storyboard"], images, evidence, sources, film["requested_seconds"], creative_brief=brief, music=film["music"])
-            video = render(delivery_config, store, root, timeline)
+            with resource_slot("remotion-render", config.get("render_slots", 2)):    # parallel chapters share the CPU
+                video = render(delivery_config, store, root, timeline)
             outputs.append({"requested_seconds": film["requested_seconds"], "actual_seconds": film["actual_seconds"],
                             "orientation": orientation, "point_count": film["point_count"], "visual_metrics": visual_metrics(film["storyboard"], film["script"], film["timing"]),
                             "music_engine": music_engine, "resolved_mood": brief["resolved_mood"],
@@ -334,6 +370,13 @@ def finish_visuals(args, config, store, models, evidence, sources, brief, films,
                                         "visual_balance": balance, "music_engine": music_engine,
                                         "human_acceptance": "pending", "reviewer_loop_adoption": "experimental pending measured evaluation"})
     print(json.dumps(outputs, indent=2))
+    from .claims import write_claims
+    try:
+        write_claims(store.root / "claims-sources.json", args.subject,
+                     [{"id": None, "title": args.subject, "project": store.root, "duration": d} for d in args.durations],
+                     config.get("llm_configuration"))
+    except (KeyError, OSError, ValueError, TypeError) as exc:     # provenance is a report; never block a delivery
+        store.event("claims", "failed", {"error": str(exc)[:300]})
     from .delivery import preview
     destination = preview(store)
     stage("video", "succeeded", output_directory=str(destination))

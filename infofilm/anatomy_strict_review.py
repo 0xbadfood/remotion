@@ -8,8 +8,9 @@ from pathlib import Path
 from .core import digest, read, write
 from .llm import ModelOutputError
 from .person_references import validate_reference
+from .educational_review import GUIDANCE, inventory_errors, inventory_failures, normalize_inventory
 
-POLICY = "infofilm.anatomy-screening.v2"
+POLICY = "infofilm.anatomy-screening.components.v3"
 CHECKS = {
     "D01": ["Liver and stomach have the stated anterior-view positions.", "A single esophagus visibly reaches the stomach.", "Small intestine is central and colon frames it, with a terminating rectum."],
     "D02": ["The torso shows the stated left-right organ positions.", "Pancreas is distinguishable in the promised transparent/cutaway view.", "Digestive organs are distinct rather than duplicated or fused."],
@@ -31,7 +32,7 @@ def errors(value, case):
     checks = value.get("checks")
     if not isinstance(checks, dict) or set(checks) != set(gates(case)):
         return ["Return exactly the gate IDs as keys of checks"]
-    result = []
+    result = inventory_errors(value, required=True, nonempty=True)
     for key, item in checks.items():
         if (not isinstance(item, dict) or item.get("status") not in {"met", "not_met", "uncertain"} or
             any(not isinstance(item.get(k), str) or not item[k].strip() for k in ["observation", "location"])):
@@ -45,19 +46,23 @@ def errors(value, case):
 def decide(value):
     statuses = [v["status"] for v in value["checks"].values()]
     # Attractive rendering and an LLM's overall opinion cannot override a gate.
-    return "fail" if "not_met" in statuses else "uncertain" if "uncertain" in statuses else "pass"
+    return "fail" if "not_met" in statuses or inventory_failures(value) else "uncertain" if "uncertain" in statuses else "pass"
 
 
 def review_candidate(models, root, case, candidate, prompt, reference):
     root = Path(root)
-    destination = root / "review-strict-v2.json"
+    destination = root / "review-components-v3.json"
     packet = {"case_id": case["id"], "visual_message": case["visual_message"],
               "current_prompt": prompt, "mandatory_gates": gates(case),
               "reference_scope": reference["scope"]}
     example = {"checks": {k: {"status": "uncertain", "observation": "Specific visible observation",
                               "location": "Describe position in the candidate image"} for k in gates(case)},
+               "component_inventory": [{"component":"A component explicitly requested in the prompt",
+                                        "expected_count":1,"visible_count":None,"count_status":"uncertain",
+                                        "placement_status":"uncertain","reference_checked":True,
+                                        "evidence":"Concrete candidate locations and actual source comparison"}],
                "limitations": [], "inferred_details": []}
-    task = ("Inspect image 1, the generated candidate. Image 2 is its sourced anatomy reference. "
+    task = GUIDANCE + ("Inspect image 1, the generated candidate. Image 2 is its sourced anatomy reference. "
             "Evaluate every mandatory gate using pixels in IMAGE 1. Never describe the reference as if it appeared in the candidate. "
             "First inventory visible organs and text; then trace each requested connection from one visible endpoint to the other. "
             "Count branches and openings explicitly. Missing visibility means uncertain; a visible contradiction means not_met. "
@@ -88,13 +93,16 @@ def review_candidate(models, root, case, candidate, prompt, reference):
             value = models.call("reviewer", f"anatomy-strict-{root.parent.name}-{case['id']}-{index}",
                                 task + feedback, image_path=candidate,
                                 reference_image_paths=[validate_reference(reference)], max_tokens=2400)
+            value = normalize_inventory(value)
             problems = errors(value, case)
         except ModelOutputError as exc:
             problems = [str(exc)]
         if not problems:
             verdict = decide(value)
             issues = [k + ": " + item["observation"] for k, item in value["checks"].items() if item["status"] == "not_met"]
+            issues += inventory_failures(value)
             review = {"case_id": case["id"], "policy": POLICY, "verdict": verdict, "checks": value["checks"],
+                      "component_inventory": value['component_inventory'],
                       "issues": issues, "limitations": value["limitations"], "inferred_details": value["inferred_details"]}
             record = {"input_sha256": signature, "seconds": round(time.monotonic()-start, 3),
                       "raw_review": value, "review": review}

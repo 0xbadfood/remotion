@@ -12,7 +12,7 @@ from num2words import num2words
 
 from .core import read
 
-AUDIT_POLICY = "english-completeness-equivalent-quantities-v5"
+AUDIT_POLICY = "english-completeness-equivalent-years-v6"
 DEFAULT_FALLBACK_MODELS = ("Systran/faster-whisper-small", "openai/whisper-large-v3-turbo")
 
 
@@ -228,8 +228,12 @@ def canonical_numeric_text(text):
     Leave MFA orthography and the frozen script unchanged. Explicit coefficients,
     units, signs and qualifiers such as 'over' still have to match.
     """
-    return re.sub(r"\ba\s+(hundred|thousand|million|billion|trillion)\b", r"one \1",
-                  spoken_numeric_text(text), flags=re.I)
+    from .numeric_speech import canonical_year_pairs
+    value = canonical_year_pairs(str(text or ""))
+    value = re.sub(r"\ba\s+(hundred|thousand|million|billion|trillion)\b", r"one \1",
+                   spoken_numeric_text(value), flags=re.I)
+    return re.sub(r"\b(hundred|thousand|million|billion)\s+and\s+(?=(?:" +
+                  "|".join(sorted(_NUMBER_WORDS)) + r")\b)", r"\1 ", value, flags=re.I)
 
 
 def point_coverage(points, transcript_text):
@@ -273,7 +277,7 @@ def audit_english_audio(auditor, audio, text, points=None):
             config=auditor.config,
         ),
         "model": auditor.model,
-        "normalization": "english-spoken-numbers-v1",
+        "normalization": "english-spoken-years-v2",
         "raw_transcript": raw_text,
         "verbatim_audit": original,
     }

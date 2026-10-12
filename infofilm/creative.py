@@ -119,11 +119,12 @@ def beat_errors(value, script, timing):
     point_words = {p["point_id"]: p["word_ids"] for p in timing["points"]}
     positions = {w["id"]: i for i, w in enumerate(timing["words"])}
     collapsed, indices = [], []
-    if len({s.get("id") for s in scenes}) != len(scenes):
-        errors.append("Visual beat IDs must be unique")
+    ids = [s.get("id") for s in scenes]
+    if len(set(ids)) != len(scenes):
+        errors.append("Visual beat IDs must be unique; repeated: " + ", ".join(sorted({str(i) for i in ids if ids.count(i) > 1})))
     for scene in scenes:
         if not re.fullmatch(r"[A-Za-z0-9_-]{1,50}", str(scene.get("id", ""))):
-            errors.append("Use short alphanumeric visual beat IDs")
+            errors.append(f"{scene.get('id')!r}: use a short alphanumeric visual beat ID")
         point_id, anchor = scene.get("point_id"), scene.get("start_word_id")
         if point_id not in point_words or anchor not in point_words.get(point_id, []):
             errors.append(f"{scene.get('id')}: anchor must be an aligned word in its point")
@@ -133,35 +134,39 @@ def beat_errors(value, script, timing):
             if anchor != point_words[point_id][0]:
                 errors.append(f"First beat of {point_id} must start at its first word")
         indices.append(positions[anchor])
-        kind = scene.get("kind")
+        kind, sid = scene.get("kind"), scene.get("id")
         if kind == "image":
             if not isinstance(scene.get("image_brief"), str) or not 1 <= len(scene["image_brief"]) <= 1800:
-                errors.append("Image beats need a subject-aware image_brief")
+                errors.append(f"{sid}: image beats need a subject-aware image_brief")
         elif kind in {"flow", "compare", "cycle"}:
             n = 2 if kind == "compare" else 3
             labels, details = scene.get("labels"), scene.get("details")
             if not isinstance(labels, list) or not isinstance(details, list):
-                errors.append("Diagram labels and details must be lists")
+                errors.append(f"{sid}: diagram labels and details must be lists")
                 continue
             if len(labels) != n or len(details) != n:
-                errors.append(f"{kind} needs {n} labels and details")
+                errors.append(f"{sid}: {kind} needs {n} labels and details")
             if any(not isinstance(v, str) or len(v.split()) > 4 for v in labels) or any(not isinstance(v, str) or len(v.split()) > 10 for v in details):
-                errors.append("Diagram labels/details are too long")
+                errors.append(f"{sid}: diagram labels/details are too long")
         else:
-            errors.append("Unsupported visual beat kind")
+            errors.append(f"{sid}: unsupported visual beat kind")
         for key, limit in [("heading", 7), ("summary", 12)]:
             if not isinstance(scene.get(key), str) or len(scene[key].split()) > limit:
-                errors.append(f"Invalid {key}")
+                errors.append(f"{sid}: {key} must be a string of at most {limit} words")
         if scene.get("motion") not in {"push", "pull", "drift", "hold"}:
-            errors.append("Unsupported motion")
+            errors.append(f"{sid}: unsupported motion")
         if scene.get("copy_density") not in {"minimal", "standard"}:
-            errors.append("Set copy_density to minimal or standard")
+            errors.append(f"{sid}: set copy_density to minimal or standard")
         if not scene.get("rationale"):
-            errors.append("Explain the visual purpose of each beat")
+            errors.append(f"{sid}: explain the visual purpose of the beat")
     if collapsed != point_ids:
-        errors.append("Visual beats must cover every narration point in unchanged order")
+        missing = [p for p in point_ids if p not in collapsed]
+        errors.append("Visual beats must cover every narration point in unchanged order; expected " + " ".join(point_ids) +
+                      ", got " + " ".join(collapsed) + (f" (missing {', '.join(missing)})" if missing else ""))
     if indices != sorted(set(indices)):
-        errors.append("Word anchors must increase strictly; no repeats or backward cuts")
+        anchored = [s for s in scenes if s.get("start_word_id") in positions]
+        bad = [b.get("id") for a, b in zip(anchored, anchored[1:]) if positions[b["start_word_id"]] <= positions[a["start_word_id"]]]
+        errors.append("Word anchors must increase strictly; no repeats or backward cuts" + (f" (at {', '.join(map(str, bad))})" if bad else ""))
     if not errors:
         if any(s["end"] <= s["start"] for s in resolved_scenes(value, script, timing)):
             errors.append("Visual beat intervals must have positive duration")
@@ -183,13 +188,44 @@ def visual_metrics(storyboard, script, timing):
             "graphic_justifications": [{"id": s["id"], "rationale": s["rationale"]} for s in scenes if s["kind"] != "image"]}
 
 
+ABBREVIATIONS = {"dr.", "mr.", "mrs.", "ms.", "st.", "gen.", "col.", "lt.", "maj.", "capt.", "sgt.", "adm.", "prof.",
+                 "no.", "vs.", "e.g.", "i.e.", "c.", "ca.", "jr.", "sr.", "u.s.", "u.k.", "mt.", "ft."}
+
+
+def ends_sentence(word, following):
+    if word.casefold() in ABBREVIATIONS or re.fullmatch(r"[A-Z]\.", word):     # "Gen.", "J." (initial)
+        return False
+    return bool(re.search(r"[.!?][\"'\u201d\u2019)\]]*$", word)) and (not following or following[:1].isupper() or following[:1].isdigit())
+
+
+def sentence_timing(point, words, point_end):
+    """Split one aligned point into sentences: [{start_word_id, start, seconds, text}]."""
+    by_id = {w["id"]: w for w in words}
+    rows = [by_id[i] for i in point["word_ids"] if i in by_id]
+    sentences, current = [], []
+    for index, word in enumerate(rows):
+        current.append(word)
+        following = rows[index + 1]["word"] if index + 1 < len(rows) else ""
+        if ends_sentence(word["word"], following):
+            sentences.append(current); current = []
+    if current:
+        sentences.append(current)
+    result = []
+    for index, sentence in enumerate(sentences):
+        end = sentences[index + 1][0]["start"] if index + 1 < len(sentences) else point_end
+        result.append({"start_word_id": sentence[0]["id"], "start": round(sentence[0]["start"], 2),
+                       "seconds": round(end - sentence[0]["start"], 2), "text": " ".join(w["word"] for w in sentence)})
+    return result
+
+
 def make_visual_beats(models, film, evidence, brief, *, experimental=True):
     task = (
         "Plan visual beats for this exact MFA-aligned narration, following the shared creative brief. "
         "One narration point may contain several shots. Longer audio needs proportionate visual coverage, not stretched identical stills. "
         "Use the per-point shot suggestions: a 13–16-second point containing multiple ideas usually benefits from two views at a meaningful boundary. "
-        "Cut at a natural sentence, clause or semantic transition using the supplied aligned WORD IDs exactly. "
-        "The first beat of every point starts at that point's first word; further beats can start at later words within that point. "
+        "Each narration point lists its sentences with start time and duration. A beat starts at a sentence: copy that sentence's "
+        "start_word_id exactly into the beat's start_word_id. The first beat of every point starts at its first sentence; further "
+        "beats can start at later sentences within that point. "
         "Cover all points in their existing order. Start/end seconds are derived by code, not invented. "
         "Soft beat/image guides and image screen-time shares are suggestions, not quotas; use useful distinct images and let diagrams remain readable. "
         "Choose generated imagery whenever scenes, objects, people or details explain the passage; use graphics only when an actual mechanism or comparison benefits. "
@@ -209,12 +245,13 @@ def make_visual_beats(models, film, evidence, brief, *, experimental=True):
     aligned = film["timing"]["points"]
     starts = [p["start"] for p in aligned]
     ends = starts[1:] + [film["actual_seconds"]]
-    context = {"evidence": evidence, "creative_brief": brief, "script": film["script"],
-               "aligned_points": film["timing"]["points"],
-               "aligned_words": [{k: w[k] for k in ["id", "word", "start", "end"]} for w in film["timing"]["words"]],
-               "guidance": guidance,
-               "point_visual_guidance": [{"point_id": p["point_id"], "seconds": round(end-start, 2),
-                    "suggested_shots": max(1, round((end-start)/guidance["suggested_mean_hold_seconds"]))}
+    # Sentence timing only: the planner anchors beats at sentence starts, so the per-word MFA alignment (most of the
+    # prompt's tokens) is not sent. Code still resolves exact word timings from the anchor.
+    script = {**film["script"], "points": [{k: v for k, v in point.items() if k != "narration"} for point in film["script"]["points"]]}
+    context = {"evidence": evidence, "creative_brief": brief, "script": script, "guidance": guidance,
+               "narration_points": [{"point_id": p["point_id"], "seconds": round(end-start, 2),
+                    "suggested_shots": max(1, round((end-start)/guidance["suggested_mean_hold_seconds"])),
+                    "sentences": sentence_timing(p, film["timing"]["words"], end)}
                     for p,start,end in zip(aligned,starts,ends)]}
     return models.loop(f"visual-beats-{film['requested_seconds']}", task, context,
                       lambda x: beat_errors(x, film["script"], film["timing"]), experimental=experimental,

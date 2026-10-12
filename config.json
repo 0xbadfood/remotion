@@ -1,11 +1,14 @@
 {
-  "planner_url": "http://10.8.0.4:8001/v1",
-  "reviewer_url": "http://10.8.0.5:8001/v1",
-  "tts_url": "http://127.0.0.1:8092",
-  "vibe_batch_size": 4,
+  "planner_url": "http://10.8.0.5:8001/v1",
+  "reviewer_url": "http://10.8.0.4:8001/v1",
+  "tts_url": "http://127.0.0.1:18092",
+  "vibe_batch_size": 40,
   "vibe_max_attempts": 3,
   "vibe_pause_seconds": 0.18,
-  "audio_audit_fallback_models": ["Systran/faster-whisper-small", "openai/whisper-large-v3-turbo"],
+  "audio_audit_fallback_models": [
+    "Systran/faster-whisper-small",
+    "openai/whisper-large-v3-turbo"
+  ],
   "audio_audit_llm_review": true,
   "omni_url": "http://127.0.0.1:8094",
   "omni_python": "/home/nitin/omni/.venv/bin/python",
@@ -23,7 +26,7 @@
   "music_stable_ts_model": "/home/nitin/.cache/whisper/large-v3.pt",
   "music_vocal_isolation": false,
   "reference_transcript": "Mumbai is the financial, commercial and the entertainment capital of India. It is also one of the world's top ten centres of commerce in terms of global financial flow.",
-  "image_url": "http://127.0.0.1:8075",
+  "image_url": "http://127.0.0.1:18092/image",
   "image_provider_settings": "/home/nitin/remotion/image-providers.json",
   "reference_audio": "/home/nitin/quiz_generator/amit.wav",
   "language": "en_indian",
@@ -38,6 +41,7 @@
   "image_steps": 25,
   "image_max_attempts": 5,
   "image_review": true,
+  "image_classify_review": true,
   "image_missing_job_retries": 2,
   "person_references": {
     "enabled": true,
@@ -71,5 +75,9 @@
     "enabled": true,
     "provider": "flux_dev_local",
     "max_candidates": 1
-  }
+  },
+  "shared_gpu_services": [
+    "music",
+    "flux"
+  ]
 }

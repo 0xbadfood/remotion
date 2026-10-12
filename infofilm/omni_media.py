@@ -33,7 +33,7 @@ def omni_service(config, store):
         pass
     else:
         raise RuntimeError("OmniVoice port 8094 is already occupied; leave the other service undisturbed")
-    with gpu_lease(config):
+    with gpu_lease(config, "voice"):
         image = request(config, "image", "GET", "/api/status")
         if image.get("busy") or image.get("state") == "loading":
             raise RuntimeError("Image service is busy; OmniVoice will wait for the next run")
@@ -201,7 +201,8 @@ def render_omnivoice(config, store, points, name):
                 # A saved batch is immutable. Points newly rejected by a changed
                 # audit policy can be submitted in the next unused batch slot.
                 recorded = {p["id"]: p["text"] for p in record["manifest"]["tasks"]}
-                tasks = [p for p in tasks if recorded.get(p["id"]) in {p["narration"], mfa_numeric_text(p["narration"])}]
+                tasks = [p for p in tasks if recorded.get(p["id"]) in {p["narration"], mfa_numeric_text(p["narration"]),
+                                                                    mfa_numeric_text(p["narration"], natural_years=False)}]
             job_id = record.get("job_id")
             if tasks:
                 store.event(name, "point_rendering" if attempt == 0 else "point_retry", {
@@ -230,7 +231,16 @@ def render_omnivoice(config, store, points, name):
             raise RuntimeError(f"OmniVoice point narration still needs review after {max_attempts} attempts: "
                                + ", ".join(p["id"] for p in pending))
         _join_wavs([selected[p["id"]] for p in points], final)
+    spoken_points = {}
+    for point in points:
+        clip = selected[point["id"]]
+        attempt = int(clip.parent.name.split("-")[-1])
+        saved = root / f"provider-{attempt}.json"
+        if saved.exists():
+            spoken_points.update({task["id"]: task["text"] for task in read(saved)["manifest"]["tasks"]
+                                  if task["id"] == point["id"]})
     info = {**audio_info(final), "text": text, "text_sha256": digest(text), "audit_policy": AUDIT_POLICY,
+            "spoken_points": spoken_points,
             "reference_audio": str(reference), "reference_audio_sha256": digest(reference.read_bytes()),
             "reference_transcript": reference_text, "language": "en", "provider": "OmniVoice",
             "speed": speed,

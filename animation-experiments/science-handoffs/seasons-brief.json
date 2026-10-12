@@ -1,0 +1,86 @@
+{
+  "sources": [
+    {
+      "id": "S1",
+      "title": "[PDF] All About that Tilt: Sun and Seasons - NASA",
+      "url": "https://assets.science.nasa.gov/content/dam/science/esd/eo/eokids/wp-content/uploads/sites/6/2019/04/16_SunSeasons-508.pdf",
+      "excerpts": [
+        "SUN'S RAYS earthobservatory.nasa.gov/eokids If the Earth had no tilt, there would be no seasons. Temperatures would just get colder the further you traveled from the equator.\nWhy is this? The Earth spins on an axis. When a basketball player spins a ball on their finger, they are spinning it on an axis. The axis for the basketball is vertical (straight up and down), but Earth spins on an axis that is tilted —23.5 degrees to be exact. Earth’s axis always points in the same direction. Because of this, the part of Earth that receives the most direct rays from the Sun changes as the Earth travels around the Sun. — Equator Equator — — Tropic of Capricorn Northern Hemisphere Southern Hemisphere Tropic of Cancer — Earth's Axis — Antarctic Circle Arctic Circle — At the equinox, the Sun's rays shine most directly on the equator, and the Northern and Southern Hemispheres get the same amount of Sunlight. March equinox December solstice June solstice September equinox Sun 23.5º During the summer solstice, the Sun shines most directly on the Tropic of Cancer, 23.5 degrees north of the equator, giving its most direct energy on Earth to the Northern Hemisphere. During the winter solstice, the Sun shines most directly on the Tropic of Capricorn, 23.5 degrees south of the equator, giving its most direct energy on Earth to the Southern Hemisphere.\nVocabulary: axis – An imaginary line that Earth spins around.\nequinox – The dates when the Sun crosses Earth’s equator and the lengths of day and night are equal.\nsolstice – The dates when the Sun reaches its highest or lowest point in the sky at noon, marked by the longest and shortest daylight hours of the year. www.nasa.gov All About that Tilt Sun & Seasons equator equator 2 WINTER & SUMMER For geographic purposes, the Earth is divided into a northern and southern hemisphere by an imaginary ring called the equator. Whichever hemisphere is more directly facing the Sun during the course of the Earth’s orbit will receive more of the Sun’s energy for more of the day.\nLonger days mean more energy for plants to grow and for phytoplankton to bloom. As plants grow, the land on Earth looks greener from space and the oceans swirl with green phytoplankton blooms. These images of global greenness show the seasonal “green up” of the Northern Hemisphere in June and the Southern Hemisphere in December. Land covered with plants are deep green. Water with a lot of phytoplankton are light bluish-green to yellow. Grey areas are where no data were collected during dark months of the year around the poles.\nWhen the Northern Hemisphere experiences the blossoming of plants in the spring, plants in the Southern Hemisphere are turning yellow and bro"
+      ]
+    }
+  ],
+  "anchors": [
+    {
+      "id": "F01",
+      "claim": "Earth rotates around an axis tilted approximately twenty-three and a half degrees.",
+      "source_ids": [
+        "S1"
+      ]
+    },
+    {
+      "id": "F02",
+      "claim": "Earth’s axis points in approximately the same direction as it travels around the Sun.",
+      "source_ids": [
+        "S1"
+      ]
+    },
+    {
+      "id": "F03",
+      "claim": "Tilt changes which hemisphere receives the most direct sunlight over the year.",
+      "source_ids": [
+        "S1"
+      ]
+    },
+    {
+      "id": "F04",
+      "claim": "The hemisphere tilted toward the Sun receives more direct solar energy and longer days.",
+      "source_ids": [
+        "S1"
+      ]
+    },
+    {
+      "id": "F05",
+      "claim": "The hemispheres experience opposite seasons.",
+      "source_ids": [
+        "S1"
+      ]
+    },
+    {
+      "id": "F06",
+      "claim": "At an equinox the Sun’s rays shine most directly on the equator.",
+      "source_ids": [
+        "S1"
+      ]
+    },
+    {
+      "id": "F07",
+      "claim": "Solstices mark the longest and shortest daylight periods for a hemisphere.",
+      "source_ids": [
+        "S1"
+      ]
+    },
+    {
+      "id": "F08",
+      "claim": "Sun angle changes shadow length, which can be modeled with a light and a fixed vertical object.",
+      "source_ids": [
+        "S1"
+      ]
+    }
+  ],
+  "required_anchor_ids": [
+    "F01",
+    "F02",
+    "F03",
+    "F04",
+    "F05",
+    "F06",
+    "F07",
+    "F08"
+  ],
+  "coverage_requirements": [
+    "Explain the causal mechanism clearly for casual viewers and junior students."
+  ],
+  "cautions": [
+    "This is a manually curated orientation brief for a planning smoke test, not full chapter research. Preserve the limits of the simplified model."
+  ]
+}

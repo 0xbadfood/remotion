@@ -17,19 +17,23 @@ from PIL import Image, ImageOps
 
 from .core import Store, digest, read, write
 from .llm import Models, ModelOutputError
-from .person_references import PROTOCOL, validate_reference
+from .person_references import PHOTO_ERA_BIRTH_YEAR, PROTOCOL, validate_reference
 
-USER_AGENT = 'InfoFilm/1.0 (source-backed educational portrait references)'
+# Wikimedia refuses (HTTP 403) user agents without a contact URL or email: https://w.wiki/4wJS
+USER_AGENT = 'InfoFilm/1.0 (source-backed educational portrait references; ' + os.environ.get('WIKIMEDIA_CONTACT', 'no contact set') + ')'
 
 
 class ReferenceSearchClient:
     """Use the research stack's Tavily service/key without requiring its SDK venv."""
     def _call(self, operation, params):
-        key = os.environ.get('TAVILY_API_KEY')
-        if not key:
+        keys = [k for k in (os.environ.get('TAVILY_API_KEY'), os.environ.get('TAVILY_FALLBACK')) if k]
+        if not keys:
             raise RuntimeError('TAVILY_API_KEY is required for portrait source discovery')
-        response = httpx.post('https://api.tavily.com/' + operation, json=params,
-                             headers={'Authorization': 'Bearer ' + key}, timeout=90)
+        for index, key in enumerate(keys):
+            response = httpx.post('https://api.tavily.com/' + operation, json=params,
+                                 headers={'Authorization': 'Bearer ' + key}, timeout=90)
+            if response.is_success or index == len(keys) - 1 or response.status_code < 400:
+                break  # a failed primary (e.g. out of credits) falls through to TAVILY_FALLBACK
         response.raise_for_status()
         return response.json()
 
@@ -191,7 +195,9 @@ def selection_errors(value, candidates, person):
     return errors
 
 
-def research_person(person, settings, archive, models, store, tavily_factory):
+def research_person(person, settings, archive, models, store, tavily_factory, search_root=None):
+    """search_root holds the source searches for this name, shared by every scene and chapter of the film."""
+    search_root = search_root or archive
     result_file = archive / 'result.json'
     if result_file.exists():
         result = read(result_file)
@@ -200,7 +206,7 @@ def research_person(person, settings, archive, models, store, tavily_factory):
         return result
     errors, candidates = [], []
     avoid_wikimedia = False
-    commons_file = archive / 'commons.json'
+    commons_file = search_root / 'commons.json'
     try:
         candidates = read(commons_file) if commons_file.exists() else commons_candidates(person, settings['max_candidates'])
         write(commons_file, candidates)
@@ -235,7 +241,7 @@ def research_person(person, settings, archive, models, store, tavily_factory):
             if not max_pages:
                 continue
             try:
-                search_archive = archive / ('primary-search-v4' if source_pass == 1 else 'broader-search-v4')
+                search_archive = search_root / ('primary-search-v4' if source_pass == 1 else 'broader-search-v4')
                 fallback_file = search_archive / 'candidates.json'
                 candidates = (read(fallback_file) if fallback_file.exists() else tavily_candidates(person,
                     tavily_factory(), settings['max_candidates'], max_pages, search_archive,
@@ -288,12 +294,30 @@ def main():
             return ReferenceSearchClient()
         results = {}
         for position, (key, person) in enumerate(request['people'].items(), 1):
+            urls = {k: request['model_config'][k] for k in ('planner_url', 'reviewer_url') if k in request['model_config']}
             archive_id = digest({'protocol': PROTOCOL, 'person': person, 'settings': request['settings'],
-                                 'models': request['model_config']})[:20]
+                                 'models': urls})[:20]
             archive = Path(request['cache_root']) / 'people' / archive_id
+            # Scenes describe the same person with different appearance_context; the portrait and its source
+            # searches depend only on who it is and the kind of depiction, so they are shared across the film.
+            by_name = Path(request['cache_root']) / 'people-by-name' / digest({'protocol': PROTOCOL,
+                'name': ' '.join(person['name'].casefold().split()), 'reference_kind': person['reference_kind'],
+                'settings': request['settings'], 'models': urls})[:20]
             store.event('person-reference', 'running', {'name': person['name'], 'appearance_context': person['appearance_context'],
                         'position': position, 'total': len(request['people'])})
-            result = research_person(person, request['settings'], archive, models, store, tavily_factory)
+            shared = by_name / 'result.json'
+            if isinstance(person.get('birth_year'), int) and person['birth_year'] < PHOTO_ERA_BIRTH_YEAR:
+                result = {'protocol': PROTOCOL, 'status': 'unavailable', 'person': person,
+                          'reason': f"Born {person['birth_year']}, before {PHOTO_ERA_BIRTH_YEAR}: no reliable photograph; drawn from the evidence"}
+            elif not (archive / 'result.json').exists() and shared.exists():
+                result = {**read(shared), 'person': person}
+                validate_reference(result)
+                write(archive / 'result.json', result)
+                store.event('person-reference', 'reused', {'name': person['name'], 'source_url': result.get('source_url')})
+            else:
+                result = research_person(person, request['settings'], archive, models, store, tavily_factory, by_name / 'search')
+                if result['status'] == 'ready' and not shared.exists():
+                    write(shared, result)
             results[key] = result
             store.event('person-reference', result['status'], {'name': person['name'], 'position': position,
                 'total': len(request['people']), 'source_url': result.get('source_url'), 'reason': result.get('reason')})

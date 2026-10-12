@@ -30,6 +30,19 @@ def probe_picture(path):
 
 
 def section_asset(project, chapter):
+    from .external_planner import production_kind
+    if production_kind(chapter) == 'animation':
+        root=Path(project)/'animation/renders'
+        folder=next((root/o for o in ('landscape','portrait') if (root/o/'render-results.json').is_file()),None)
+        if folder is None:raise ValueError('Animation section card has no checked checkpoint')
+        receipt=read(folder/'render-results.json')
+        if not receipt.get('complete') or not receipt.get('checkpoints'):raise ValueError('Animation section card is not checked')
+        # Prefer a teaching checkpoint after the initial setup, using an existing rendered image.
+        sample=receipt['checkpoints'][min(1,len(receipt['checkpoints'])-1)]
+        image=(folder/sample['file']).resolve()
+        if not image.is_relative_to(folder.resolve()):raise ValueError('Animation checkpoint escapes its render folder')
+        return {'asset_id':chapter['id']+'-animation-checkpoint','file':str(image),'sha256':digest(image.read_bytes()),
+                'selection_policy':'Checked incoming animation teaching checkpoint; no image generated'}
     images = read(Path(project) / 'image_manifest.json')
     library = read(Path(project) / 'visual-library.json')
     wanted = set(re.findall(r'[a-z]{4,}', chapter['title'].lower() + ' ' + chapter['section_card']['image_selection_brief'].lower()))

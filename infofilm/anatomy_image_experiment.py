@@ -215,6 +215,8 @@ def write_report(store, definition):
                 '<h1>Digestive anatomy: matched first-pass experiment</h1><p>' +
                 f'{summary["completed"]}/{summary["planned"]} completed; {summary["errors"]} errors. Conditioning: ' +
                 escape(definition["conditioning"]) + '. Identical scene prompts and seeds; provider-native steps. No image repair loop.</p>'
+                '<p>Reviewer: ' + escape(definition.get('reviewer_url','unspecified')) +
+                (' · previous reviewer: ' + escape(definition['baseline_reviewer_url']) if definition.get('baseline_reviewer_url') else '') + '</p>'
                 '<p>Automated screening only. Internal details absent from the reference are inferred. '
                 'These scores do not certify scientific accuracy or establish that reference conditioning caused an improvement.</p>'
                 '<p><a href="' + escape(SOURCE_URL) + '">NIH source diagram</a> · '

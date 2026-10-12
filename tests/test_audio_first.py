@@ -15,7 +15,7 @@ from infofilm.media import audio_info
 from infofilm.pipeline import create
 from infofilm.planning import script_text
 from infofilm.queue import Queue
-from test_longform import accepted_plan, checked_stub, creative
+from test_longform import accepted_plan, checked_stub, creative, pair_ok, script_stub
 
 
 def audio_fixture(project, duration=120, subject='An explanation'):
@@ -159,6 +159,10 @@ class AudioDeliveryTests(unittest.TestCase):
 
 
 class LongAudioFirstTests(unittest.TestCase):
+    def setUp(self):
+        # Long films calibrate the voice once at film level before phase A; no voice server in unit tests.
+        calibration = patch('infofilm.pipeline.voice_calibration', return_value=150); calibration.start(); self.addCleanup(calibration.stop)
+
     def test_all_chapters_halt_before_visuals_failure_continues_and_resume_reuses_audio(self):
         plan, brief = accepted_plan()
         with tempfile.TemporaryDirectory() as directory:
@@ -174,6 +178,7 @@ class LongAudioFirstTests(unittest.TestCase):
                 review_mode='experimental',sources=sources,orientation_brief=orientation,chapter_plan=outline,until='audio')
             calls = []
             def child(payload, project, store, cid, *extra):
+                if payload.get('until')=='script':return script_stub(payload,project)   # phase A (scripts) stub
                 calls.append(cid)
                 self.assertEqual(payload['until'], 'audio')
                 self.assertTrue(payload['audio_checkpoint_only'])
@@ -183,7 +188,7 @@ class LongAudioFirstTests(unittest.TestCase):
                 return project/'attempts/audio'
             with patch('infofilm.creative.make_creative_brief',return_value=creative()), \
                  patch('infofilm.longform.run_chapter',side_effect=child), \
-                 patch('infofilm.longform.continuity_review') as continuity, \
+                 patch('infofilm.longform.continuity_review',side_effect=pair_ok) as continuity, \
                  patch('infofilm.audio_delivery.assemble_audio') as join, \
                  patch('infofilm.longform_video.assemble',side_effect=AssertionError('No video assembly')):
                 with self.assertRaisesRegex(RuntimeError,'C02'):
@@ -193,16 +198,17 @@ class LongAudioFirstTests(unittest.TestCase):
                 self.assertEqual(status['completed'],6)
                 self.assertEqual(status['failed'],1)
                 self.assertEqual(status['chapters'][0]['status'],'audio_ready')
-                continuity.assert_not_called(); join.assert_not_called()
+                self.assertEqual(continuity.call_count, 6); join.assert_not_called()   # scripts gate, before media
             calls.clear()
             def repair(payload, project, store, cid, *extra):
+                if payload.get('until')=='script':return script_stub(payload,project)   # phase A (scripts) stub
                 calls.append(cid); audio_fixture(project,payload['durations'][0],payload['subject']); return project/'attempts/recovered'
             with patch('infofilm.longform.run_chapter',side_effect=repair), \
-                 patch('infofilm.longform.continuity_review') as continuity, \
+                 patch('infofilm.longform.continuity_review',side_effect=pair_ok) as continuity, \
                  patch('infofilm.audio_delivery.ROOT',root):
                 create_long(args)
                 self.assertEqual(calls,['C02'])
-                continuity.assert_called_once()
+                self.assertEqual(continuity.call_count, 2)   # only pairs touching C02
                 self.assertEqual(read(args.project/'longform-status.json')['completed'],7)
                 self.assertFalse((args.project/'delivery.json').exists())
                 self.assertTrue((args.project/'audio-delivery.json').is_file())
@@ -211,6 +217,7 @@ class LongAudioFirstTests(unittest.TestCase):
             args.until='video'; args.resume_from='scenes'
             calls.clear()
             def pictures(payload, project, store, cid, *extra):
+                if payload.get('until')=='script':return script_stub(payload,project)   # phase A (scripts) stub
                 calls.append(cid)
                 self.assertEqual(payload['resume_from'],'scenes')
                 child_args = SimpleNamespace(**payload)
@@ -224,7 +231,7 @@ class LongAudioFirstTests(unittest.TestCase):
             with patch('infofilm.audio_delivery.ROOT',root), \
                  patch('infofilm.longform.run_chapter',side_effect=pictures), \
                  patch('infofilm.pipeline.research',side_effect=AssertionError('No parent research')), \
-                 patch('infofilm.longform.continuity_review'), \
+                 patch('infofilm.longform.continuity_review',side_effect=pair_ok), \
                  patch('infofilm.longform_video.assemble',return_value={'video':'checked.mp4'}) as video, \
                  patch('infofilm.delivery.preview',return_value=root/'output'):
                 create_long(args)

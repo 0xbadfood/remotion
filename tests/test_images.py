@@ -13,8 +13,8 @@ from infofilm.media import generate_images, image_identity, repair_image_prompt,
 
 CORRECTED = "A parchment document bearing a round red wax stamp beside a quill and a closed tax ledger. Place the inanimate objects right of centre, leaving a quiet upper-right area for a banner."
 REJECTED = {"pass": False, "reason_keys": ["semantic_mismatch"], "issues": ["A marine animal represents the wrong meaning of the legal document stamp"],
-            "correction": "Show a historical parchment document bearing a red wax stamp.", "limitations": []}
-ACCEPTED = {"pass": True, "reason_keys": [], "issues": [], "correction": "", "limitations": []}
+            "correction": "Show a historical parchment document bearing a red wax stamp.", "limitations": [], "component_inventory": []}
+ACCEPTED = {"pass": True, "reason_keys": [], "issues": [], "correction": "", "limitations": [], "component_inventory": []}
 
 
 class ImageRecoveryTests(unittest.TestCase):

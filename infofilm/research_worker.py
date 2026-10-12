@@ -6,7 +6,8 @@ import time
 from pathlib import Path
 
 from .core import Store, digest, read, write
-from .llm import Models
+from .llm import Models, llm_slot
+from .llm_settings import api_key, endpoint
 from .research_digest import MODEL_MESSAGE_LIMIT, choose_passages, digest_errors, source_summary_prompt
 from .research_harness import ResearchTools, QwenClient, run_agent, TOOLS, canonical_url, HarnessError
 
@@ -20,7 +21,9 @@ def main():
     project_store = Store(directory.parent.parent)
     summaries = directory / "source-summaries"
     full_sources = directory / "full-sources"
-    reviewer = Models({"reviewer_url": request["model_url"]}, project_store)
+    llm = request.get("llm") or {"reviewer_url": request["model_url"]}
+    reviewer = Models(llm, project_store)
+    agent = endpoint(llm, request.get("agent_role", "reviewer"))
 
     def summarize_source(url, content):
         identity = digest({"url": url, "full_sha256": digest(content), "policy": "source-digest-v1"})
@@ -97,7 +100,8 @@ def main():
             start=time.monotonic()
             result = None
             try:
-                result=super().complete(messages,tools)
+                with llm_slot(agent):
+                    result=super().complete(messages,tools)
                 return result
             finally:
                 write(directory/"model-calls"/f"call-{self.count}.json",{"model":self.model,"messages":messages,
@@ -106,7 +110,9 @@ def main():
                     "response_attempts": self.last_response_reports})
 
     tools=ArchiveTools(TavilyClient(api_key=os.environ.get("TAVILY_API_KEY")),
-        Path(request["kbagent_root"])/"obscura",max_searches=3,max_fetches=8)
+        Path(request["kbagent_root"])/"obscura",max_searches=request.get("budget",{}).get("max_searches",3),
+        max_fetches=request.get("budget",{}).get("max_fetches",8),
+        fallback=TavilyClient(api_key=os.environ["TAVILY_FALLBACK"]) if os.environ.get("TAVILY_FALLBACK") else None)
     tools.source_summarizer = summarize_source
     tools.source_archive = full_sources
     prior_searches = sorted(directory.glob("search-*.json"))
@@ -141,7 +147,8 @@ def main():
         seed_digests = [tools.digest_cache[url] for url in tools.fetch_cache if url in tools.fetched_urls]
         resumed += "\nFirst-pass summaries of already fetched, archived pages:\n" + "\n".join(
             item["url"] + "\n" + item["text"] for item in seed_digests)
-    model=ArchiveModel(request["model_url"],None,os.environ.get("VLLM_API_KEY"),timeout=900)
+    key = os.environ.get("VLLM_API_KEY") if agent.get("legacy") else api_key(llm.get("llm_secrets_root"), agent.get("id"), agent)
+    model=ArchiveModel(agent["url"],agent.get("model") or None,key,timeout=900,local=agent["type"]=="openai_chat")
     guidance = ''
     if request.get('subject_guidance') is not None:
         guidance = ('\nResearch guidance from a reviewed subject profile (questions, not facts):\n' +

@@ -28,7 +28,7 @@ class MessageExperimentTests(unittest.TestCase):
     def verdict(self, passed=False, mode='targeted', reason='semantic_mismatch'):
         return {'visual_message': self.message, 'pass': passed,
             'reason_keys': [] if passed else [reason], 'issues': [] if passed else ['The measuring rod is missing.'],
-            'limitations': [], 'repair_mode': 'none' if passed else mode,
+            'limitations': [], 'component_inventory': [], 'repair_mode': 'none' if passed else mode,
             'mode_reason': 'The concept is useful; correct its main prop.',
             'correction': '' if passed else 'Show the measuring implement clearly.'}
 

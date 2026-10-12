@@ -182,7 +182,8 @@ def resume_narration(args):
         for duration, film in films.items():
             film["timing"] = (align_vibevoice(config, store, film["audio"], film["script"], film["audio_info"], f"alignment-{duration}-recovery")
                               if engine == "vibevoice" else
-                              align_audio(config, store, film["audio"], film["script"], f"alignment-{duration}-recovery"))
+                              align_audio(config, store, film["audio"], film["script"], f"alignment-{duration}-recovery",
+                                          spoken_points=film["audio_info"].get("spoken_points")))
             errors = beat_errors(film["storyboard"], film["script"], film["timing"])
             if errors:
                 raise ValueError(f"Saved visual anchors no longer match repaired narration: {errors}")

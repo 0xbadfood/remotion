@@ -62,14 +62,15 @@ def preview(store, destination=None):
                          f'<audio controls src="narration-{duration}.wav"></audio>')
     sources = read(store.root / "sources.json")["results"]
     links = "".join(f'<li>{html.escape(s.get("id", f"S{i+1}"))}: <a href="{html.escape(s["url"],quote=True)}">{html.escape(s.get("title") or s["url"])}</a></li>' for i,s in enumerate(sources))
-    for filename in ["evaluation.json","audio-user-review.json","scene-image-prompts.json","image_manifest.json", "creative-brief.json"]:
+    for filename in ["evaluation.json","audio-user-review.json","scene-image-prompts.json","image_manifest.json", "creative-brief.json", "claims-sources.json"]:
         if (store.root / filename).exists():
             shutil.copyfile(store.root / filename, destination / filename)
     references = store.root / 'person-references' / 'manifest.json'
-    reference_link = ''
+    reference_link = ('<a href="claims-sources.json">Claims and sources (every narrated fact and where it came from)</a> · '
+                      if (store.root / "claims-sources.json").exists() else '')
     if references.exists():
         shutil.copyfile(references, destination / 'person-reference-manifest.json')
-        reference_link = '<a href="person-reference-manifest.json">Person reference sources and contact cards</a> · '
+        reference_link += '<a href="person-reference-manifest.json">Person reference sources and contact cards</a> · '
     def gap_names(value):
         if isinstance(value, list):
             return [item['person']['name'] for item in value if isinstance(item, dict) and 'person' in item]

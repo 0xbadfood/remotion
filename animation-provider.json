@@ -1,0 +1,16 @@
+{
+  "schema_version": "infofilm.animation-provider.v1",
+  "model": "gpt-6-luna",
+  "reviewer_model": "gpt-6-luna",
+  "reasoning_effort": "high",
+  "max_output_tokens": 24000,
+  "animation_output_tokens": 48000,
+  "max_output_recovery_tokens": 64000,
+  "execution_mode": "beats",
+  "max_attempts": 3,
+  "max_render_repairs": 2,
+  "continuity_model": "local",
+  "local_schema_repair": true,
+  "render_concurrency": 6,
+  "library": "animation-library"
+}

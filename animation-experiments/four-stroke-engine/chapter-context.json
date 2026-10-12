@@ -1,0 +1,56 @@
+{
+  "film": {
+    "subject": "The working of a four-stroke engine",
+    "title": "How a Four-Stroke Engine Works",
+    "language": "en",
+    "central_question": "How does a four-stroke engine repeat its operating cycle?",
+    "audience": "Casual viewers and junior students",
+    "orientation": "landscape",
+    "shared_visual_style": "Clear educational cutaways with readable labels"
+  },
+  "chapter": {
+    "id": "C01",
+    "title": "One Complete Engine Cycle",
+    "objective": "Understand the intake, compression, power and exhaust strokes, and how piston and valve movements coordinate during one cycle.",
+    "scope": {
+      "start_year": null,
+      "end_year": null,
+      "description": "Explain one complete cycle using a simplified single-cylinder spark-ignition engine."
+    },
+    "topic_ids": [],
+    "source_ids": [],
+    "research_queries": [],
+    "exclude": [
+      "Engine history",
+      "Detailed combustion chemistry",
+      "Comparisons with diesel and two-stroke engines"
+    ],
+    "entry_context": "A standalone explanation; no previous chapter.",
+    "exit_handoff": "Conclude the explanation.",
+    "opening_role": "film_intro",
+    "ending_role": "film_conclusion",
+    "visual_direction": "Use a clear cutaway with separately movable engine parts. Choose components and demonstrations that make the cycle understandable.",
+    "advisory_seconds": 90,
+    "mood": {
+      "preset": "professional",
+      "direction": "Clear, patient explanation",
+      "rationale": "Educational mechanism demonstration"
+    },
+    "music": {
+      "direction": "Restrained instrumental under speech",
+      "bpm": 80
+    }
+  },
+  "owned_topics": [],
+  "orientation_anchors": [],
+  "previous_chapter": null,
+  "next_chapter": null,
+  "research_gaps": [
+    {
+      "chapter_id": "C01",
+      "question": "Confirm the explanatory mechanics with credible sources before production narration."
+    }
+  ],
+  "shared_creative": {},
+  "research_subject": "The working of a four-stroke engine"
+}

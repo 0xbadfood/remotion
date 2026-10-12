@@ -110,6 +110,7 @@ class ResearchTools:
     source_summarizer: Any = None
     source_archive: Path | None = None
     source_errors: dict[str, dict[str, Any]] = field(default_factory=dict)
+    fallback: Any = None  # second Tavily client (TAVILY_FALLBACK), used once the primary fails, e.g. out of credits
 
     def search(self, query: str) -> dict[str, Any]:
         query = query.strip()
@@ -121,16 +122,19 @@ class ResearchTools:
             return {"error": f"search budget exhausted ({self.max_searches}/{self.max_searches})"}
 
         self.searches_used += 1
+        options = dict(query=query, search_depth="advanced", max_results=self.search_results,
+                       include_answer=False, include_raw_content=False)
         try:
-            response = self.tavily.search(
-                query=query,
-                search_depth="advanced",
-                max_results=self.search_results,
-                include_answer=False,
-                include_raw_content=False,
-            )
+            response = self.tavily.search(**options)
         except Exception as exc:  # SDK exception types have changed between releases.
-            return {"error": f"Tavily search failed: {exc}"}
+            if self.fallback is None:
+                return {"error": f"Tavily search failed: {exc}"}
+            print(f"[research] primary Tavily key failed ({exc}); switching to TAVILY_FALLBACK", flush=True)
+            self.tavily, self.fallback = self.fallback, None
+            try:
+                response = self.tavily.search(**options)
+            except Exception as fallback_exc:
+                return {"error": f"Tavily search failed on both keys: {exc}; fallback: {fallback_exc}"}
 
         results = []
         for item in response.get("results", []):
@@ -231,9 +235,10 @@ class ResearchTools:
 
 class QwenClient:
     def __init__(self, base_url: str, model: str | None, api_key: str | None = None, timeout: float = 180.0,
-                 max_response_attempts: int = 3) -> None:
+                 max_response_attempts: int = 3, local: bool = True) -> None:
         self.base_url = base_url.rstrip("/")
         self.model = model
+        self.local = local
         if not 1 <= max_response_attempts <= 5:
             raise ValueError('Research response attempts must be between one and five')
         self.max_response_attempts = max_response_attempts
@@ -262,8 +267,12 @@ class QwenClient:
             "messages": messages,
             "temperature": 0.1,
             "max_tokens": 4000,
-            "chat_template_kwargs": {"enable_thinking": False},
         }
+        if self.local:      # llama.cpp / vLLM reasoning switch; hosted APIs reject unknown fields
+            payload["chat_template_kwargs"] = {"enable_thinking": False}
+        else:               # hosted models count hidden reasoning inside max_tokens: keep it light, with room
+            payload["reasoning"] = {"effort": "low"}
+            payload["max_tokens"] += 8000
         if tools:
             payload.update({"tools": tools, "tool_choice": "auto"})
         self.last_response_reports = []

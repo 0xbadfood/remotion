@@ -1,0 +1,38 @@
+{
+  "schema_version": "infofilm.animation-scene.v1",
+  "id": "gravity-horizontal-launch-v1",
+  "archetype": "projectile-comparison.v1",
+  "authoring": "Hand-authored seed; not an evaluated LLM plan",
+  "visual_message": "Gravity accelerates a horizontally launched ball downward. A ball dropped from the same height at the same time has the same vertical motion and reaches the ground together with it.",
+  "subject": "Gravity",
+  "title": "One launch. Two motions.",
+  "assumptions": ["Uniform gravity near Earth's surface", "Air resistance ignored", "Both balls begin at the same height with zero vertical velocity", "Motion slowed for clarity"],
+  "duration_seconds": 21,
+  "fps": 30,
+  "orientations": {"landscape": {"width": 1280, "height": 720}, "portrait": {"width": 720, "height": 1280}},
+  "physics": {"gravity_m_s2": 9.81, "release_height_m": 8, "launch_speed_m_s": 12, "drop_x_m": 1.1},
+  "objects": [
+    {"id": "launcher", "asset_id": "physics.cannon.side.v1", "role": "launcher", "required_capabilities": ["side-view", "horizontal-muzzle"], "instance": {"width": 180, "height": 140}},
+    {"id": "launched", "asset_id": "geometry.ball.v1", "role": "launched-ball", "required_capabilities": ["circular", "center-pivot"], "instance": {"width": 27, "height": 27}},
+    {"id": "dropped", "asset_id": "geometry.ball.v1", "role": "dropped-ball", "required_capabilities": ["circular", "center-pivot"], "instance": {"width": 27, "height": 27}},
+    {"id": "surface", "asset_id": "environment.ground.v1", "role": "ground", "required_capabilities": ["horizontal-surface"], "instance": {"height": 50}},
+    {"id": "gravity-vector", "asset_id": "notation.arrow.v1", "role": "gravity-vector", "required_capabilities": ["directional", "tail-pivot"], "instance": {"width": 76, "height": 18}}
+  ],
+  "animation": {
+    "first_launch": {"start_seconds": 3, "end_seconds": 8},
+    "comparison": {"start_seconds": 12, "end_seconds": 17},
+    "trajectory_intervals": 6,
+    "vertical_acceleration_arrow": true,
+    "replay_fade": {"start_seconds": 10.7, "end_seconds": 11.5},
+    "final_hold_seconds": 4
+  },
+  "cues": [
+    {"start": 0, "end": 3, "heading": "Watch what happens after launch", "text": "The cannon gives the ball horizontal motion."},
+    {"start": 3, "end": 8, "heading": "Gravity adds downward motion", "text": "The ball keeps moving forward as it accelerates downward."},
+    {"start": 8, "end": 11, "heading": "Together, those motions form a curve", "text": "The trail marks the ball's position at equal time intervals."},
+    {"start": 11, "end": 12, "heading": "Now compare it with a dropped ball", "text": "Same height. Same release time. Zero initial vertical speed."},
+    {"start": 12, "end": 17, "heading": "Their vertical motion stays the same", "text": "Moving sideways does not change how quickly either ball falls."},
+    {"start": 17, "end": 21, "heading": "Both reach the ground together", "text": "From the same height, with air resistance ignored."}
+  ],
+  "acceptance": ["The launched ball follows the computed parabolic trajectory", "The comparison ball drops vertically outside the cannon platform", "Both balls have equal height at every comparison instant", "Both reach the ground at the same instant", "All objects and captions fit landscape and portrait frames", "The gravity arrow represents downward acceleration, not a downward-only velocity"]
+}

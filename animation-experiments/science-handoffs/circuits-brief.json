@@ -1,0 +1,92 @@
+{
+  "sources": [
+    {
+      "id": "S1",
+      "title": "21.1 Resistors in Series and Parallel - College Physics 2e | OpenStax",
+      "url": "https://openstax.org/books/college-physics-2e/pages/21-1-resistors-in-series-and-parallel",
+      "excerpts": [
+        "[College Physics 2e](/details/books/college-physics-2e)21.1 Resistors in Series and Parallel",
+        "* Draw a circuit with resistors in parallel and in series.\n* Calculate the voltage drop of a current across a resistor using Ohm’s law.\n* Contrast the way total resistance is calculated for resistors in series and in parallel.\n* Explain why total resistance of a parallel circuit is less than the smallest resistance of any of the resistors in that circuit.\n* Calculate total resistance of a circuit that contains a mixture of resistors connected in series and in parallel.",
+        "Most circuits have more than one component, called a resistor that limits the flow of charge in the circuit. A measure of this limit on charge flow is called resistance. The simplest combinations of resistors are the series and parallel connections illustrated in [Figure 21.2](21-1-resistors-in-series-and-parallel#import-auto-id2989840). The total resistance of a combination of resistors depends on both their individual values and how they are connected.",
+        "Figure  21.2   (a) A series connection of resistors. (b) A parallel connection of resistors.",
+        "When are resistors in series? Resistors are in series whenever the flow of charge, called the current, must flow through devices sequentially. For example, if current flows through a person holding a screwdriver and into the Earth, then in [Figure 21.2](21-1-resistors-in-series-and-parallel#import-auto-id2989840)(a) could be the resistance of the screwdriver’s shaft, the resistance of its handle, the person’s body resistance, and the resistance of her shoes.",
+        "[Figure 21.3](21-1-resistors-in-series-and-parallel#import-auto-id3043995) shows resistors in series connected to a voltage source. It seems reasonable that the total resistance is the sum of the individual resistances, considering that the current has to pass through each resistor in sequence. (This fact would be an advantage to a person wishing to avoid an electrical shock, who could reduce the current by wearing high-resistance rubber-soled shoes. It could be a disadvantage if one of the resistances were a faulty high-resistance cord to an appliance that would reduce the operating current.)",
+        "Figure  21.3   Three resistors connected in series to a battery (left) and the equivalent single or series resistance (right)."
+      ]
+    }
+  ],
+  "anchors": [
+    {
+      "id": "F01",
+      "claim": "Resistors in series are connected sequentially, with the same current passing through each.",
+      "source_ids": [
+        "S1"
+      ]
+    },
+    {
+      "id": "F02",
+      "claim": "Series resistances add to form the equivalent resistance.",
+      "source_ids": [
+        "S1"
+      ]
+    },
+    {
+      "id": "F03",
+      "claim": "The source voltage in a series circuit is divided across the resistors.",
+      "source_ids": [
+        "S1"
+      ]
+    },
+    {
+      "id": "F04",
+      "claim": "Resistors in parallel connect across the same source terminals.",
+      "source_ids": [
+        "S1"
+      ]
+    },
+    {
+      "id": "F05",
+      "claim": "Each branch resistor in parallel has the full source voltage across it in the ideal-wire model.",
+      "source_ids": [
+        "S1"
+      ]
+    },
+    {
+      "id": "F06",
+      "claim": "The total current in a parallel circuit is the sum of the branch currents.",
+      "source_ids": [
+        "S1"
+      ]
+    },
+    {
+      "id": "F07",
+      "claim": "Equivalent parallel resistance is smaller than any individual resistance in the combination.",
+      "source_ids": [
+        "S1"
+      ]
+    },
+    {
+      "id": "F08",
+      "claim": "Parallel connections let separate devices operate independently when the source is not overloaded.",
+      "source_ids": [
+        "S1"
+      ]
+    }
+  ],
+  "required_anchor_ids": [
+    "F01",
+    "F02",
+    "F03",
+    "F04",
+    "F05",
+    "F06",
+    "F07",
+    "F08"
+  ],
+  "coverage_requirements": [
+    "Explain the causal mechanism clearly for casual viewers and junior students."
+  ],
+  "cautions": [
+    "This is a manually curated orientation brief for a planning smoke test, not full chapter research. Preserve the limits of the simplified model."
+  ]
+}

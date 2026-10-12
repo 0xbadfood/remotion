@@ -93,7 +93,10 @@ class Queue:
         return [self.get(job_id) for job_id in ids]
 
     def submit(self, request, idempotency_key=None):
+        from .llm_settings import Registry
         config = configuration(self.config_path)
+        # Planner/reviewer endpoints come from the LLM settings page (or a named configuration chosen for this run).
+        config = Registry(self.root, config).freeze(config, request.get("llm_configuration") or None)
         job_id = uuid.uuid4().hex
         slug = re.sub(r"[^a-z0-9]+", "-", request["subject"].lower()).strip("-")[:50] or "film"
         project = ROOT / "artifacts/runs" / f"{slug}-{job_id[:10]}"
@@ -103,6 +106,7 @@ class Queue:
             "generation_mode": request.get("generation_mode", "short"),
             "production_target": request.get("production_target", "video"),
             "subject_graph": request.get("subject_graph", False),
+            "animation_chapters": request.get('animation_chapters', False),
             "start_year": None, "end_year": None,
             "tts_engine": request.get("tts_engine", "vibevoice"),
             "omni_speed": request.get("omni_speed", .8), "mood": request.get("mood", "auto"),
@@ -113,11 +117,19 @@ class Queue:
             "reference_transcript": request.get("reference_transcript"),
             "voice_id": request.get("voice_id", "default"), "narrator_label": request.get("narrator_label"),
             "sources": None, "script_dir": None, "visual_plan_dir": None, "image_manifest": None,
-            "until": "audio" if request.get("production_target") == "audio" else "video", "use_evidence": True}
+            "until": "audio" if request.get("production_target") == "audio" else "video", "use_evidence": True,
+            "llm_configuration": config["llm_configuration"]}
         if payload['production_target'] not in {'audio', 'video'}:
             raise ValueError('Unknown production target')
         if type(payload['image_review']) is not bool:
             raise ValueError('image_review must be boolean')
+        if type(payload['animation_chapters']) is not bool:
+            raise ValueError('animation_chapters must be boolean')
+        if payload['animation_chapters']:
+            if payload['generation_mode'] != 'long':raise ValueError('Animation chapter routing requires long generation')
+            if payload['tts_engine'] != 'vibevoice':raise ValueError('Animation chapters currently require VibeVoice')
+            from .animation_production import provider_settings
+            config['animation_provider'] = provider_settings(config)
         if payload["generation_mode"] == "long":
             from .longform import planner_settings, year_bounds
             payload["start_year"], payload["end_year"] = year_bounds(payload["subject"])
@@ -138,7 +150,7 @@ class Queue:
                     old = json.loads(previous["request"])
                     defaults = {"omni_speed": .8, "mood": "auto", "mood_intensity": "restrained", "visual_balance": "auto", "music_engine": "none",
                                 "generation_mode": "short", "start_year": None, "end_year": None, "subject_graph": False,
-                                "production_target": "video", "image_review": True}
+                                "production_target": "video", "image_review": True, "animation_chapters": False}
                     if any(old.get(k, defaults.get(k)) != payload.get(k) for k in ["subject", "durations", "orientation", "review_mode", "reference_audio", "reference_transcript", "tts_engine", *defaults]):
                         raise ValueError("This submission key was already used for different settings")
                     return self.get(previous["id"])
@@ -152,9 +164,16 @@ class Queue:
     def resume(self, job_id, *, image_review=None):
         if image_review is not None and type(image_review) is not bool:
             raise ValueError('image_review must be boolean')
+        job = self.get(job_id)
+        if job['status'] == 'waiting_for_assets':
+            from .animation_production import asset_waits
+            waits = asset_waits(job['project'])
+            if not waits or any(w['kind']=='assets' and not w['ready'] for w in waits):
+                raise ValueError('Requested animation assets are still missing or do not satisfy their capabilities. Fill the cache before resuming.')
+        resumable = "('failed','interrupted','waiting_for_assets','waiting_for_capabilities')"
         with self.connection() as db:
             if image_review is None:
-                changed = db.execute("UPDATE jobs SET status='queued',error=NULL,updated=? WHERE id=? AND status IN ('failed','interrupted')",
+                changed = db.execute("UPDATE jobs SET status='queued',error=NULL,updated=? WHERE id=? AND status IN " + resumable,
                                      (time.time(), job_id)).rowcount
             else:
                 row = db.execute('SELECT request FROM jobs WHERE id=?', (job_id,)).fetchone()
@@ -162,10 +181,10 @@ class Queue:
                     raise KeyError(job_id)
                 payload = json.loads(row[0])
                 payload['image_review'] = image_review
-                changed = db.execute("UPDATE jobs SET request=?,status='queued',error=NULL,updated=? WHERE id=? AND status IN ('failed','interrupted')",
+                changed = db.execute("UPDATE jobs SET request=?,status='queued',error=NULL,updated=? WHERE id=? AND status IN " + resumable,
                                      (json.dumps(payload), time.time(), job_id)).rowcount
         if not changed:
-            raise ValueError("Only failed or interrupted runs can be resumed")
+            raise ValueError("Only failed, interrupted or waiting runs can be resumed")
         self.wake.set()
         return self.get(job_id)
 
@@ -248,6 +267,7 @@ class Queue:
                 outputs = delivery["outputs"]
                 params = {"subject": delivery["subject"], "durations": sorted({o["requested_seconds"] for o in outputs}),
                     "generation_mode": delivery.get("generation_mode", "short"),
+                    'animation_chapters': delivery.get('animation_chapters',False),
                     "orientation": "both" if len({o["orientation"] for o in outputs}) > 1 else outputs[0]["orientation"],
                     "review_mode": delivery.get("review_mode", "off"), "tts_engine": delivery.get("tts_engine", "vibevoice"),
                     "mood": delivery.get("mood", "auto"), "music_engine": delivery.get("music_engine", "none")}
@@ -285,7 +305,7 @@ class Queue:
         if result_path.exists():
             try:
                 result = read(result_path)
-                if not isinstance(result, dict) or result.get("status") not in {"failed", "succeeded"}:
+                if not isinstance(result, dict) or result.get("status") not in {"failed", "succeeded", "waiting_for_assets", "waiting_for_capabilities"}:
                     raise ValueError("Invalid worker outcome")
             except (ValueError, OSError) as exc:
                 if self._alive(job):
@@ -375,7 +395,9 @@ class Queue:
         result["settings"] = {k:job["request"].get(k) for k in ["durations", "orientation", "review_mode", "tts_engine", "mood", "mood_intensity", "visual_balance", "music_engine", "omni_speed", "generation_mode", "start_year", "end_year"]}
         result['settings']['subject_graph'] = job['request'].get('subject_graph', False)
         result['settings']['production_target'] = job['request'].get('production_target', 'video')
+        result['settings']['llm_configuration'] = job['request'].get('llm_configuration')
         result['settings']['image_review'] = job['request'].get('image_review', True)
+        result['settings']['animation_chapters'] = job['request'].get('animation_chapters', False)
         stages = LONG_STAGES if long else STAGES
         if audio_first:
             stages = ([(key, 'Chapter narrations' if key == 'chapters' else 'Score & audio delivery' if key == 'assembly' else label)
@@ -402,6 +424,9 @@ class Queue:
             result['review_url'] = f'/media/{job_id}/listen/index.html' if (project / 'audio-delivery.json').is_file() else None
         if details:
             result["chapter_plan_url"] = f"/media/{job_id}/plan/chapter-plan.json" if (project / "chapter-plan.json").is_file() else None
+            from .animation_production import asset_waits
+            result['asset_waits'] = asset_waits(project)
+            result['can_resume_assets'] = bool(result['asset_waits']) and all(w['ready'] for w in result['asset_waits'])
             result["chapters"] = []
             if long and (project / "longform-status.json").is_file():
                 from .longform import child_stage
@@ -414,12 +439,19 @@ class Queue:
                             "mood": chapter["mood"]["preset"], **(child_stage(row["project"]) if state == "running" else {})}
                     # Keep the chapter's overall state distinct from its current pipeline stage.
                     item["status"] = state
+                    from .external_planner import production_kind
+                    item['production_kind'] = production_kind(chapter)
                     child = Path(row["project"])
+                    if item['production_kind']=='animation' and (child/'animation/public-report.json').is_file():
+                        item['animation_report_url'] = f"/media/{job_id}/chapter/{chapter['id']}/animation/report.html"
+                        if (child/'animation/object-requests.json').is_file():
+                            item['asset_requests_url'] = f"/media/{job_id}/chapter/{chapter['id']}/animation/object-requests.json"
                     if (child / f"film-{row['duration']}/audio-selection.json").is_file():
                         item["audio_url"] = f"/media/{job_id}/chapter/{chapter['id']}/audio.wav"
                         item["script_url"] = f"/media/{job_id}/chapter/{chapter['id']}/script.txt"
                     if state == "succeeded" and (child / 'delivery.json').is_file():
-                        item["review_url"] = f"/media/{job_id}/chapter/{chapter['id']}/review/index.html"
+                        item["review_url"] = (item.get('animation_report_url') if item['production_kind']=='animation' else
+                                              f"/media/{job_id}/chapter/{chapter['id']}/review/index.html")
                     result["chapters"].append(item)
                 result["chapter_progress"] = {k:value[k] for k in ["completed", "failed", "total"]}
             result["events"] = events[:40]

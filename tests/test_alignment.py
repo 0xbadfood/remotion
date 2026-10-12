@@ -73,6 +73,35 @@ class AlignmentRecoveryTests(unittest.TestCase):
             self.assertFalse(result["provenance"]["had_retry"])
             store.db.close()
 
+    def test_year_and_same_number_as_quantity_share_exact_caption_mapping(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store, audio, script, module, _ = self.setup_run(directory)
+            source = "In 1970, 1970 soldiers arrived."
+            script["points"][0]["narration"] = source
+            with patch("infofilm.media._mfa_adapter", return_value=(module, Path("adapter.py"))):
+                result = align_audio({}, store, audio, script, "alignment")
+            self.assertEqual(result["provenance"]["orthographic_input"],
+                             "In nineteen seventy, one thousand, nine hundred and seventy soldiers arrived.")
+            self.assertEqual([w["word"] for w in result["words"]], source.split())
+            self.assertEqual(len(result["words"][1]["mfa_word_ids"]), 2)
+            self.assertEqual(len(result["words"][2]["mfa_word_ids"]), 6)
+            store.db.close()
+
+    def test_saved_cardinal_year_recording_keeps_its_provider_wording(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store, audio, script, module, _ = self.setup_run(directory)
+            source = "In 1970, it opened."
+            script["points"][0]["narration"] = source
+            recorded = mfa_numeric_text(source, natural_years=False)
+            with patch("infofilm.media._mfa_adapter", return_value=(module, Path("adapter.py"))):
+                result = align_audio({}, store, audio, script, "alignment", spoken_points={"P05": recorded})
+            self.assertEqual(result["provenance"]["orthographic_input"], recorded)
+            self.assertEqual(len(result["words"][1]["mfa_word_ids"]), 6)
+            with patch("infofilm.media._mfa_adapter", side_effect=AssertionError("Reuse timing")):
+                self.assertEqual(align_audio({}, store, audio, script, "resume", spoken_points={"P05": recorded}), result)
+                self.assertEqual(align_audio({}, store, audio, script, "resume-legacy-cache"), result)
+            store.db.close()
+
     def test_decade_compound_recovers_saved_unknown_without_rebuilding_audio(self):
         with tempfile.TemporaryDirectory() as directory:
             store, audio, script, module, _ = self.setup_run(directory)

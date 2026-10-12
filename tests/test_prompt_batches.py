@@ -57,6 +57,20 @@ class PromptBatchTests(unittest.TestCase):
         self.assertEqual(captured[1][1]['scene_contexts_by_asset']['A009'][0]['previous_narration'],'Point 8 explanation.')
         self.assertEqual(captured[0][1]['scene_contexts_by_asset']['A008'][0]['next_narration'],'Point 9 explanation.')
 
+    def test_planner_classifies_individual_assets_and_rejects_missing_profiles(self):
+        library,film,evidence=self.fixture(2)
+        def loop(stage,task,context,validator,**kwargs):
+            self.assertIn('Classify the concrete image, not the film subject',task)
+            result=self.planner([]).loop(stage,task,context,lambda x:[])
+            self.assertTrue(validator(result))
+            result['assets'][0]['review_profile']='scientific_diagram'
+            result['assets'][1]['review_profile']='narrative'
+            self.assertEqual(validator(result),[])
+            return result
+        result=make_image_prompts(Mock(loop=Mock(side_effect=loop)),library,[film],evidence,
+                                  ['landscape'],message_recovery=True,classify_review=True)
+        self.assertEqual([a['review_profile'] for a in result['assets']],['scientific_diagram','narrative'])
+
     def test_shared_image_keeps_all_scene_contexts_together_across_batch_boundary(self):
         library,film,evidence=self.fixture(10)
         film['storyboard']['scenes'][-1]['asset_id']='A001'
@@ -160,4 +174,39 @@ class OutputContractTests(unittest.TestCase):
             last_draft=[c for c in models.call.call_args_list if c.args[0]=='planner'][-1]
             self.assertIn('Preserve the sourced relationship.',last_draft.args[2])
             self.assertIn('complete compact JSON',last_draft.args[2])
+            store.db.close()
+
+    def test_second_failure_simplifies_item_and_grants_extra_rounds(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store=Store(directory);models=Models({'planner_url':'p','reviewer_url':'r','max_repairs':1},store)
+            batch=lambda v:{'assets':[{'id':'A001','prompt':'ok'},{'id':'A002','prompt':v}]}
+            bad=lambda:{'pass':False,'score':70,'issues':[{'field':'assets[1].prompt','severity':'major','problem':'invented injury'}]}
+            models.call=Mock(side_effect=[batch('x0'),bad(),batch('x1'),bad(),batch('x2'),
+                                         {'pass':True,'score':90,'issues':[]},{'preferred':'B','reasons':[],'regressions':[]}])
+            self.assertEqual(models.loop('batch','Task',{},lambda x:[],experimental=True),batch('x2'))
+            drafts=[c.args[2] for c in models.call.call_args_list if c.args[0]=='planner']
+            self.assertIn('FLAGGED ITEMS',drafts[1]);self.assertNotIn('SIMPLIFY',drafts[1])
+            self.assertIn('SIMPLIFY THESE ITEMS',drafts[2]);self.assertIn('A002',drafts[2].split('SIMPLIFY THESE ITEMS')[1])
+            reviews=[c.args[2] for c in models.call.call_args_list if c.args[0]=='reviewer']
+            self.assertNotIn('PRIOR FINDINGS',reviews[0]);self.assertIn('invented injury',reviews[1].split('PRIOR FINDINGS')[1])
+            store.db.close()
+
+    def test_repair_keeps_unflagged_assets_unchanged(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store=Store(directory);models=Models({'planner_url':'p','reviewer_url':'r','max_repairs':1},store)
+            first={'assets':[{'id':'A001','prompt':'good'},{'id':'A002','prompt':'bad'}]}
+            redraft={'assets':[{'id':'A001','prompt':'drifted'},{'id':'A002','prompt':'fixed'}]}
+            models.call=Mock(side_effect=[first,{'pass':False,'score':70,'issues':[{'field':'A002.prompt','severity':'major'}]},
+                                         redraft,{'pass':True,'score':90,'issues':[]},{'preferred':'B','reasons':[],'regressions':[]}])
+            result=models.loop('batch','Task',{},lambda x:[],experimental=True)
+            self.assertEqual([a['prompt'] for a in result['assets']],['good','fixed'])
+            store.db.close()
+
+    def test_batch_level_error_does_not_lock_assets(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store=Store(directory);models=Models({'planner_url':'p','reviewer_url':'r','max_repairs':1},store)
+            first={'assets':[{'id':'A001','prompt':'a'}],'v':0};second={'assets':[{'id':'A001','prompt':'b'}],'v':1}
+            models.call=Mock(side_effect=[first,second])
+            validator=lambda x:['assets must cover every scene'] if x['v']==0 else []
+            self.assertEqual(models.loop('batch','Task',{},validator,experimental=False),second)
             store.db.close()

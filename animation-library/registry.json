@@ -1,0 +1,1119 @@
+{
+  "schema_version": "infofilm.animation-library.v1",
+  "revision": "objects-f564a9ec885c510e",
+  "objects": {
+    "geometry.ball.v1": {
+      "file": "objects/ball.svg",
+      "sha256": "e8c19a54cf1b6ddc526e5e735dbff1c90438d6ccc61401544267def2c5e4b1ff",
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "capabilities": [
+        "circular",
+        "center-pivot"
+      ],
+      "provenance": "Original hand-authored SVG for the gravity animation seed"
+    },
+    "physics.cannon.side.v1": {
+      "file": "objects/cannon.svg",
+      "sha256": "975662286e8233ecac746407fcceed101c3b8a800d611a0055f223a878879391",
+      "pivot": [
+        1,
+        0.36428571428571427
+      ],
+      "capabilities": [
+        "side-view",
+        "horizontal-muzzle"
+      ],
+      "provenance": "Original hand-authored SVG for the gravity animation seed"
+    },
+    "environment.ground.v1": {
+      "file": "objects/ground.svg",
+      "sha256": "1d793e14f0e3745916ee5c4b18933e8326bc3af0e270dbf65c72f42ec8d842a2",
+      "pivot": [
+        0,
+        0
+      ],
+      "capabilities": [
+        "horizontal-surface"
+      ],
+      "provenance": "Original hand-authored SVG for the gravity animation seed"
+    },
+    "notation.arrow.v1": {
+      "file": "objects/arrow.svg",
+      "sha256": "02a4ecf015d12aca93d3f733cfc192ad8397265d3fe5d57f371d1399a04c93c0",
+      "pivot": [
+        0,
+        0.5
+      ],
+      "capabilities": [
+        "directional",
+        "tail-pivot"
+      ],
+      "provenance": "Original hand-authored SVG for the gravity animation seed"
+    },
+    "notation.projectile-trajectory.v1": {
+      "file": "objects/notation.projectile-trajectory.v1-aa6065d4b53b409c.svg",
+      "sha256": "aa6065d4b53b409c4e40682c9e8b23f9c7b65ba5475b273fad9796909dea3fb8",
+      "pivot": [
+        0,
+        0.5
+      ],
+      "capabilities": [
+        "horizontal-tangent-at-launch",
+        "side-view",
+        "smooth-downward-curving-path"
+      ],
+      "provenance": "Original hand-authored SVG created for the requested generic horizontal-launch trajectory. In its 400x300 intrinsic canvas the launch point is (0,150), coincident with the left-center pivot, and the endpoint is (400,300). The quadratic path follows y=150+150*(x/400)^2; its vertical drop occupies HALF the object height. Stroke clipping at canvas edges is intentional. This is a reusable guide, not a baseline scene or animation plan.",
+      "viewbox": [
+        0.0,
+        0.0,
+        400.0,
+        300.0
+      ],
+      "intrinsic_dimensions": {
+        "width": 400.0,
+        "height": 300.0
+      },
+      "registration_review": {
+        "pass": true,
+        "asset_sha256": "aa6065d4b53b409c4e40682c9e8b23f9c7b65ba5475b273fad9796909dea3fb8",
+        "assessed_capabilities": [
+          "horizontal-tangent-at-launch",
+          "side-view",
+          "smooth-downward-curving-path"
+        ]
+      }
+    },
+    "engine.single-cylinder.block-cutaway.v1": {
+      "file": "objects/engine.single-cylinder.block-cutaway.v1-c06a6468c1b19a77.svg",
+      "sha256": "c06a6468c1b19a77ebb2156268f4102355384416e34648cd3dabdf6c44adc860",
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "capabilities": [
+        "openings for separate valves, passages, spark plug, and crankshaft",
+        "single-cylinder cutaway block",
+        "visible bore and head"
+      ],
+      "provenance": "Hand-authored reusable side-view engine component for this experiment. Intrinsic canvas 400x600. Landmark coordinates in intrinsic SVG pixels: {\"bore_bottom_left\": [120, 390], \"bore_top_left\": [120, 140], \"bore_top_right\": [280, 140], \"crankshaft_axis\": [200, 500], \"exhaust_passage_opening\": [285, 110], \"exhaust_valve_seat\": [255, 140], \"intake_passage_opening\": [115, 110], \"intake_valve_seat\": [145, 140], \"spark_plug_port\": [200, 100]}. This describes the asset only; the frontier model owns scene placement and motion.",
+      "viewbox": [
+        0.0,
+        0.0,
+        400.0,
+        600.0
+      ],
+      "intrinsic_dimensions": {
+        "width": 400.0,
+        "height": 600.0
+      },
+      "registration_review": {
+        "pass": true,
+        "asset_sha256": "c06a6468c1b19a77ebb2156268f4102355384416e34648cd3dabdf6c44adc860",
+        "assessed_capabilities": [
+          "openings for separate valves, passages, spark plug, and crankshaft",
+          "single-cylinder cutaway block",
+          "visible bore and head"
+        ]
+      }
+    },
+    "engine.single-cylinder.piston.v1": {
+      "file": "objects/engine.single-cylinder.piston.v1-e2c13a185e9acbef.svg",
+      "sha256": "e2c13a185e9acbefbad889507602937789633a14db84c0c7608a54c68c6b590d",
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "capabilities": [
+        "crown and skirt landmarks",
+        "side-view engine component",
+        "standalone piston"
+      ],
+      "provenance": "Hand-authored reusable side-view engine component for this experiment. Intrinsic canvas 160x110. Landmark coordinates in intrinsic SVG pixels: {\"crown_center\": [80, 8], \"skirt_bottom\": [80, 101], \"wrist_pin\": [80, 64]}. This describes the asset only; the frontier model owns scene placement and motion.",
+      "viewbox": [
+        0.0,
+        0.0,
+        160.0,
+        110.0
+      ],
+      "intrinsic_dimensions": {
+        "width": 160.0,
+        "height": 110.0
+      },
+      "registration_review": {
+        "pass": true,
+        "asset_sha256": "e2c13a185e9acbefbad889507602937789633a14db84c0c7608a54c68c6b590d",
+        "assessed_capabilities": [
+          "crown and skirt landmarks",
+          "side-view engine component",
+          "standalone piston"
+        ]
+      }
+    },
+    "engine.single-cylinder.connecting-rod.v1": {
+      "file": "objects/engine.single-cylinder.connecting-rod.v1-42b4b057cb4a633c.svg",
+      "sha256": "42b4b057cb4a633c18bc572f409e33f12fbee936222641cd49ba987ab1031df3",
+      "pivot": [
+        0.5,
+        0.85
+      ],
+      "capabilities": [
+        "end landmarks for articulation",
+        "standalone connecting rod",
+        "visible small end and big end"
+      ],
+      "provenance": "Hand-authored reusable side-view engine component for this experiment. Intrinsic canvas 70x240. Landmark coordinates in intrinsic SVG pixels: {\"big_end\": [35, 204], \"shaft_midpoint\": [35, 115], \"small_end\": [35, 25]}. This describes the asset only; the frontier model owns scene placement and motion.",
+      "viewbox": [
+        0.0,
+        0.0,
+        70.0,
+        240.0
+      ],
+      "intrinsic_dimensions": {
+        "width": 70.0,
+        "height": 240.0
+      },
+      "registration_review": {
+        "pass": true,
+        "asset_sha256": "42b4b057cb4a633c18bc572f409e33f12fbee936222641cd49ba987ab1031df3",
+        "assessed_capabilities": [
+          "end landmarks for articulation",
+          "standalone connecting rod",
+          "visible small end and big end"
+        ]
+      }
+    },
+    "engine.single-cylinder.crankshaft.v1": {
+      "file": "objects/engine.single-cylinder.crankshaft.v1-20ebaebc03041f28.svg",
+      "sha256": "20ebaebc03041f282ca2e9c1ef306c0bb3b50dca84de7e43e18ea5e3ebc6a3d6",
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "capabilities": [
+        "side-view engine component",
+        "standalone crankshaft",
+        "visible main axis and crank throw"
+      ],
+      "provenance": "Hand-authored reusable side-view engine component for this experiment. Intrinsic canvas 180x180. Landmark coordinates in intrinsic SVG pixels: {\"crank_pin\": [90, 34], \"main_axis\": [90, 90], \"throw_radius_pixels\": 56}. This describes the asset only; the frontier model owns scene placement and motion.",
+      "viewbox": [
+        0.0,
+        0.0,
+        180.0,
+        180.0
+      ],
+      "intrinsic_dimensions": {
+        "width": 180.0,
+        "height": 180.0
+      },
+      "registration_review": {
+        "pass": true,
+        "asset_sha256": "20ebaebc03041f282ca2e9c1ef306c0bb3b50dca84de7e43e18ea5e3ebc6a3d6",
+        "assessed_capabilities": [
+          "side-view engine component",
+          "standalone crankshaft",
+          "visible main axis and crank throw"
+        ]
+      }
+    },
+    "engine.single-cylinder.poppet-valve.v1": {
+      "file": "objects/engine.single-cylinder.poppet-valve.v1-95a0f6dcea586d94.svg",
+      "sha256": "95a0f6dcea586d9455095231a37324e184add01a8e426b43e223d63d4b0c8f39",
+      "pivot": [
+        0.5,
+        0.2
+      ],
+      "capabilities": [
+        "independently articulable instance",
+        "standalone poppet valve",
+        "visible stem and valve head"
+      ],
+      "provenance": "Hand-authored reusable side-view engine component for this experiment. Intrinsic canvas 40x150. Landmark coordinates in intrinsic SVG pixels: {\"head_center\": [20, 137], \"seat_contact\": [20, 144], \"stem_top\": [20, 9]}. This describes the asset only; the frontier model owns scene placement and motion.",
+      "viewbox": [
+        0.0,
+        0.0,
+        40.0,
+        150.0
+      ],
+      "intrinsic_dimensions": {
+        "width": 40.0,
+        "height": 150.0
+      },
+      "registration_review": {
+        "pass": true,
+        "asset_sha256": "95a0f6dcea586d9455095231a37324e184add01a8e426b43e223d63d4b0c8f39",
+        "assessed_capabilities": [
+          "independently articulable instance",
+          "standalone poppet valve",
+          "visible stem and valve head"
+        ]
+      }
+    },
+    "engine.single-cylinder.flow-passage.v1": {
+      "file": "objects/engine.single-cylinder.flow-passage.v1-fe0783c877aa3a68.svg",
+      "sha256": "fe0783c877aa3a68d06c32384a3a8c0de5755232aafd5d714b07c64159885a1f",
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "capabilities": [
+        "independent instance",
+        "standalone open-channel engine passage",
+        "visible passage endpoints"
+      ],
+      "provenance": "Hand-authored reusable side-view engine component for this experiment. Intrinsic canvas 120x60. Landmark coordinates in intrinsic SVG pixels: {\"channel_center\": [60, 30], \"left_open_endpoint\": [0, 30], \"right_open_endpoint\": [120, 30]}. This describes the asset only; the frontier model owns scene placement and motion.",
+      "viewbox": [
+        0.0,
+        0.0,
+        120.0,
+        60.0
+      ],
+      "intrinsic_dimensions": {
+        "width": 120.0,
+        "height": 60.0
+      },
+      "registration_review": {
+        "pass": true,
+        "asset_sha256": "fe0783c877aa3a68d06c32384a3a8c0de5755232aafd5d714b07c64159885a1f",
+        "assessed_capabilities": [
+          "independent instance",
+          "standalone open-channel engine passage",
+          "visible passage endpoints"
+        ]
+      }
+    },
+    "engine.single-cylinder.spark-plug.v1": {
+      "file": "objects/engine.single-cylinder.spark-plug.v1-6a94b09761b15a23.svg",
+      "sha256": "6a94b09761b15a23bc04e8d81c19354d316e042271ae02d0bbf95f02b05388bf",
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "capabilities": [
+        "side-view engine component",
+        "standalone spark plug",
+        "visible electrode end"
+      ],
+      "provenance": "Hand-authored reusable side-view engine component for this experiment. Intrinsic canvas 50x140. Landmark coordinates in intrinsic SVG pixels: {\"electrode_tip\": [25, 128], \"plug_body\": [25, 76], \"thread_center\": [25, 99]}. This describes the asset only; the frontier model owns scene placement and motion.",
+      "viewbox": [
+        0.0,
+        0.0,
+        50.0,
+        140.0
+      ],
+      "intrinsic_dimensions": {
+        "width": 50.0,
+        "height": 140.0
+      },
+      "registration_review": {
+        "pass": true,
+        "asset_sha256": "6a94b09761b15a23bc04e8d81c19354d316e042271ae02d0bbf95f02b05388bf",
+        "assessed_capabilities": [
+          "side-view engine component",
+          "standalone spark plug",
+          "visible electrode end"
+        ]
+      }
+    },
+    "physics.circular-orbit-guide.v1": {
+      "file": "objects/physics.circular-orbit-guide.v1-b36d5e1999605321.svg",
+      "sha256": "b36d5e1999605321a2d46a18056a790730407ace339b5751d6b4c8570fce4990",
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "capabilities": [
+        "centered rotation-axis landmark",
+        "top-down circular orbit guide",
+        "unfilled path suitable as a motion guide"
+      ],
+      "provenance": "Original hand-authored SVG for the circular-motion animation pilot. Transparent unfilled circular guide. Center cross marks the axis; no ball, string or force arrow is baked in. Intrinsic SVG landmark coordinates: {\"circular_path_reference_point\": [380, 200], \"orbit_radius_px\": 180, \"rotation_axis_center\": [200, 200]}",
+      "viewbox": [
+        0.0,
+        0.0,
+        400.0,
+        400.0
+      ],
+      "intrinsic_dimensions": {
+        "width": 400.0,
+        "height": 400.0
+      },
+      "registration_review": {
+        "pass": true,
+        "asset_sha256": "b36d5e1999605321a2d46a18056a790730407ace339b5751d6b4c8570fce4990",
+        "assessed_capabilities": [
+          "centered rotation-axis landmark",
+          "top-down circular orbit guide",
+          "unfilled path suitable as a motion guide"
+        ]
+      }
+    },
+    "physics.coriolis-qualitative-path.v1": {
+      "file": "objects/physics.coriolis-qualitative-path.v1-9f6a883e7a2d0eb1.svg",
+      "sha256": "9f6a883e7a2d0eb1e41c5e84b8310850bd31343dabf5f4344ee5e7b1e047ef35",
+      "pivot": [
+        0,
+        0.5
+      ],
+      "capabilities": [
+        "clear initial tangent landmark",
+        "path suitable as a qualitative trajectory guide",
+        "top-down smooth path curving right of an initial outward radial direction"
+      ],
+      "provenance": "Original hand-authored SVG for the circular-motion animation pilot. Qualitative guide only, not a computed physical trajectory. In SVG coordinates, +x is right and +y is down: the initial outward tangent is +x and the curve bends toward +y, its right-hand side. The initial point equals the requested left-center pivot. Scene rotation and ball motion belong to the planner. Intrinsic SVG landmark coordinates: {\"cubic_control_points\": [[0, 120], [90, 120], [200, 125], [310, 214]], \"initial_outward_tangent_direction\": [1, 0], \"initial_point\": [0, 120], \"right_curving_path_endpoint\": [310, 214]}",
+      "viewbox": [
+        0.0,
+        0.0,
+        320.0,
+        240.0
+      ],
+      "intrinsic_dimensions": {
+        "width": 320.0,
+        "height": 240.0
+      },
+      "registration_review": {
+        "pass": true,
+        "asset_sha256": "9f6a883e7a2d0eb1e41c5e84b8310850bd31343dabf5f4344ee5e7b1e047ef35",
+        "assessed_capabilities": [
+          "clear initial tangent landmark",
+          "path suitable as a qualitative trajectory guide",
+          "top-down smooth path curving right of an initial outward radial direction"
+        ]
+      }
+    },
+    "earth.rotating-globe.v1": {
+      "file": "objects/earth.rotating-globe.v1-a55a93cfec8e5283.svg",
+      "sha256": "a55a93cfec8e528306aeb9aa072d10361f7efbbfcf08d535680792c578ec2e04",
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "capabilities": [
+        "clean vector style suitable for force overlays",
+        "rotating Earth globe illustration",
+        "slightly oblate shape",
+        "visible rotation axis and equator"
+      ],
+      "provenance": "Original hand-authored SVG for the circular-motion animation pilot. Static three-quarter diagram with schematic continent silhouettes, separate gold axis and pale equator. Flattening is slightly exaggerated for legibility, not a quantitative Earth model. Landmark coordinates are before the intrinsic -18-degree rotation around [240,240]; the frontier owns scene placement, force arrows and animation. Intrinsic SVG landmark coordinates: {\"equatorial_radius_px\": 176, \"globe_center\": [240, 240], \"intrinsic_tilt_degrees\": -18, \"polar_radius_px\": 173, \"unrotated_axis_endpoints\": [[240, 18], [240, 462]], \"unrotated_equator_endpoints\": [[64, 240], [416, 240]], \"unrotated_north_pole\": [240, 67], \"unrotated_south_pole\": [240, 413]}",
+      "viewbox": [
+        0.0,
+        0.0,
+        480.0,
+        480.0
+      ],
+      "intrinsic_dimensions": {
+        "width": 480.0,
+        "height": 480.0
+      },
+      "registration_review": {
+        "pass": true,
+        "asset_sha256": "a55a93cfec8e528306aeb9aa072d10361f7efbbfcf08d535680792c578ec2e04",
+        "assessed_capabilities": [
+          "clean vector style suitable for force overlays",
+          "rotating Earth globe illustration",
+          "slightly oblate shape",
+          "visible rotation axis and equator"
+        ]
+      }
+    },
+    "physics.vector-arrow.velocity-green.v1": {
+      "file": "objects/physics.vector-arrow.velocity-green.v1-3a092fb5003018a1.svg",
+      "sha256": "3a092fb5003018a1d1169fa3299169269074256c35f2f4581c64c3161b389bb8",
+      "pivot": [
+        0,
+        0.5
+      ],
+      "capabilities": [
+        "directional arrowhead",
+        "green velocity-vector styling (#34D399)",
+        "rotatable in the diagram plane",
+        "tail pivot at vector origin"
+      ],
+      "provenance": "Original hand-authored circular-motion pilot asset. Horizontal +x arrow, tail at left-center pivot; scene rotation determines its direction. Intrinsic SVG landmark coordinates: {\"arrowhead_base\": [214, 24], \"vector_tail\": [0, 24], \"vector_tip\": [238, 24]}",
+      "viewbox": [
+        0.0,
+        0.0,
+        240.0,
+        48.0
+      ],
+      "intrinsic_dimensions": {
+        "width": 240.0,
+        "height": 48.0
+      },
+      "registration_review": {
+        "pass": true,
+        "asset_sha256": "3a092fb5003018a1d1169fa3299169269074256c35f2f4581c64c3161b389bb8",
+        "assessed_capabilities": [
+          "directional arrowhead",
+          "green velocity-vector styling (#34D399)",
+          "rotatable in the diagram plane",
+          "tail pivot at vector origin"
+        ]
+      }
+    },
+    "physics.vector-arrow.net-force-blue.v1": {
+      "file": "objects/physics.vector-arrow.net-force-blue.v1-26eeec0f3d3c72ae.svg",
+      "sha256": "26eeec0f3d3c72ae09e95411890f906ed242730fe32489cc5dd49ac589354811",
+      "pivot": [
+        0,
+        0.5
+      ],
+      "capabilities": [
+        "blue net-force styling (#38BDF8)",
+        "directional arrowhead",
+        "rotatable in the diagram plane",
+        "tail pivot at vector origin"
+      ],
+      "provenance": "Original hand-authored circular-motion pilot asset. Horizontal +x arrow, tail at left-center pivot; scene rotation determines its direction. Intrinsic SVG landmark coordinates: {\"arrowhead_base\": [214, 24], \"vector_tail\": [0, 24], \"vector_tip\": [238, 24]}",
+      "viewbox": [
+        0.0,
+        0.0,
+        240.0,
+        48.0
+      ],
+      "intrinsic_dimensions": {
+        "width": 240.0,
+        "height": 48.0
+      },
+      "registration_review": {
+        "pass": true,
+        "asset_sha256": "26eeec0f3d3c72ae09e95411890f906ed242730fe32489cc5dd49ac589354811",
+        "assessed_capabilities": [
+          "blue net-force styling (#38BDF8)",
+          "directional arrowhead",
+          "rotatable in the diagram plane",
+          "tail pivot at vector origin"
+        ]
+      }
+    },
+    "physics.ball.ghost.v1": {
+      "file": "objects/physics.ball.ghost.v1-764ad2d94a5e17b2.svg",
+      "sha256": "764ad2d94a5e17b2e28bbef9067f8ed033d50d30cce9eaf9353a133bbc90ac44",
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "capabilities": [
+        "center pivot",
+        "circular ball silhouette",
+        "ghost or translucent appearance",
+        "legible on a dark background"
+      ],
+      "provenance": "Original hand-authored circular-motion pilot asset. Dashed, translucent ghost ball for the hypothetical no-force trajectory; not a second physical ball. Intrinsic SVG landmark coordinates: {\"ball_center\": [50, 50], \"outer_ball_radius\": 46}",
+      "viewbox": [
+        0.0,
+        0.0,
+        100.0,
+        100.0
+      ],
+      "intrinsic_dimensions": {
+        "width": 100.0,
+        "height": 100.0
+      },
+      "registration_review": {
+        "pass": true,
+        "asset_sha256": "764ad2d94a5e17b2e28bbef9067f8ed033d50d30cce9eaf9353a133bbc90ac44",
+        "assessed_capabilities": [
+          "center pivot",
+          "circular ball silhouette",
+          "ghost or translucent appearance",
+          "legible on a dark background"
+        ]
+      }
+    },
+    "physics.delta-v-vector-subtraction.wide.v1": {
+      "file": "objects/physics.delta-v-vector-subtraction.wide.v1-316b77065269a5e0.svg",
+      "sha256": "316b77065269a5e0e00e41b7f41cdafc429e51f148d73e13ebcf188b03bc23c1",
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "capabilities": [
+        "correct vector difference Δv = v_later - v_earlier",
+        "semantic landmarks for vector origins and tips",
+        "two equal-length green velocity vectors sharing a common tail",
+        "wider finite angular separation with Δv roughly inward",
+        "Δv arrow from earlier vector tip to later vector tip"
+      ],
+      "provenance": "Original hand-authored circular-motion pilot asset. Equal-length sampled velocity vectors share a common origin. Blue delta-v runs from earlier tip to later tip; left is inward for the depicted right-side orbital position. Static teaching diagram; native labels are separate. Intrinsic SVG landmark coordinates: {\"angular_separation_degrees\": 60, \"common_vector_tail\": [280, 190], \"delta_v_tail\": [335.0, 94.73720558371176], \"delta_v_tip\": [225.00000000000003, 94.73720558371174], \"earlier_velocity_tip\": [335.0, 94.73720558371176], \"inward_reference_direction\": [-1, 0], \"later_velocity_tip\": [225.00000000000003, 94.73720558371174]}",
+      "viewbox": [
+        0.0,
+        0.0,
+        400.0,
+        260.0
+      ],
+      "intrinsic_dimensions": {
+        "width": 400.0,
+        "height": 260.0
+      },
+      "registration_review": {
+        "pass": true,
+        "asset_sha256": "316b77065269a5e0e00e41b7f41cdafc429e51f148d73e13ebcf188b03bc23c1",
+        "assessed_capabilities": [
+          "correct vector difference Δv = v_later - v_earlier",
+          "semantic landmarks for vector origins and tips",
+          "two equal-length green velocity vectors sharing a common tail",
+          "wider finite angular separation with Δv roughly inward",
+          "Δv arrow from earlier vector tip to later vector tip"
+        ]
+      }
+    },
+    "physics.delta-v-vector-subtraction.close.v1": {
+      "file": "objects/physics.delta-v-vector-subtraction.close.v1-7f85320c0dffde84.svg",
+      "sha256": "7f85320c0dffde849a81d9fe3983fde94a134ce652adc7be73f63191fefc6b98",
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "capabilities": [
+        "correct vector difference Δv = v_later - v_earlier",
+        "semantic landmarks for vector origins and tips",
+        "small angular separation with Δv approaching the inward direction",
+        "two equal-length green velocity vectors sharing a common tail",
+        "Δv arrow from earlier vector tip to later vector tip"
+      ],
+      "provenance": "Original hand-authored circular-motion pilot asset. Equal-length sampled velocity vectors share a common origin. Blue delta-v runs from earlier tip to later tip; left is inward for the depicted right-side orbital position. Static teaching diagram; native labels are separate. Intrinsic SVG landmark coordinates: {\"angular_separation_degrees\": 12, \"common_vector_tail\": [280, 190], \"delta_v_tail\": [291.4981309594419, 80.60259150948994], \"delta_v_tip\": [268.5018690405581, 80.60259150948994], \"earlier_velocity_tip\": [291.4981309594419, 80.60259150948994], \"inward_reference_direction\": [-1, 0], \"later_velocity_tip\": [268.5018690405581, 80.60259150948994]}",
+      "viewbox": [
+        0.0,
+        0.0,
+        400.0,
+        260.0
+      ],
+      "intrinsic_dimensions": {
+        "width": 400.0,
+        "height": 260.0
+      },
+      "registration_review": {
+        "pass": true,
+        "asset_sha256": "7f85320c0dffde849a81d9fe3983fde94a134ce652adc7be73f63191fefc6b98",
+        "assessed_capabilities": [
+          "correct vector difference Δv = v_later - v_earlier",
+          "semantic landmarks for vector origins and tips",
+          "small angular separation with Δv approaching the inward direction",
+          "two equal-length green velocity vectors sharing a common tail",
+          "Δv arrow from earlier vector tip to later vector tip"
+        ]
+      }
+    },
+    "physics.earth-moon-orbit-diagram.v1": {
+      "file": "objects/physics.earth-moon-orbit-diagram.v1-45724cb4c608d986.svg",
+      "sha256": "45724cb4c608d986d7f15cea2041fc4fd36f2f0e9b66bc214afadd395619b556",
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "capabilities": [
+        "clean vector style on a dark background",
+        "clear Moon position for an inward gravity-vector overlay",
+        "recognizable Earth and Moon illustrations",
+        "top-down circular orbit depiction",
+        "visible Earth center and Moon center landmarks"
+      ],
+      "provenance": "Original hand-authored circular-motion pilot asset. Schematic circular Earth–Moon orbit; sizes and distances are not to scale. Gravity arrows are separate overlays. Intrinsic SVG landmark coordinates: {\"earth_center\": [200, 200], \"moon_center\": [330, 200], \"moon_inward_direction\": [-1, 0], \"orbit_radius\": 130}",
+      "viewbox": [
+        0.0,
+        0.0,
+        400.0,
+        400.0
+      ],
+      "intrinsic_dimensions": {
+        "width": 400.0,
+        "height": 400.0
+      },
+      "registration_review": {
+        "pass": true,
+        "asset_sha256": "45724cb4c608d986d7f15cea2041fc4fd36f2f0e9b66bc214afadd395619b556",
+        "assessed_capabilities": [
+          "clean vector style on a dark background",
+          "clear Moon position for an inward gravity-vector overlay",
+          "recognizable Earth and Moon illustrations",
+          "top-down circular orbit depiction",
+          "visible Earth center and Moon center landmarks"
+        ]
+      }
+    },
+    "physics.car.level-curve-topdown.v1": {
+      "file": "objects/physics.car.level-curve-topdown.v1-7febc6879b44cb92.svg",
+      "sha256": "7febc6879b44cb923e1558c72b1800f04c4b4023bc5adc200a8742bfe8090c5d",
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "capabilities": [
+        "car center landmark",
+        "clean vector style on a dark background",
+        "curve center landmark",
+        "recognizable top-down car",
+        "unbanked level-road curve context"
+      ],
+      "provenance": "Original hand-authored circular-motion pilot asset. Level-road context with car pointing along the upward tangent at the curve’s rightmost point. Friction vector and labels are separate. Intrinsic SVG landmark coordinates: {\"car_center\": [355, 200], \"car_forward_direction\": [0, -1], \"curve_center\": [200, 200], \"inward_direction_at_car\": [-1, 0], \"road_radius\": 155}",
+      "viewbox": [
+        0.0,
+        0.0,
+        400.0,
+        400.0
+      ],
+      "intrinsic_dimensions": {
+        "width": 400.0,
+        "height": 400.0
+      },
+      "registration_review": {
+        "pass": true,
+        "asset_sha256": "7febc6879b44cb923e1558c72b1800f04c4b4023bc5adc200a8742bfe8090c5d",
+        "assessed_capabilities": [
+          "car center landmark",
+          "clean vector style on a dark background",
+          "curve center landmark",
+          "recognizable top-down car",
+          "unbanked level-road curve context"
+        ]
+      }
+    },
+    "physics.banked-curve-force-diagram.v1": {
+      "file": "objects/physics.banked-curve-force-diagram.v1-a8f9f6e617247775.svg",
+      "sha256": "a8f9f6e6172477759cfdec4d226651a208161ac09eca2e9bab083d6f99ec3ce4",
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "capabilities": [
+        "blue inward horizontal net-force component",
+        "clean vector style on a dark background",
+        "gravity vector",
+        "normal-force decomposition into vertical and horizontal components",
+        "normal-force vector",
+        "recognizable car on an ideal banked road",
+        "vertical force balance shown"
+      ],
+      "provenance": "Original hand-authored circular-motion pilot asset. Ideal frictionless banked curve: the upward-left normal splits into an upward component balancing weight and a leftward inward net-force component. Vector lengths are proportional; geometry is illustrative, labels are separate. Intrinsic SVG landmark coordinates: {\"banking_angle_degrees\": 20, \"car_center\": [192.81757699016094, 180.26645496349593], \"gravity_tail\": [192.81757699016094, 180.26645496349593], \"gravity_tip\": [192.81757699016094, 307.1249587695936], \"normal_horizontal_tip\": [146.64485764119567, 180.26645496349593], \"normal_tail\": [192.81757699016094, 180.26645496349593], \"normal_tip\": [146.64485764119567, 53.40795115739829], \"normal_vertical_tip\": [192.81757699016094, 53.40795115739829], \"road_midpoint\": [200, 200]}",
+      "viewbox": [
+        0.0,
+        0.0,
+        400.0,
+        360.0
+      ],
+      "intrinsic_dimensions": {
+        "width": 400.0,
+        "height": 360.0
+      },
+      "registration_review": {
+        "pass": true,
+        "asset_sha256": "a8f9f6e6172477759cfdec4d226651a208161ac09eca2e9bab083d6f99ec3ce4",
+        "assessed_capabilities": [
+          "blue inward horizontal net-force component",
+          "clean vector style on a dark background",
+          "gravity vector",
+          "normal-force decomposition into vertical and horizontal components",
+          "normal-force vector",
+          "recognizable car on an ideal banked road",
+          "vertical force balance shown"
+        ]
+      }
+    },
+    "environment.road.curve-topdown.v1": {
+      "file": "objects/environment.road.curve-topdown.v1-b4a3e7123e8ee5e2.svg",
+      "sha256": "b4a3e7123e8ee5e2644925c7250383c081d99f683a6ffed83825a776ee28c5cb",
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "capabilities": [
+        "curve geometry makes inward direction identifiable",
+        "curve-center landmark",
+        "top-down curved roadway",
+        "visible inner and outer road edges"
+      ],
+      "provenance": "Original hand-authored circular-motion pilot asset. Level-road plan view; center cross fixes inward direction. No banking, vehicles or force vectors are baked in. Intrinsic SVG landmark coordinates: {\"center_of_curvature\": [200, 200], \"inner_radius\": 131, \"outer_radius\": 179, \"rightmost_road_point\": [355, 200], \"road_centerline_radius\": 155}",
+      "viewbox": [
+        0.0,
+        0.0,
+        400.0,
+        400.0
+      ],
+      "intrinsic_dimensions": {
+        "width": 400.0,
+        "height": 400.0
+      },
+      "registration_review": {
+        "pass": true,
+        "asset_sha256": "b4a3e7123e8ee5e2644925c7250383c081d99f683a6ffed83825a776ee28c5cb",
+        "assessed_capabilities": [
+          "curve geometry makes inward direction identifiable",
+          "curve-center landmark",
+          "top-down curved roadway",
+          "visible inner and outer road edges"
+        ]
+      }
+    },
+    "vehicle.car.top-down.v1": {
+      "file": "objects/vehicle.car.top-down.v1-f89b41827639f44e.svg",
+      "sha256": "f89b41827639f44e8d955d21fda358588253d5d81ad1d2c7880eb94af263095d",
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "capabilities": [
+        "recognizable vehicle body",
+        "top-down car view",
+        "transparent background suitable for force overlays",
+        "visible front-to-rear orientation"
+      ],
+      "provenance": "Original hand-authored circular-motion pilot asset. Top-down car, nose toward +x; the planner rotates it to the road tangent. Intrinsic SVG landmark coordinates: {\"body_center\": [80, 45], \"front_end\": [154, 45], \"rear_end\": [18, 45], \"wheel_centers\": [[43, 12], [125, 12], [43, 78], [125, 78]]}",
+      "viewbox": [
+        0.0,
+        0.0,
+        160.0,
+        90.0
+      ],
+      "intrinsic_dimensions": {
+        "width": 160.0,
+        "height": 90.0
+      },
+      "registration_review": {
+        "pass": true,
+        "asset_sha256": "f89b41827639f44e8d955d21fda358588253d5d81ad1d2c7880eb94af263095d",
+        "assessed_capabilities": [
+          "recognizable vehicle body",
+          "top-down car view",
+          "transparent background suitable for force overlays",
+          "visible front-to-rear orientation"
+        ]
+      }
+    },
+    "notation.force-vector-arrow.v1": {
+      "file": "objects/notation.force-vector-arrow.v1-bb22184ef4468c17.svg",
+      "sha256": "bb22184ef4468c17c8eab30cf92f952a004c14fe481cca5b78bc492cb6fdc33a",
+      "pivot": [
+        0,
+        0.5
+      ],
+      "capabilities": [
+        "directional vector arrow",
+        "orientation-independent 2D rotation",
+        "renderer-recolorable stroke",
+        "tail pivot",
+        "transparent background",
+        "variable-length scaling"
+      ],
+      "provenance": "Original hand-authored circular-motion pilot asset. Horizontal +x tail-pivot arrow. Explicit currentColor placeholders are recolored by the opt-in renderer adapter. Default color is neutral; scale and rotation are controlled by the scene. Intrinsic SVG landmark coordinates: {\"vector_tail\": [0, 24], \"vector_tip\": [238, 24]}",
+      "viewbox": [
+        0.0,
+        0.0,
+        240.0,
+        48.0
+      ],
+      "intrinsic_dimensions": {
+        "width": 240.0,
+        "height": 48.0
+      },
+      "registration_review": {
+        "pass": true,
+        "asset_sha256": "bb22184ef4468c17c8eab30cf92f952a004c14fe481cca5b78bc492cb6fdc33a",
+        "assessed_capabilities": [
+          "directional vector arrow",
+          "orientation-independent 2D rotation",
+          "renderer-recolorable stroke",
+          "tail pivot",
+          "transparent background",
+          "variable-length scaling"
+        ]
+      }
+    },
+    "vehicle.car.side-profile.v1": {
+      "file": "objects/vehicle.car.side-profile.v1-d1f9a2f4137ff50f.svg",
+      "sha256": "d1f9a2f4137ff50feab39b1ce61b14253a876ab8b30494b37750289e09bb9613",
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "capabilities": [
+        "recognizable body and wheels",
+        "side-view car",
+        "transparent background suitable for force overlays"
+      ],
+      "provenance": "Original hand-authored circular-motion pilot asset. Side-profile car, nose toward +x, level tire contacts; force vectors are separate. Intrinsic SVG landmark coordinates: {\"body_center\": [90, 48], \"front_end\": [168, 57], \"rear_end\": [15, 57], \"wheel_contact_points\": [[44, 85.5], [139, 85.5]]}",
+      "viewbox": [
+        0.0,
+        0.0,
+        180.0,
+        100.0
+      ],
+      "intrinsic_dimensions": {
+        "width": 180.0,
+        "height": 100.0
+      },
+      "registration_review": {
+        "pass": true,
+        "asset_sha256": "d1f9a2f4137ff50feab39b1ce61b14253a876ab8b30494b37750289e09bb9613",
+        "assessed_capabilities": [
+          "recognizable body and wheels",
+          "side-view car",
+          "transparent background suitable for force overlays"
+        ]
+      }
+    },
+    "environment.road.banked-cross-section.v1": {
+      "file": "objects/environment.road.banked-cross-section.v1-47c82c84e2278a56.svg",
+      "sha256": "47c82c84e2278a56779148bc6d686cbee48a69b42bf8b7943a175d50cfdb1bf1",
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "capabilities": [
+        "banked-road cross-section",
+        "banking-angle marker",
+        "clearly inclined road surface",
+        "inner and raised outer edge identifiable",
+        "reference horizontal for banking-angle comparison"
+      ],
+      "provenance": "Original hand-authored circular-motion pilot asset. Inner edge is low at left, outer edge raised at right. Angle arc is qualitative; native theta label and force arrows are separate. The planner must align tires to this surface. Intrinsic SVG landmark coordinates: {\"banking_angle_degrees\": 14.826479970355665, \"horizontal_reference\": [[40, 155], [380, 155]], \"low_inner_edge\": [40, 155], \"raised_outer_edge\": [380, 65]}",
+      "viewbox": [
+        0.0,
+        0.0,
+        420.0,
+        200.0
+      ],
+      "intrinsic_dimensions": {
+        "width": 420.0,
+        "height": 200.0
+      },
+      "registration_review": {
+        "pass": true,
+        "asset_sha256": "47c82c84e2278a56779148bc6d686cbee48a69b42bf8b7943a175d50cfdb1bf1",
+        "assessed_capabilities": [
+          "banked-road cross-section",
+          "banking-angle marker",
+          "clearly inclined road surface",
+          "inner and raised outer edge identifiable",
+          "reference horizontal for banking-angle comparison"
+        ]
+      }
+    },
+    "vehicle.car.banked-cross-section.v1": {
+      "file": "objects/vehicle.car.banked-cross-section.v1-9b093fd016e8f3ba.svg",
+      "sha256": "9b093fd016e8f3ba076b27cd7608e92116ae81c2cce5d92c47644b5eb88847f3",
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "capabilities": [
+        "compatible with a visibly inclined road surface",
+        "transparent background suitable for force overlays",
+        "vehicle schematic suitable for a banked-road cross-section",
+        "visible tire contact points"
+      ],
+      "provenance": "Original hand-authored circular-motion pilot asset. Front/cross-section car with equal level tire contacts. Rotate the entire car to match the inclined road; no second intrinsic banking angle is baked into this reusable part. Intrinsic SVG landmark coordinates: {\"body_center\": [80, 62], \"road_facing_underside\": [80, 97], \"tire_contact_points\": [[38, 97], [122, 97]], \"upper_body\": [80, 27]}",
+      "viewbox": [
+        0.0,
+        0.0,
+        160.0,
+        110.0
+      ],
+      "intrinsic_dimensions": {
+        "width": 160.0,
+        "height": 110.0
+      },
+      "registration_review": {
+        "pass": true,
+        "asset_sha256": "9b093fd016e8f3ba076b27cd7608e92116ae81c2cce5d92c47644b5eb88847f3",
+        "assessed_capabilities": [
+          "compatible with a visibly inclined road surface",
+          "transparent background suitable for force overlays",
+          "vehicle schematic suitable for a banked-road cross-section",
+          "visible tire contact points"
+        ]
+      }
+    },
+    "earth.rotating-globe.weather-overlay.v1": {
+      "file": "objects/earth.rotating-globe.weather-overlay.v1-8d09099d71f0e7e5.svg",
+      "sha256": "8d09099d71f0e7e55d304727f0707fc0e445412bcda3c8756a6b49a705c8d708",
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "capabilities": [
+        "registered Northern Hemisphere counterclockwise cyclone path",
+        "registered Northern and Southern Hemisphere cyclone circulation paths",
+        "registered Southern Hemisphere clockwise cyclone path",
+        "registered equator and latitude markers",
+        "registered northward air-parcel path landmarks",
+        "surface registration to earth.rotating-globe.v1",
+        "synchronized rotation with the globe"
+      ],
+      "provenance": "Original hand-authored circular-motion pilot asset. Same canvas, center pivot and intrinsic tilt as earth.rotating-globe.v1. Northern cyclone arrow is counterclockwise, southern clockwise as viewed from above. Parcel curves eastward during northward travel; all paths are qualitative, not a solver. Attach overlay with identical size/pivot and synchronized rotation to the globe. Intrinsic SVG landmark coordinates: {\"globe_center\": [240, 240], \"intrinsic_tilt_degrees\": -18, \"unrotated_equator_endpoints\": [[64, 240], [416, 240]], \"unrotated_northern_cyclone_center\": [180, 150], \"unrotated_parcel_end\": [340, 145], \"unrotated_parcel_start\": [300, 240], \"unrotated_southern_cyclone_center\": [270, 320]}",
+      "viewbox": [
+        0.0,
+        0.0,
+        480.0,
+        480.0
+      ],
+      "intrinsic_dimensions": {
+        "width": 480.0,
+        "height": 480.0
+      },
+      "registration_review": {
+        "pass": true,
+        "asset_sha256": "8d09099d71f0e7e55d304727f0707fc0e445412bcda3c8756a6b49a705c8d708",
+        "assessed_capabilities": [
+          "registered Northern Hemisphere counterclockwise cyclone path",
+          "registered Northern and Southern Hemisphere cyclone circulation paths",
+          "registered Southern Hemisphere clockwise cyclone path",
+          "registered equator and latitude markers",
+          "registered northward air-parcel path landmarks",
+          "surface registration to earth.rotating-globe.v1",
+          "synchronized rotation with the globe"
+        ]
+      }
+    },
+    "physics.newton-bucket-flat-water-profile.v1": {
+      "file": "objects/physics.newton-bucket-flat-water-profile.v1-2d9c1ccbf9681380.svg",
+      "sha256": "2d9c1ccbf96813804848da2d7ede1b747d8b709bebff064b3fe193dca048cec1",
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "capabilities": [
+        "alignment landmarks for a bucket cross-section",
+        "flat profile landmarks suitable for alignment within a bucket cross-section",
+        "side-view flat water-surface profile",
+        "side-view water-surface profile",
+        "static profile illustration"
+      ],
+      "provenance": "Original hand-authored circular-motion pilot asset. Static flat water-surface cross-section, matching the other profile’s canvas and pivot. Register inside the bucket outline; this illustration does not simulate fluid deformation. Intrinsic SVG landmark coordinates: {\"left_surface_endpoint\": [48, 110], \"right_surface_endpoint\": [272, 110], \"surface_midpoint\": [160, 110], \"water_bottom\": [160, 192]}",
+      "viewbox": [
+        0.0,
+        0.0,
+        320.0,
+        220.0
+      ],
+      "intrinsic_dimensions": {
+        "width": 320.0,
+        "height": 220.0
+      },
+      "registration_review": {
+        "pass": true,
+        "asset_sha256": "2d9c1ccbf96813804848da2d7ede1b747d8b709bebff064b3fe193dca048cec1",
+        "assessed_capabilities": [
+          "alignment landmarks for a bucket cross-section",
+          "flat profile landmarks suitable for alignment within a bucket cross-section",
+          "side-view flat water-surface profile",
+          "side-view water-surface profile",
+          "static profile illustration"
+        ]
+      }
+    },
+    "physics.newton-bucket-concave-water-profile.v1": {
+      "file": "objects/physics.newton-bucket-concave-water-profile.v1-1c8caff191512911.svg",
+      "sha256": "1c8caff191512911c9a3e037d231bc510013235f5a7f71c6bdba5e54b4148c70",
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "capabilities": [
+        "alignment landmarks matching the flat profile's bucket cross-section",
+        "raised-edge and lowered-center landmarks",
+        "raised-edge and lowered-center landmarks suitable for alignment within a bucket cross-section",
+        "side-view concave water-surface profile",
+        "static profile illustration"
+      ],
+      "provenance": "Original hand-authored circular-motion pilot asset. Static concave water-surface cross-section, matching the other profile’s canvas and pivot. Register inside the bucket outline; this illustration does not simulate fluid deformation. Intrinsic SVG landmark coordinates: {\"left_surface_endpoint\": [48, 80], \"right_surface_endpoint\": [272, 80], \"surface_midpoint\": [160, 130], \"water_bottom\": [160, 192]}",
+      "viewbox": [
+        0.0,
+        0.0,
+        320.0,
+        220.0
+      ],
+      "intrinsic_dimensions": {
+        "width": 320.0,
+        "height": 220.0
+      },
+      "registration_review": {
+        "pass": true,
+        "asset_sha256": "1c8caff191512911c9a3e037d231bc510013235f5a7f71c6bdba5e54b4148c70",
+        "assessed_capabilities": [
+          "alignment landmarks matching the flat profile's bucket cross-section",
+          "raised-edge and lowered-center landmarks",
+          "raised-edge and lowered-center landmarks suitable for alignment within a bucket cross-section",
+          "side-view concave water-surface profile",
+          "static profile illustration"
+        ]
+      }
+    },
+    "physics.mach-principle-cosmic-concept.v1": {
+      "file": "objects/physics.mach-principle-cosmic-concept.v1-161cfa4356a921d3.svg",
+      "sha256": "161cfa4356a921d3f524a638246e3527c284149c614d01562cd4d4d69313b585",
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "capabilities": [
+        "conceptual vector illustration",
+        "distant stars and local rotating system shown together",
+        "no implied causal mechanism",
+        "no implied causal mechanism or physical simulation",
+        "no physical simulation linking distant matter to inertia"
+      ],
+      "provenance": "Original hand-authored circular-motion pilot asset. Conceptual juxtaposition of distant stars and a local rotating system. No connecting arrows or causal mechanism. Native narration/labels must identify Mach’s principle as a proposal. Intrinsic SVG landmark coordinates: {\"distant_star_field\": \"outside local region\", \"local_region_boundary_radii\": [88, 62], \"local_rotating_system_center\": [320, 185]}",
+      "viewbox": [
+        0.0,
+        0.0,
+        640.0,
+        360.0
+      ],
+      "intrinsic_dimensions": {
+        "width": 640.0,
+        "height": 360.0
+      },
+      "registration_review": {
+        "pass": true,
+        "asset_sha256": "161cfa4356a921d3f524a638246e3527c284149c614d01562cd4d4d69313b585",
+        "assessed_capabilities": [
+          "conceptual vector illustration",
+          "distant stars and local rotating system shown together",
+          "no implied causal mechanism",
+          "no implied causal mechanism or physical simulation",
+          "no physical simulation linking distant matter to inertia"
+        ]
+      }
+    },
+    "physics.lense-thirring-frame-dragging-schematic.v1": {
+      "file": "objects/physics.lense-thirring-frame-dragging-schematic.v1-a6a011be69f85dec.svg",
+      "sha256": "a6a011be69f85dec3d968d99d66f4988c6acd9fc4877e98d4ec3c68c39a4b4f9",
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "capabilities": [
+        "nearby reference-frame markers",
+        "not presented as confirmation of Mach's principle",
+        "qualitative frame-dragging depiction",
+        "spinning mass",
+        "spinning mass with nearby reference-frame markers"
+      ],
+      "provenance": "Original hand-authored circular-motion pilot asset. Qualitative spinning-mass and nearby frame-marker illustration. Marker angles and ring are schematic, not measured GR predictions or a physical simulation. Native labels must distinguish frame dragging from proof of Mach’s principle. Intrinsic SVG landmark coordinates: {\"central_spinning_mass\": [240, 200], \"nearby_reference_frame_centers\": [[100, 200], [380, 200], [240, 76], [240, 324]], \"spin_axis_endpoints\": [[240, 62], [240, 338]]}",
+      "viewbox": [
+        0.0,
+        0.0,
+        480.0,
+        400.0
+      ],
+      "intrinsic_dimensions": {
+        "width": 480.0,
+        "height": 400.0
+      },
+      "registration_review": {
+        "pass": true,
+        "asset_sha256": "a6a011be69f85dec3d968d99d66f4988c6acd9fc4877e98d4ec3c68c39a4b4f9",
+        "assessed_capabilities": [
+          "nearby reference-frame markers",
+          "not presented as confirmation of Mach's principle",
+          "qualitative frame-dragging depiction",
+          "spinning mass",
+          "spinning mass with nearby reference-frame markers"
+        ]
+      }
+    }
+  }
+}

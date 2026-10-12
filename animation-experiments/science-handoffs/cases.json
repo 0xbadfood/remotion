@@ -1,0 +1,20 @@
+[
+  {
+    "id": "gravity",
+    "subject": "Why a horizontally launched ball falls: gravity and projectile motion",
+    "advisory_seconds": 360,
+    "brief": "gravity-brief.json"
+  },
+  {
+    "id": "seasons",
+    "subject": "Why Earth has seasons",
+    "advisory_seconds": 360,
+    "brief": "seasons-brief.json"
+  },
+  {
+    "id": "circuits",
+    "subject": "How series and parallel electric circuits work",
+    "advisory_seconds": 360,
+    "brief": "circuits-brief.json"
+  }
+]

@@ -30,7 +30,8 @@ class TerminalImageTests(unittest.TestCase):
         return {'visual_message': self.message, 'message_marks': total*.5, 'prompt_marks': total*.3,
                 'usability_marks': total*.2, 'score': total, 'pass': passed,
                 'reason_keys': [] if passed else ['unwanted_text'], 'issues': [] if passed else ['Generated lettering'],
-                'limitations': [], 'correction': '' if passed else 'Plain parchment', 'score_protocol': PROTOCOL}
+                'limitations': [], 'correction': '' if passed else 'Plain parchment', 'score_protocol': PROTOCOL,
+                'component_inventory': []}
 
     def setup(self, directory):
         root = Path(directory)/'images/abc123'
@@ -73,6 +74,21 @@ class TerminalImageTests(unittest.TestCase):
             self.assertEqual(result['file'], str(original))
             self.assertTrue(result['needs_review'])
             self.assertFalse(result['review']['pass'])
+            store.db.close()
+
+    def test_unreviewed_candidate_is_available_for_premium_comparison(self):
+        with tempfile.TemporaryDirectory() as folder:
+            store = Store(folder);root, original = self.setup(folder)
+            state=read(root/'message-state.json')
+            state['pending_review']=state['takes'].pop()
+            write(root/'message-state.json',state)
+            with patch('infofilm.image_recovery.render_take',side_effect=self.render), \
+                 patch('infofilm.image_recovery.provider_session',return_value=contextlib.nullcontext()), \
+                 patch('infofilm.image_terminal.score_image',side_effect=[self.score(85),self.score(70,True)]) as score:
+                result=recover(self.config,store,root,self.case,Mock(),terminal_settings(self.config))
+            self.assertEqual(result['file'],str(original))
+            self.assertEqual(score.call_count,2)
+            self.assertTrue(result['needs_review'])
             store.db.close()
 
     def test_score_schema_rejects_nan_boolean_and_out_of_range_marks(self):

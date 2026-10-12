@@ -201,9 +201,27 @@ class VibePointTests(unittest.TestCase):
             write(root/"batches/attempt-0-batch-0/provider.json", {"state": "submission_started", "job_id": "existing",
                 "body": {}, "points": [{"point_id": "P01"}]})
             with patch("infofilm.vibe_media.request", side_effect=AssertionError("No new POST")), \
+                 patch("infofilm.vibe_media.job_known", return_value=True), \
                  patch("infofilm.vibe_media.wait_job", side_effect=RuntimeError("Provider job needs reconciliation")):
                 with self.assertRaisesRegex(RuntimeError, "reconciliation"):
                     _batch(config, store, root, points, Path(config["reference_audio"]), 0, 0, "test")
+            store.db.close()
+
+    def test_submission_the_server_never_accepted_is_resubmitted_under_the_same_id(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store, config, points = self.setup_run(directory, 1)
+            root = store.root/"audio/vibevoice/test"
+            body = {"job_id": "saved-id", "items": []}
+            write(root/"batches/attempt-0-batch-0/provider.json", {"state": "submission_started", "job_id": "saved-id",
+                "body": body, "points": [{"point_id": "P01"}]})
+            posts = []
+            with patch("infofilm.vibe_media.request", side_effect=lambda *a, **k: posts.append(k["json"]) or {"accepted": True}), \
+                 patch("infofilm.vibe_media.job_known", return_value=False), \
+                 patch("infofilm.vibe_media.wait_job", side_effect=RuntimeError("stop after submit")):
+                with self.assertRaisesRegex(RuntimeError, "stop after submit"):
+                    _batch(config, store, root, points, Path(config["reference_audio"]), 0, 0, "test")
+            self.assertEqual(posts, [body])
+            self.assertEqual(read(root/"batches/attempt-0-batch-0/provider.json")["state"], "submitted")
             store.db.close()
 
     def test_new_batch_sends_explicit_numbers_and_saved_result_survives_service_recycle(self):
@@ -218,7 +236,7 @@ class VibePointTests(unittest.TestCase):
                 _batch(config, store, root, points, Path(config["reference_audio"]), 0, 0, "test")
             record = read(root / "batches/attempt-0-batch-0/provider.json")
             spoken = record["body"]["items"][0]["script"]
-            self.assertIn("one thousand, nine hundred and seventy", spoken)
+            self.assertIn("nineteen seventy", spoken)
             self.assertIn("twenty-two point five percent", spoken)
             self.assertIn("mid nineteen seventies", spoken)
             self.assertNotIn("1970", spoken)

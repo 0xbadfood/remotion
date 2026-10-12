@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 60">
+  <path d="M0 0 H600 V60 H0 Z" fill="#173845"/>
+  <path d="M0 3 H600" stroke="#92b0bc" stroke-width="5"/>
+  <path d="M20 30 L50 12 M80 42 L110 24 M140 30 L170 12 M200 42 L230 24 M260 30 L290 12 M320 42 L350 24 M380 30 L410 12 M440 42 L470 24 M500 30 L530 12 M560 42 L590 24" stroke="#385763" stroke-width="3"/>
+</svg>
