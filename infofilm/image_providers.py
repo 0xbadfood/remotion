@@ -14,7 +14,7 @@ from PIL import Image
 
 from .core import digest, read, write
 
-ADAPTERS = {"qwen_async", "imagestudio_sdapi"}
+ADAPTERS = {"qwen_async", "imagestudio_sdapi", "openrouter_image"}
 IMAGE_REVIEW_REASONS = {
     "unwanted_text": "Generated overlay captions, labels or gibberish typography; not ordinary writing on a required scene object.",
     "semantic_mismatch": "Wrong or missing essential subject/object/action, including an unwanted figure.",
@@ -127,6 +127,10 @@ def provider_config(base, provider_id, provider):
                       image_dimension_multiple=provider["settings"]["dimension_multiple"],
                       image_park_idle_services=provider.get("park_idle_services", False))
         # The Qwen adapter's endpoint is separate from the current tier endpoint.
+        result["qwen_url"] = base.get("qwen_url", base["image_url"])
+    elif provider["adapter"] == "openrouter_image":
+        # Cloud premium tier: the model and key come from LLM settings (premium_image_endpoint).
+        result.update(image_engine="openrouter")
         result["qwen_url"] = base.get("qwen_url", base["image_url"])
     return result
 

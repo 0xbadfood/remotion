@@ -23,7 +23,7 @@ moves to the Spark; the premium image tier becomes a cloud provider.
 | Chromium for layout checks (`browser`) | Playwright x86 build | Playwright ARM chromium, or Remotion's own chrome-headless-shell |
 | ACE-Step music (`acestep_*`), Whisper large-v3 QA (`music_stable_ts_*`, `music_vad_python`) | venvs on the 3090 | fresh ARM venvs (torch aarch64 + CUDA already works for VibeVoice); copy checkpoints |
 | OmniVoice (`omni_*`) | local venv | Spark already runs `omnivoice.service`: point `omni_url` at it |
-| Flux premium tier (`flux_dev_local`) | ImageStudio on the 3090 | cloud provider + new adapter in `image_providers.py` (choice pending) |
+| Flux premium tier (`flux_dev_local`) | ImageStudio on the 3090 | **done:** `cloud_premium` (adapter `openrouter_image`, `infofilm/image_cloud.py`), model chosen under LLM settings → Premium images; now `google/gemini-3.1-flash-image` (~$0.07/image, 3 attempts max) |
 | Manim env for Lesson Studio (`manim_python`) | `.venv-manim-pilot` | fresh ARM venv (manim, LaTeX, ffmpeg via apt) |
 | `gpu_lock`, `shared_gpu_services` | 3090 lease (music, Flux) | Spark: music only (or none, with enough memory) |
 | Python env for both apps | pyenv 3.11.9 | pyenv 3.11.15 venv per app |
@@ -46,14 +46,15 @@ moves to the Spark; the premium image tier becomes a cloud provider.
    `github.com/0xbadfood/lesson-studio` (initial import; runtime data in `scivid-data/` is copied separately).
 2. Spark: clone, create venvs, install Node deps for the renderer, MFA env, research env (+ fetcher replacement).
 3. Music: ACE-Step + Whisper QA on the Spark; drop the 3090 lease for music.
-4. Premium images: cloud adapter; remove `flux_dev_local` from the policy.
+4. Premium images: done (cloud adapter; `flux_dev_local` kept in the registry but no policy uses it).
 5. Copy `interface/` state; start units; run the test suite; one short film, then one long film.
-6. Switch the public URL; stop the services here.
+6. Stop the services here. The public URL is already switched: `remotion.photovault.live` → 10.8.0.4:8051 on master's
+   Caddy (2026-10-12); 13 sites that lived only in Caddy's admin-API config were persisted into `/etc/caddy/Caddyfile`
+   (backup `Caddyfile.bak-20261012-150752-before-api-sites`). `manim.photovault.live` (Lesson Studio) still points
+   here (10.8.0.2:18610) and moves at its cutover.
 
 ## Decisions
 
 - Digest work (NCERT, kb_research) pauses until this host is back (user, 2026-10-12). Nothing in the move needs the
   Spark arbiter LLM; its 41 GB can be freed if music or other services need room.
 
-- Premium image provider (and whether it must accept reference images for person cards).
-- Who updates the public URL / proxy for `remotion.photovault.live`.

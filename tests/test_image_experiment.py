@@ -21,6 +21,8 @@ class LadderExperimentTests(unittest.TestCase):
         store = Store(directory)
         config = {'image_url': 'http://qwen', 'tts_url': 'http://tts', 'image_width': 1536, 'image_height': 864,
                   'image_provider_registry': read(ROOT / 'image-providers.json')}
+        # The ladder experiment is defined against the local Flux tier, whatever the live premium tier is.
+        config['image_provider_registry']['policies']['standard_then_premium']['tiers'][1] = {'provider': 'flux_dev_local', 'max_attempts': 5}
         library = {'style': 'editorial', 'assets': [{'id': 'A001', 'prompt': 'A rugged plateau with a stone fortress.', 'purpose': 'Historical setting', 'acceptance': []}],
                    'orientations': ['landscape'], 'scene_contexts_by_asset': {'A001': [{'copy_density': 'minimal'}]}}
         settings = read(ROOT / 'pilots/image-ladder/settings.json')

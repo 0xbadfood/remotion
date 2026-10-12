@@ -151,6 +151,9 @@ def save_image(raw, candidate, native_size, target_size):
 def render_studio(config, store, root, attempt, params):
     """Checkpoint before POST; reconcile unknown submissions, never blindly repeat. Flux runs on the local GPU, so it
     holds the "flux" lease even when Qwen images (remote) do not take the GPU lease."""
+    if config.get("image_engine") == "openrouter":          # cloud premium tier: no local GPU involved
+        from .image_cloud import render_cloud
+        return render_cloud(config, store, root, attempt, params)
     shared = config.get("shared_gpu_services")
     separate = shared is not None and "images" not in shared      # else the image stage already holds the lease
     with gpu_lease(config, "flux") if separate else contextlib.nullcontext():

@@ -37,6 +37,8 @@ class ProviderTests(unittest.TestCase):
         registry = read(ROOT / 'image-providers.json')
         registry['providers']['qwen_local']['url'] = config['image_url']
         registry['providers']['flux_dev_local']['park_idle_services'] = False
+        # These tests exercise escalation to the local Flux tier, whatever the live registry's premium tier is.
+        registry['policies']['standard_then_premium']['tiers'][1] = {'provider': 'flux_dev_local', 'max_attempts': 5}
         config['image_provider_registry'] = registry
         return fixture, store, config, library, models
 

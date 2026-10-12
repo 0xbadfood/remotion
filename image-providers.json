@@ -1,54 +1,62 @@
 {
- "schema_version": "infofilm.image-providers.v1",
- "default_policy": "standard_then_premium",
- "providers": {
-  "qwen_local": {
-   "label": "Qwen Image 2.1 (amdserver image factory, via media adapter)",
-   "adapter": "qwen_async",
-   "url": "http://127.0.0.1:18092/image",
-   "settings": {
-    "steps": 25
-   }
-  },
-  "flux_dev_local": {
-   "label": "Flux.2 Dev (ImageStudio)",
-   "adapter": "imagestudio_sdapi",
-   "engine": "flux2",
-   "url": "http://127.0.0.1:8000",
-   "park_idle_services": false,
-   "settings": {
-    "steps": 20,
-    "cfg_scale": 1.0,
-    "dimension_multiple": 16
-   }
-  }
- },
- "policies": {
-  "standard_then_premium": {
-   "tiers": [
-    {
-     "provider": "qwen_local",
-     "max_attempts": 5
+  "schema_version": "infofilm.image-providers.v1",
+  "default_policy": "standard_then_premium",
+  "providers": {
+    "qwen_local": {
+      "label": "Qwen Image 2.1 (amdserver image factory, via media adapter)",
+      "adapter": "qwen_async",
+      "url": "http://127.0.0.1:18092/image",
+      "settings": {
+        "steps": 25
+      }
     },
-    {
-     "provider": "flux_dev_local",
-     "max_attempts": 5
+    "flux_dev_local": {
+      "label": "Flux.2 Dev (ImageStudio)",
+      "adapter": "imagestudio_sdapi",
+      "engine": "flux2",
+      "url": "http://127.0.0.1:8000",
+      "park_idle_services": false,
+      "settings": {
+        "steps": 20,
+        "cfg_scale": 1.0,
+        "dimension_multiple": 16
+      }
+    },
+    "cloud_premium": {
+      "label": "Cloud premium image model (LLM settings \u2192 Premium images)",
+      "adapter": "openrouter_image",
+      "url": "https://openrouter.ai/api/v1",
+      "settings": {
+        "steps": 1
+      }
     }
-   ],
-   "max_total_attempts": 10,
-   "min_escalation_attempts": 2,
-   "escalation_confidence": 0.8
   },
-  "standard_only": {
-   "tiers": [
-    {
-     "provider": "qwen_local",
-     "max_attempts": 5
+  "policies": {
+    "standard_then_premium": {
+      "tiers": [
+        {
+          "provider": "qwen_local",
+          "max_attempts": 5
+        },
+        {
+          "provider": "cloud_premium",
+          "max_attempts": 3
+        }
+      ],
+      "max_total_attempts": 10,
+      "min_escalation_attempts": 2,
+      "escalation_confidence": 0.8
+    },
+    "standard_only": {
+      "tiers": [
+        {
+          "provider": "qwen_local",
+          "max_attempts": 5
+        }
+      ],
+      "max_total_attempts": 5,
+      "min_escalation_attempts": 2,
+      "escalation_confidence": 0.8
     }
-   ],
-   "max_total_attempts": 5,
-   "min_escalation_attempts": 2,
-   "escalation_confidence": 0.8
   }
- }
 }

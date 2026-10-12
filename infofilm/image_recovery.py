@@ -239,6 +239,9 @@ def repair_scene(models, case, last_scene, last_prompt, review, name, max_json_a
 
 @contextlib.contextmanager
 def provider_session(config, store):
+    if config.get("image_engine") == "openrouter":           # cloud tier: nothing to lease, load or unload
+        yield
+        return
     with gpu_lease(config, "images"), contextlib.ExitStack() as stack:
         studio = bool(config.get("image_engine"))
         if studio and config.get("image_park_idle_services"):

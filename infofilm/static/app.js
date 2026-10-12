@@ -239,14 +239,17 @@ function renderLLM(data) {
   $('llm-roles').replaceChildren(...data.roles.map(role => {
     const box = el('div', undefined, 'llm-role'); const label = el('label', role.label); label.htmlFor = `llm-role-${role.id}`;
     const select = el('select'); select.id = `llm-role-${role.id}`;
-    select.replaceChildren(...ids.map(id => option(id, connectionName(id) + (role.needs_images && !data.connections[id].vision ? ' (no images)' : ''))));
+    const usable = ids.filter(id => !role.types || role.types.includes(data.connections[id].type));
+    select.replaceChildren(...(role.optional ? [option('', 'None')] : []),
+      ...usable.map(id => option(id, connectionName(id) + (role.needs_images && !data.connections[id].vision ? ' (no images)' : ''))));
     select.value = data.assignments[role.id] || ''; box.append(label, select, el('p', role.description, 'hint')); return box;
   }));
   const configs = Object.entries(data.configurations);
   $('llm-configs').replaceChildren(...(configs.length ? configs.map(([id, c]) => {
     const row = el('div', undefined, 'llm-item'); const text = el('div');
     text.append(el('strong', c.label + (data.active_configuration === id ? ' · active' : '')),
-                el('small', `Planner: ${connectionName(c.roles.planner)} · Reviewer: ${connectionName(c.roles.reviewer)}`));
+                el('small', `Planner: ${connectionName(c.roles.planner)} · Reviewer: ${connectionName(c.roles.reviewer)}` +
+                            (c.roles.premium_image ? ` · Premium images: ${connectionName(c.roles.premium_image)}` : '')));
     if (c.note) text.append(el('small', c.note));
     const actions = el('div', undefined, 'llm-actions');
     const apply = el('button', 'Apply', 'secondary'); apply.type = 'button'; apply.onclick = () => llmAction('/api/llm-settings/configurations/apply', {id}, 'llm-config-error');
@@ -295,9 +298,10 @@ $('llm-open').addEventListener('click', () => { $('llm-view').hidden = false; do
 $('llm-close').addEventListener('click', () => { $('llm-view').hidden = true; document.querySelector('main.workspace').hidden = false; });
 $('llm-type').addEventListener('change', updateConnectionType);
 $('llm-cancel').addEventListener('click', resetConnectionForm);
-$('llm-save-roles').addEventListener('click', () => llmAction('/api/llm-settings/roles', {planner: $('llm-role-planner').value, reviewer: $('llm-role-reviewer').value}, 'llm-roles-error'));
+function selectedRoles() { return Object.fromEntries(state.llm.roles.map(role => [role.id, $(`llm-role-${role.id}`).value])); }
+$('llm-save-roles').addEventListener('click', () => llmAction('/api/llm-settings/roles', selectedRoles(), 'llm-roles-error'));
 $('llm-save-config').addEventListener('click', async () => {
-  const roles = {planner: $('llm-role-planner').value, reviewer: $('llm-role-reviewer').value};   // what is selected now
+  const roles = selectedRoles();   // what is selected now, even if "Save roles" was not clicked
   if (await llmAction('/api/llm-settings/configurations', {label: $('llm-config-name').value, note: $('llm-config-note').value, roles}, 'llm-config-error')) { $('llm-config-name').value = ''; $('llm-config-note').value = ''; }
 });
 $('llm-detect').addEventListener('click', async event => {

@@ -64,6 +64,7 @@ class LLMRef(BaseModel):
 class LLMRoles(BaseModel):
     planner: str = Field(max_length=60)
     reviewer: str = Field(max_length=60)
+    premium_image: str | None = Field(default=None, max_length=60)
 
 
 class LLMConfiguration(BaseModel):
@@ -400,11 +401,12 @@ def create_app(config_path=ROOT / "config.json", directory=ROOT / "artifacts/int
 
     @app.post("/api/llm-settings/roles")
     def llm_assign(body: LLMRoles):
-        return llm_change(lambda r: r.assign(body.model_dump()))
+        return llm_change(lambda r: r.assign(body.model_dump(exclude_unset=True)))
 
     @app.post("/api/llm-settings/configurations")
     def llm_save_configuration(body: LLMConfiguration):
-        return llm_change(lambda r: r.save_configuration(body.label, body.note, body.roles.model_dump() if body.roles else None))
+        return llm_change(lambda r: r.save_configuration(body.label, body.note,
+                                                          body.roles.model_dump(exclude_unset=True) if body.roles else None))
 
     @app.post("/api/llm-settings/configurations/apply")
     def llm_apply_configuration(body: LLMRef):

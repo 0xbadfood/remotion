@@ -31,6 +31,10 @@ ROLES = {
     'reviewer': {'label': 'Reviewer', 'description': 'Reviews every draft, checks generated images, summarises sources '
                  'and adjudicates narration checks. Use a different model from the planner (no self-review).',
                  'needs_images': True},
+    'premium_image': {'label': 'Premium images', 'description': 'Image model used when the standard image (Qwen) keeps '
+                      'failing review: an OpenRouter model with image output, e.g. google/gemini-3.1-flash-image. '
+                      'Optional; without it the premium tier is unavailable.', 'needs_images': False, 'optional': True,
+                      'types': ['openrouter']},
 }
 SETTINGS_FILE, SECRETS_FILE = 'llm-settings.json', 'llm-secrets.json'
 
@@ -161,9 +165,18 @@ class Registry:
         self.save(data)
         self._set_secret(cid, None)
 
+    @staticmethod
+    def _merged(current, roles):
+        """Roles sent from the page over the saved ones; an optional role sent empty is cleared."""
+        merged = {**current, **{r: c for r, c in roles.items() if c}}
+        for role, cid in roles.items():
+            if not cid and ROLES.get(role, {}).get('optional'):
+                merged.pop(role, None)
+        return merged
+
     def assign(self, roles):
         data = self.load()
-        merged = {**data['roles'], **roles}
+        merged = self._merged(data['roles'], roles)
         self._check_roles(data, merged)
         data['roles'] = merged
         self.save(data)
@@ -174,7 +187,11 @@ class Registry:
                 raise ValueError(f'Unknown role or connection: {role} → {cid}')
             if ROLES[role]['needs_images'] and not data['connections'][cid].get('vision'):
                 raise ValueError(f'The {role} checks images; choose a connection marked as supporting images')
-        missing = [r for r in ROLES if r not in roles]
+        for role, cid in roles.items():
+            allowed = ROLES[role].get('types')
+            if allowed and data['connections'][cid]['type'] not in allowed:
+                raise ValueError(f'The {role} role needs a connection of type: {", ".join(allowed)}')
+        missing = [r for r in ROLES if r not in roles and not ROLES[r].get('optional')]
         if missing:
             raise ValueError('Assign a connection to: ' + ', '.join(missing))
 
@@ -190,7 +207,7 @@ class Registry:
         if not label:
             raise ValueError('Name the configuration')
         if roles:
-            data['roles'] = {**data['roles'], **roles}
+            data['roles'] = self._merged(data['roles'], roles)
         self._check_roles(data, data['roles'])
         pid = _id(label)
         data['configurations'][pid] = {'label': label[:60], 'note': str(note or '').strip()[:400],
@@ -222,13 +239,16 @@ class Registry:
         """Write the chosen endpoints into a job's config (no secrets; workers read keys at call time)."""
         data = self.load()
         roles = dict(self._configuration(data, configuration)['roles']) if configuration else dict(data['roles'])
-        if not configuration and not self.path.exists() and set(roles) != set(ROLES):
+        if not configuration and not self.path.exists() and not {'planner', 'reviewer'} <= set(roles):
             config['llm_configuration'] = None      # nothing configured anywhere: leave the config as it is
             return config
         self._check_roles(data, roles)
         endpoints = {}
         for role, cid in roles.items():
             connection = data['connections'][cid]
+            if role == 'premium_image':              # an image tier, not an LLM role: frozen separately
+                config['premium_image_endpoint'] = {**connection, 'id': cid}
+                continue
             identity = connection['url'] + '#' + cid
             config[role + '_url'] = identity
             endpoints[identity] = {**connection, 'id': cid}
