@@ -68,9 +68,9 @@ def _batch(config, store, root, tasks, reference, attempt, index, name):
         body = record["body"]
         if [x["point_id"] for x in record["points"]] != [p["id"] for p in tasks]:
             raise RuntimeError("Saved VibeVoice batch is immutable; resume its original points")
-        if record.get("state") == "submission_started" and not (directory / "result.json").exists():
-            # The POST was never confirmed (e.g. refused while the single-job server served another chapter). If the
-            # server does not know this job id, it never accepted it: submit the saved body under the same id.
+        if record.get("state") in {"submission_started", "submitted"} and not (directory / "result.json").exists():
+            # Unconfirmed POST (e.g. refused while the single-job server served another chapter), or a job the server
+            # has forgotten (restart): if it does not know this job id, submit the saved body under the same id.
             if not job_known(config, job_id):
                 response = request(config, "tts", "POST", "/render-batch", json=body)
                 write(record_path, {**record, "state": "submitted", "response": response})

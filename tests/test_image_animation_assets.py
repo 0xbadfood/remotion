@@ -290,17 +290,23 @@ class ImageAnimationAssetTests(unittest.TestCase):
         self.assertEqual(read(root / "provider-0.json")["job_id"], "replacement")
         self.assertEqual(Path(result["assets"]["part"]["file"]).read_bytes(), raw)
 
-    def test_unknown_submission_never_repeats_post(self):
+    def test_unconfirmed_local_submission_is_posted_again_once(self):
+        # The local Qwen factory is unbilled: a POST that never confirmed a job id (power cut) is retried.
         manifest = self.prepare()
         root = assets._asset_root(self.directory, manifest["requests"][0])
         item = manifest["requests"][0]
         params = {"prompt": item["prompt"], "width": "512", "height": "512", "steps": "25", "guidance": "0",
                   "output_format": "png", "seed": str(int(item["request_sha256"][:7], 16))}
         write(root / "provider-0.json", {"state": "submission_started", "params": params})
+        posts = []
+        def request(config, service, method, path, **kwargs):
+            posts.append((method, path)); return {"id": "fresh"}
         with patch.object(assets, "_provider_session", return_value=contextlib.nullcontext(True)), \
-             patch.object(assets.media, "request", side_effect=AssertionError("No duplicate POST")), \
-             self.assertRaisesRegex(RuntimeError, "Unknown Qwen submission"):
+             patch.object(assets.media, "request", side_effect=request), \
+             patch("infofilm.image_jobs.wait_qwen_job", side_effect=RuntimeError("stop after submit")), \
+             self.assertRaisesRegex(RuntimeError, "stop after submit"):
             self.generate(manifest, execute=True, capabilities=capabilities())
+        self.assertEqual(posts, [("POST", "/api/generate")])
 
 
 if __name__ == "__main__":

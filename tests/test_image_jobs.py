@@ -29,6 +29,11 @@ class MissingImageJobTests(unittest.TestCase):
         return wait_qwen_job(config or {}, self.store, self.provider, 'A001',
                              request_fn=self.request, wait_fn=wait)
 
+    def test_missing_job_behind_the_media_adapter_prefix_is_also_recovered(self):
+        wait = Mock(side_effect=[failure(path='/image/api/jobs/lost'), {'state': 'complete', 'url': '/image.png'}])
+        self.assertEqual(self.run_wait(wait)['state'], 'complete')
+        self.assertEqual(read(self.provider)['job_id'], 'replacement')
+
     def test_missing_job_resubmits_same_settings_and_records_new_id(self):
         wait = Mock(side_effect=[failure(), {'state': 'complete', 'url': '/image.png'}])
         result = self.run_wait(wait)

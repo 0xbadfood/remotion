@@ -207,6 +207,22 @@ class VibePointTests(unittest.TestCase):
                     _batch(config, store, root, points, Path(config["reference_audio"]), 0, 0, "test")
             store.db.close()
 
+    def test_submitted_job_the_server_forgot_is_resubmitted_under_the_same_id(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store, config, points = self.setup_run(directory, 1)
+            root = store.root/"audio/vibevoice/test"
+            body = {"job_id": "saved-id", "items": []}
+            write(root/"batches/attempt-0-batch-0/provider.json", {"state": "submitted", "job_id": "saved-id",
+                "body": body, "points": [{"point_id": "P01"}], "response": {"accepted": True}})
+            posts = []
+            with patch("infofilm.vibe_media.request", side_effect=lambda *a, **k: posts.append(k["json"]) or {"accepted": True}), \
+                 patch("infofilm.vibe_media.job_known", return_value=False), \
+                 patch("infofilm.vibe_media.wait_job", side_effect=RuntimeError("stop after submit")):
+                with self.assertRaisesRegex(RuntimeError, "stop after submit"):
+                    _batch(config, store, root, points, Path(config["reference_audio"]), 0, 0, "test")
+            self.assertEqual(posts, [body])
+            store.db.close()
+
     def test_submission_the_server_never_accepted_is_resubmitted_under_the_same_id(self):
         with tempfile.TemporaryDirectory() as directory:
             store, config, points = self.setup_run(directory, 1)

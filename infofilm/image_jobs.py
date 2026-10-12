@@ -24,8 +24,9 @@ def wait_qwen_job(config, store, provider, label, *, request_fn=None, wait_fn=No
         except httpx.HTTPStatusError as exc:
             # Only a confirmed GET of this job may authorize replacement. A
             # failed submit, missing asset download or generic 5xx cannot.
+            # (The path may carry a proxy prefix, e.g. the media adapter's /image.)
             if (exc.response.status_code != 404 or exc.request.method != 'GET'
-                    or exc.request.url.path != '/api/jobs/' + job_id):
+                    or not exc.request.url.path.endswith('/api/jobs/' + job_id)):
                 raise
             history = list(record.get('missing_job_history', []))
             store.event(label, 'job_missing', {'job_id': job_id, 'resubmissions': len(history),

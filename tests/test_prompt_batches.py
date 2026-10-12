@@ -210,3 +210,16 @@ class OutputContractTests(unittest.TestCase):
             validator=lambda x:['assets must cover every scene'] if x['v']==0 else []
             self.assertEqual(models.loop('batch','Task',{},validator,experimental=False),second)
             store.db.close()
+
+    def test_resume_after_an_exhausted_loop_gets_extra_rounds(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store=Store(directory);models=Models({'planner_url':'p','reviewer_url':'r','max_repairs':0},store)
+            models.call=Mock(side_effect=ModelOutputError('malformed'))
+            with self.assertRaisesRegex(RuntimeError,'exhausted'):
+                models.loop('batch','Task',{},lambda x:[],experimental=False)
+            self.assertEqual(models.call.call_count,1)
+            models.call=Mock(side_effect=[ModelOutputError('malformed'),{'value':1}])
+            self.assertEqual(models.loop('batch','Task',{},lambda x:[],experimental=False),{'value':1})
+            self.assertEqual(models.call.call_count,2)
+            store.db.close()
+

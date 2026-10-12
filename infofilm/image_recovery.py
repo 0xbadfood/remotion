@@ -283,6 +283,11 @@ def render_take(config, store, root, params, label):
         if provider.exists() and read(provider)["params"] != params:
             raise ValueError("Saved image submission settings changed")
         if not candidate.exists():
+            if provider.exists() and read(provider).get("state") == "submission_started" and not read(provider).get("job_id"):
+                # The POST never confirmed a job id (e.g. cut off by a power failure). The Qwen factory is local and
+                # unbilled, so submitting again is safe; billed cloud tiers never take this path.
+                store.event(label, "unconfirmed_submission_retried", {"provider_record": str(provider)})
+                provider.unlink()
             if not provider.exists():
                 write(provider, {"state": "submission_started", "params": params})
                 from .person_references import submit_qwen_job

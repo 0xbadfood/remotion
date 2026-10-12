@@ -149,15 +149,20 @@ class ImageRecoveryTests(unittest.TestCase):
             finally:
                 store.db.close()
 
-    def test_unknown_submission_cannot_repeat_post(self):
+    def test_unconfirmed_local_submission_is_submitted_again(self):
+        # The Qwen factory is local and unbilled: a POST that never confirmed a job id (power cut) is retried.
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
             params = {'prompt': 'Actual submitted settings'}
             write(root/'provider-0.json', {'params': params, 'state': 'submission_started'})
-            with patch('infofilm.media.request') as request:
-                with self.assertRaisesRegex(RuntimeError, 'Unknown Qwen'):
-                    render_take({}, Mock(), root, params, 'A001 1/20')
-                request.assert_not_called()
+            store = Mock()
+            with patch('infofilm.person_references.submit_qwen_job', return_value={'id': 'fresh'}) as submit, \
+                 patch('infofilm.image_jobs.wait_qwen_job', side_effect=RuntimeError('stop after submit')):
+                with self.assertRaisesRegex(RuntimeError, 'stop after submit'):
+                    render_take({}, store, root, params, 'A001 1/20')
+            submit.assert_called_once()
+            self.assertEqual(read(root/'provider-0.json')['job_id'], 'fresh')
+            self.assertEqual(store.event.call_args_list[0].args[1], 'unconfirmed_submission_retried')
 
     def test_first_review_format_failure_keeps_candidate_and_enters_premium_recovery(self):
         from infofilm.image_terminal import PROTOCOL as TERMINAL_PROTOCOL, REVIEW_TAG

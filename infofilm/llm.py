@@ -290,6 +290,12 @@ class Models:
         feedback, prior, flagged, prior_findings = "", None, {}, []
         strikes, simplify = {}, set()
         rounds = self.config.get("max_repairs", 2) + 1
+        previous = directory / "evaluation.json"
+        if previous.exists() and read(previous).get("accepted") is False:
+            # A resume after an exhausted loop would replay the same cached rounds and fail the same way:
+            # give it a few more rounds instead.
+            rounds += self.config.get("resume_extra_rounds", 2)
+            self.store.event(stage, "resume_extra_rounds", {"max_attempts": rounds})
         attempt = -1
         while attempt + 1 < rounds:
             attempt += 1
