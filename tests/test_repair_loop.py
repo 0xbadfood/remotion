@@ -73,6 +73,14 @@ class RepairLoopTests(unittest.TestCase):
         result, _ = self.run_loop(responses, validator)          # 3 review rounds + 3 mechanical ones
         self.assertEqual([p["narration"] for p in result["points"]], ["Good.", "Fixed."])
 
+    def test_an_unchanged_replacement_is_called_out_in_the_next_request(self):
+        validator = lambda x: ["P02: heading has 9 words; at most 7"] if x["points"][1]["narration"] == "same" else []
+        same = {"units": {"points": [{"id": "P02", "narration": "same"}]}}
+        result, prompts = self.run_loop([script("One.", "same"), same, {"units": {"points": [{"id": "P02", "narration": "new"}]}},
+                                         passing(), {"preferred": "A", "reasons": [], "regressions": []}], validator)
+        self.assertEqual(result["points"][1]["narration"], "new")
+        self.assertNotIn("UNCHANGED", prompts[1][2]); self.assertIn("UNCHANGED: your last replacement for P02", prompts[2][2])
+
     def test_cast_people_get_code_assigned_ids(self):
         units = {"lists": {"people": "id"}, "assign": {"people": "R"}}
         result, prompts = self.run_loop([{"people": [{"name": "Leslie Groves"}, {"name": "J. Robert Oppenheimer"}]},

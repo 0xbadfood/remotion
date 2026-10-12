@@ -256,6 +256,7 @@ class Models:
                             json.dumps({"stage": stage_findings, "units": flagged}, ensure_ascii=False))
             self.store.event(stage, "seeded_repair", {"units": sorted(flagged), "stage_findings": len(stage_findings)})
         mechanical, mechanical_cap = 0, self.config.get("validation_rounds", 3)
+        unchanged = []                                  # flagged units the planner returned unchanged last round
         attempt = -1
         while attempt + 1 < rounds:
             attempt += 1
@@ -272,7 +273,11 @@ class Models:
                             "No unfinished strings or trailing commentary. Error: " + str(exc))
                 continue
             if prior is not None:
-                current = ru.merge(prior, current, flagged, units)
+                merged = ru.merge(prior, current, flagged, units)
+                before, after = ru.units(prior, units), ru.units(merged, units)
+                unchanged = [u for u in flagged if u in before and u in after
+                             and ru.unit_value(prior, u, units) == ru.unit_value(merged, u, units)]
+                current = merged
             else:
                 current = ru.assign_ids(current, units)
             write(directory / f"candidate-{attempt}.json", current)
@@ -375,7 +380,11 @@ class Models:
                               for x in (review or {}).get("issues", []) if x.get("severity") in {"blocker", "major"}]
             if flagged and not stage_findings:
                 prior = current                                   # targeted: only the flagged units come back
-                feedback = ru.repair_request(current, flagged, units, simplify)
+                repeat = [u for u in unchanged if u in flagged]
+                feedback = ru.repair_request(current, flagged, units, simplify, extra=(
+                    "\nUNCHANGED: your last replacement for " + ", ".join(repeat) + " was identical to the failing "
+                    "version and still fails the same check. Change it so the finding no longer applies; code's own "
+                    "count or rule in the finding is authoritative." if repeat else ""))
                 self.store.event(stage, "targeted_repair", {"attempt": attempt + 1, "units": sorted(flagged)})
             else:
                 prior = None                                      # stage-level findings: the only full redraft

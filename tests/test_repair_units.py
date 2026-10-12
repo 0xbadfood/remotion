@@ -90,6 +90,13 @@ class MergeTests(unittest.TestCase):
         self.assertIn('"operations"', text)
 
 
+class WordCountTests(unittest.TestCase):
+    def test_designations_are_one_word_and_times_still_count_each_part(self):
+        from infofilm.planning import word_count
+        self.assertEqual(word_count("Oak Ridge plants: Y-12, K-25, S-50"), 6)      # Manhattan C04 banner
+        self.assertEqual(word_count("At 10:30 p.m. on May 7"), 8)
+
+
 class RasterLabelTests(unittest.TestCase):
     def test_prompts_asking_the_generator_to_write_a_label_are_a_unit_error(self):
         from infofilm.planning import RASTER_LABEL

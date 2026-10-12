@@ -108,6 +108,10 @@ rescue chapters; the film ran 46% long.
 - [x] Reference selector rejected Oppenheimer's c.1944 official portrait and Hahn's 1944 Nobel Foundation photo
   because the metadata did not state the medium. Rule added: a dated photographic-era portrait from a reputable
   archive counts as a photograph unless it says painting/drawing/sculpture. (This run keeps the cached rejections.)
+- [x] C04 image prompts: banner "Oak Ridge plants: Y-12, K-25, S-50" counted 9 words by code (6 by the planner);
+  targeted repair asked nine times and got the same text back. Designations (Y-12, B-29, U-235) now count as one
+  word, banner errors show code's token breakdown, and a flagged unit returned unchanged is called out in the next
+  request ("UNCHANGED: ... change it").
 - Cast survived with code ids R01-R12 and C01:F03 refs; 10 of 12 referenced. C02 must show 8 people.
 
 ## Manhattan Project trial (15-min long film, 2026-10-13): stopped for the build, to be redone

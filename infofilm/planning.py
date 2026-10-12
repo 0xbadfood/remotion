@@ -7,8 +7,16 @@ from .core import read, write
 from .composition import image_composition
 
 
+# A designation such as Y-12, K-25, B-29 or U-235 is one word on screen; times and dates still count each part.
+WORD = re.compile(r"\b[A-Za-z]{1,3}-\d+[A-Za-z]?\b|\b[\w]+(?:['’][\w]+)*\b")
+
+
+def word_tokens(text):
+    return WORD.findall(text or "")
+
+
 def word_count(text):
-    return len(re.findall(r"\b[\w]+(?:['’][\w]+)*\b", text))
+    return len(word_tokens(text))
 
 
 def evidence_context(extraction, subject):
@@ -470,7 +478,8 @@ def make_image_prompts(models, library, films, evidence, orientations, experimen
                     if not isinstance(b.get("text"), str):
                         errors.append(f"{b.get('scene_key')}: banner text must be a string")
                     elif word_count(b["text"]) > 8:
-                        errors.append(f"{b.get('scene_key')}: banner {b['text']!r} counts {word_count(b['text'])} words; at most 8 "
+                        errors.append(f"{b.get('scene_key')}: banner {b['text']!r} counts {word_count(b['text'])} words "
+                                      f"({' | '.join(word_tokens(b['text']))}); at most 8 "
                                       "(times like 10:30, abbreviations like p.m. and dates count each part); no source tags in banners")
             return errors
         return validate
