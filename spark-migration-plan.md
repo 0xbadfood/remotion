@@ -50,8 +50,10 @@ moves to the Spark; the premium image tier becomes a cloud provider.
 5. Copy `interface/` state; start units; run the test suite; one short film, then one long film.
 6. Switch the public URL; stop the services here.
 
-## Decisions needed
+## Decisions
+
+- Digest work (NCERT, kb_research) pauses until this host is back (user, 2026-10-12). Nothing in the move needs the
+  Spark arbiter LLM; its 41 GB can be freed if music or other services need room.
 
 - Premium image provider (and whether it must accept reference images for person cards).
-- Keep the arbiter LLM resident on the Spark (41 GB; nights' digest work) now that the pair is cloud?
 - Who updates the public URL / proxy for `remotion.photovault.live`.
