@@ -94,7 +94,10 @@ def beat_errors(value, chapters, tolerance):
             errors.append(f"{chapter}: needs at least two beats")
         total = sum(b["words"] for b in own if type(b.get("words")) is int)
         if own and abs(total - budgets[chapter]) > budgets[chapter] * tolerance:
-            errors.append(f"{chapter}: beats allocate {total} words; its budget is {budgets[chapter]} (±{round(tolerance * 100)}%)")
+            # Name every beat that can fix it, so code flags the beats (not only the chapter frame) for repair.
+            owners = ", ".join(str(b.get("id")) for b in own if b.get("id"))
+            errors.append(f"{chapter} ({owners}): beats allocate {total} words; its budget is {budgets[chapter]} "
+                          f"(±{round(tolerance * 100)}%): change these beats' words")
     return errors
 
 

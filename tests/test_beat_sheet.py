@@ -32,7 +32,10 @@ class BeatSheetTests(unittest.TestCase):
         bad["beats"][2]["words"] = 400                         # C02 now 520 words for a 240 budget
         errors = beat_errors(bad, CHAPTERS, .15)
         self.assertTrue(any(e.startswith("B02: fact_ids must be one or more of C01's") for e in errors))
-        self.assertTrue(any(e.startswith("C02: beats allocate 520 words; its budget is 240") for e in errors))
+        budget = next(e for e in errors if "beats allocate 520 words; its budget is 240" in e)
+        self.assertTrue(budget.startswith("C02 (B03, B04):"))
+        from infofilm.repair_units import error_units
+        self.assertEqual(sorted(error_units(budget, bad, UNITS)), ["B03", "B04", "C02"])   # the beats get flagged too
 
     def test_order_count_and_grouping_are_code_checked(self):
         self.assertIn("chapters must list exactly C01 C02", beat_errors(sheet(chapters=sheet()["chapters"][::-1]), CHAPTERS, .15)[0])
