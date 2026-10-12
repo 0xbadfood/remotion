@@ -20,21 +20,36 @@ Rules every planning stage must follow (from the audit of all 12 production plan
    code, which assigns the new ids.
 5. Whole-candidate issues (counts, cross-unit duplication, arc) are stage-level: the only full redraft, still via code.
 
-### 1. Structure compliant with targeted repair
-- [ ] Strict pointer format in every reviewer prompt and every validator message; code validation of reviews
+### 1. Structure compliant with targeted repair (done 2026-10-13)
+- [x] Strict pointer format in every reviewer prompt and every validator message; code validation of reviews
   (schema repair on bad pointers). Found in Manhattan C03: `scenes[S17]`, `S20 (P10, ...)` and
   `assets[].people_in_frame (A001-A008)` matched no unit, so the planner got the whole raw review; script errors put
   the id last ("Invalid point mapping: P03"); one evidence error prints the whole fact instead of its id.
-- [ ] Code-assigned stable ids for every unit: facts, uncertainties, points, scenes, assets, banners (today keyed by
+- [x] Code-assigned stable ids for every unit: facts, uncertainties, points, scenes, assets, banners (today keyed by
   scene_key), cast people (today keyed by name), orientation cautions and coverage rules, creative-brief fields.
 
-### 2. Logic for targeted repair
-- [ ] Generic engine in `llm.loop`: repair request with only the flagged units, partial planner response, merge by id,
+  Done: `infofilm/repair_units.py` (unit specs, pointer resolution incl. `assets[A013]`, `assets[id=A013]`,
+  `scenes[S17]`, `S20 (...)`, ranges and lists; pointer errors go back to the reviewer once); every stage declares
+  its units; validator errors start with `<unit id>: `; cast people get code ids R01.. and fact refs `C01:F03`;
+  string lists (uncertainties, cautions, coverage rules) get code ids; creative-brief fields are units.
+
+### 2. Logic for targeted repair (done 2026-10-13)
+- [x] Generic engine in `llm.loop`: repair request with only the flagged units, partial planner response, merge by id,
   anchors kept, structural operations, stage-level fallback. (Today `keep_unflagged` enforces only assets and
   scenes, and the planner still returns the whole candidate.)
-- [ ] Wire every stage, by impact: script points and the continuity gate (both rewrite a whole chapter script today),
+- [x] Wire every stage, by impact: script points and the continuity gate (both rewrite a whole chapter script today),
   evidence facts, film cast, longform orientation, image-prompt banners, creative-brief fields; parent plan returns
   only the flagged chapters.
+
+  Done: the planner gets only the flagged units and answers `{units, fields, operations}`; code merges by id
+  (anchors kept; insert/remove applied by code with new ids such as S17b); stage-level findings are the only full
+  redraft, and they get structured findings, never the raw review. The continuity gate now repairs only the points
+  its findings name (`C02 P11`), starting from the accepted script; a finding about the other chapter stays stage
+  level. Parent plan: structured findings only and a by-id merge; it still returns the whole plan (one document
+  with code enrichment, once per film) and code keeps every unflagged chapter.
+  Tests: `tests/test_repair_units.py`, `tests/test_repair_loop.py`.
+
+Audit table before the build (2026-10-13):
 
 | Stage | Unit | Stable id today | Code-enforced repair today |
 |---|---|---|---|
@@ -74,6 +89,17 @@ rescue chapters; the film ran 46% long.
 - Rejected alternatives: fully central script writing (one ~2,500-word output and review degrade with film length;
   loses parallel writing and chapter-sized repair); keeping solo chapters with a wider gate (still patches after
   the fact, cannot manage length).
+
+## Manhattan Project trial (15-min long film, 2026-10-13): stopped for the build, to be redone
+
+4 of 8 chapter videos made. No rescue (premium off on purpose); the run fed the build above.
+- Film cast exhausted silently (no cast: no required people, no face references in the whole film): fact refs
+  `C01-F01` called fabricated (format now defined and code-checked), mechanical length errors cost whole rounds
+  (now targeted per person), the reviewer kept asking for more people than the budget (task now states the budget).
+- C03 visual beats: repairs inserted scenes and renumbered 16 later ones (merge by id since tonight).
+- C07/C08 image prompts: unparsed pointers (`assets[A009]`, `assets[id=A013]`, `assets[0].prompt; assets[3]...`)
+  and prompts asking for "labelled as an illustration" (now a planner rule and a validator error per asset).
+- C06 narration: "P9" false positive (scoring fix, arbiter on repeated identical failures).
 
 ## Agreed optimization plan (2026-10-11)
 

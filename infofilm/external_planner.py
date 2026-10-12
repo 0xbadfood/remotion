@@ -166,10 +166,10 @@ def brief_errors(brief, settings):
     for anchor in anchors:
         refs = anchor.get('source_ids')
         if not text(anchor.get('claim')) or not isinstance(refs, list) or not refs or any(not isinstance(s, str) or s not in source_ids for s in refs):
-            errors.append(f'Invalid grounding for anchor {anchor.get("id")}')
+            errors.append(f'{anchor.get("id")}: needs a claim grounded in supplied source ids')
         years = anchor.get('event_years', [])
         if not isinstance(years, list) or any(type(y) is not int for y in years):
-            errors.append(f'Invalid dated events for anchor {anchor.get("id")}')
+            errors.append(f'{anchor.get("id")}: event_years must be zero or one integer within the requested scope')
     required = brief.get('required_anchor_ids', [])
     if not isinstance(required, list) or any(not isinstance(a, str) or a not in anchor_ids for a in required):
         errors.append('Unknown required anchor IDs')
@@ -560,12 +560,13 @@ def flagged_chapters(plan, issues):
 
 
 def keep_unflagged_chapters(previous, candidate, flagged):
-    """Restore every chapter the repair was not asked to change (same ids in the same order only)."""
-    before = {c.get('id'): c for c in previous.get('chapters', [])}
-    after = candidate.get('chapters', [])
-    if not flagged or [c.get('id') for c in after] != list(before):
+    """Targeted repair enforced by code: the previous chapters, with only the flagged ones taken from the candidate
+    (matched by id). Chapters the candidate added, dropped or renumbered are ignored."""
+    if not flagged or not isinstance(previous.get('chapters'), list):
         return candidate
-    return {**candidate, 'chapters': [c if c.get('id') in flagged else before[c['id']] for c in after]}
+    after = {c.get('id'): c for c in candidate.get('chapters', []) if isinstance(c, dict)}
+    return {**candidate, 'chapters': [after[c.get('id')] if c.get('id') in flagged and c.get('id') in after else c
+                                      for c in previous['chapters']]}
 
 
 def plan_film(config, store, request, brief, settings, *, models=None, compare=True, seed_plan=None, seed_feedback=None, subject_handoff=None):
@@ -690,7 +691,9 @@ def plan_film(config, store, request, brief, settings, *, models=None, compare=T
         previous = candidate
         blocking = [i for i in review.get('issues') or [] if isinstance(i, dict) and i.get('severity') in {'major', 'blocker'}]
         prior_findings = [{k: i.get(k) for k in ('severity', 'field', 'problem')} for i in blocking]
-        feedback = {'code_errors': errors, 'semantic_review': review,
+        # Code sits between reviewer and planner: structured blocking findings only, never the raw review.
+        feedback = {'code_errors': errors,
+                    'findings': [{k: i.get(k) for k in ('field', 'severity', 'problem', 'correction')} for i in blocking],
                     'repair_instruction': 'Address concrete defects while preserving useful correct material; do not chase cosmetic changes or runtime matching.'}
         flagged = flagged_chapters(candidate, blocking)
         if flagged and not errors:

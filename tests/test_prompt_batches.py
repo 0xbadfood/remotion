@@ -185,8 +185,8 @@ class OutputContractTests(unittest.TestCase):
                                          {'pass':True,'score':90,'issues':[]},{'preferred':'B','reasons':[],'regressions':[]}])
             self.assertEqual(models.loop('batch','Task',{},lambda x:[],experimental=True),batch('x2'))
             drafts=[c.args[2] for c in models.call.call_args_list if c.args[0]=='planner']
-            self.assertIn('FLAGGED ITEMS',drafts[1]);self.assertNotIn('SIMPLIFY',drafts[1])
-            self.assertIn('SIMPLIFY THESE ITEMS',drafts[2]);self.assertIn('A002',drafts[2].split('SIMPLIFY THESE ITEMS')[1])
+            self.assertIn('FLAGGED UNITS',drafts[1]);self.assertNotIn('SIMPLIFY',drafts[1])
+            self.assertIn('SIMPLIFY THESE UNITS',drafts[2]);self.assertIn('A002',drafts[2].split('SIMPLIFY THESE UNITS')[1])
             reviews=[c.args[2] for c in models.call.call_args_list if c.args[0]=='reviewer']
             self.assertNotIn('PRIOR FINDINGS',reviews[0]);self.assertIn('invented injury',reviews[1].split('PRIOR FINDINGS')[1])
             store.db.close()

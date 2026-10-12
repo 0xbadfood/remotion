@@ -138,7 +138,9 @@ def make_orientation(models, extraction, subject, settings, start=None, end=None
         task += (' Use the reviewed subject profile to identify relevant questions and qualifications, '
                  'not as evidence or a fixed outline. Preserve the exact requested focus; unsupported answers remain research gaps.')
         orientation_context['subject_guidance'] = subject_guidance
-    result = models.loop('longform-orientation', task, orientation_context, validate, experimental=True)
+    result = models.loop('longform-orientation', task, orientation_context, validate, experimental=True,
+                         units={'lists': {'anchors': 'id', 'coverage_requirements': '@R', 'cautions': '@K'},
+                                'operations': ['anchors']})
     return {**result, 'sources': sources}
 
 
@@ -379,6 +381,9 @@ def continuity_review(models, plan, records):
             'Use the supplied chapter evidence for facts, not unverified outline claims. A short contextual reminder is allowed. '
             'Do not impose runtime limits, prefer cosmetic wording or demand every source fact. '
             'Minor editorial imprecision and optional wording improvements are advisory; pass with minor issues. '
+            'Each issue field names the chapter and point it concerns, e.g. "C02 P11" (or "C02 P04, C02 P05"); use the '
+            'chapter id alone for a chapter-wide problem. Only the later chapter is revised, so point at its points '
+            'wherever the fix belongs there. '
             'Return {pass:boolean,score:0..100,issues:[{severity:"minor"|"major"|"blocker",field,problem,evidence,correction}],strengths:[string]}.'
         )
         # No numeric global runtime is sent to this semantic review.

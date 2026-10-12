@@ -16,95 +16,19 @@ from .core import digest, read, write
 from .llm_settings import api_key, endpoint
 
 
-ITEM_LISTS = ("assets", "scenes")
 SIMPLIFY_AFTER = 2          # failed review rounds on one item before it is simplified
 
 
-def _items(candidate):
-    """{id: (list key, index)} for the independently repairable items of a candidate."""
-    found = {}
-    for key in ITEM_LISTS:
-        for index, item in enumerate(candidate.get(key) or []):
-            if isinstance(item, dict) and item.get("id"):
-                found[str(item["id"])] = (key, index)
-    return found
-
-
 def flagged_items(candidate, errors, review):
-    """Map item id -> the blocking findings and validation errors that name it."""
-    items, flagged = _items(candidate), {}
-    def owner(text):
-        match = re.match(r"\s*(\w+)\[(\d+)\]", text)
-        if match and match.group(1) in ITEM_LISTS:
-            entries = candidate.get(match.group(1)) or []
-            index = int(match.group(2))
-            if index < len(entries) and isinstance(entries[index], dict) and entries[index].get("id"):
-                return str(entries[index]["id"])
-        match = re.match(r"\s*([A-Za-z0-9_-]+)\s*[:.]", text)
-        return match.group(1) if match and match.group(1) in items else None
-    for issue in (review or {}).get("issues", []):
-        if issue.get("severity") in {"blocker", "major"}:
-            item = owner(str(issue.get("field", "")))
-            if item:
-                flagged.setdefault(item, []).append({k: issue.get(k) for k in ("field", "problem", "correction")})
-    for error in errors:
-        item = owner(str(error))
-        if item:
-            flagged.setdefault(item, []).append({"validation_error": error})
-    return flagged
-
-
-ANCHORS = ("id", "point_id", "start_word_id")   # a repaired scene keeps its place in the timeline
+    """Map item id -> the blocking findings and validation errors that name it (default asset/scene units)."""
+    from .repair_units import flag
+    return flag(candidate, errors, review)[0]
 
 
 def keep_unflagged(prior, draft, flagged):
-    """Targeted repair is enforced by code: the candidate stays the prior one, with only the flagged items taken from
-    the draft (matched by id). Items the draft added, dropped or renumbered are ignored, so a repair cannot rebuild
-    the rest (Manhattan C03: visual beats inserted scenes, renumbered 16 later ones and broke their diagrams).
-    A replaced scene keeps its timeline anchors so its neighbours stay valid."""
-    if not flagged:
-        return draft
-    result = dict(draft)
-    for key in ITEM_LISTS:
-        before = [a for a in prior.get(key) or [] if isinstance(a, dict)]
-        after = {str(a.get("id")): a for a in draft.get(key) or [] if isinstance(a, dict) and a.get("id")}
-        if not before or not after:
-            continue
-        merged = []
-        for item in before:
-            ident = str(item.get("id"))
-            if ident in flagged and ident in after:
-                replacement = dict(after[ident])
-                if key == "scenes":
-                    replacement.update({k: item[k] for k in ANCHORS if k in item})
-                merged.append(replacement)
-            else:
-                merged.append(item)
-        result[key] = merged
-    return result
-
-
-def repair_feedback(prior, errors, review, flagged, simplify):
-    feedback = "\nREPAIR the prior candidate. Keep correct content; address actual defects.\nPRIOR:\n" + json.dumps(prior)
-    if not flagged:
-        return feedback + "\nFEEDBACK:\n" + json.dumps({"errors": errors, "review": review})
-    targeted = {k: v for k, v in flagged.items() if k not in simplify}
-    unowned = [e for e in errors if not any({"validation_error": e} in v for v in flagged.values())]
-    if targeted:
-        feedback += ("\nFLAGGED ITEMS (fix exactly these; return every other item unchanged, as in PRIOR):\n" +
-                     json.dumps(targeted, ensure_ascii=False))
-    hard = {k: v for k, v in flagged.items() if k in simplify}
-    if hard:
-        feedback += ("\nSIMPLIFY THESE ITEMS (they failed review " + str(SIMPLIFY_AFTER) + " times; stop re-arguing the same details):\n" +
-                     json.dumps(hard, ensure_ascii=False) +
-                     "\nRewrite each as a simpler, safer version. Keep its id, timing anchors and the narration point it serves. "
-                     "Use only facts stated in the evidence and drop every contested or unsupported specific (injuries, times, numbers, "
-                     "exact actions, who is present) instead of guessing a replacement. Prefer a generic, symbolic or establishing "
-                     "composition (place, object, document, silhouette, hands) over a detailed reconstruction. List in people_in_frame "
-                     "only people the scene's narration names, or none; link only fact_ids whose claim the image itself shows.")
-    if unowned:
-        feedback += "\nOTHER VALIDATION ERRORS:\n" + json.dumps(unowned, ensure_ascii=False)
-    return feedback
+    """Targeted repair enforced by code for the default asset/scene units (see repair_units.merge)."""
+    from .repair_units import merge
+    return merge(prior, draft, flagged)
 
 
 REASONING_ROOM = 8000
@@ -292,7 +216,10 @@ class Models:
                             "with the requested fields, concise issues and evidence. Error: " + str(exc))
                 self.store.event(name, "format_retry", {"attempt": index + 1, "max_attempts": 2, "error": str(exc)})
 
-    def loop(self, stage, task, context, validator, *, experimental=True, metrics=None):
+    def loop(self, stage, task, context, validator, *, experimental=True, metrics=None, units=None, seed=None):
+        """Planner/reviewer trial with targeted repair: `units` declares the stage's smallest repairable units
+        (see repair_units); code maps findings to units, asks for only the flagged units and merges them by id."""
+        from . import repair_units as ru
         root = self.store.root / "planning" / stage
         identity = digest({"task": task, "context": context, "experimental": experimental,
                            "planner": self.config["planner_url"], "reviewer": self.config["reviewer_url"],
@@ -316,6 +243,18 @@ class Models:
             # give it a few more rounds instead.
             rounds += self.config.get("resume_extra_rounds", 2)
             self.store.event(stage, "resume_extra_rounds", {"max_attempts": rounds})
+        if seed is not None:
+            # Repair an accepted candidate (e.g. a continuity finding) instead of drafting from scratch.
+            base, findings = seed
+            flagged, stage_findings = ru.flag(base, [], {"issues": [{**f, "severity": "major"} for f in findings]}, units)
+            initial = base
+            if flagged and not stage_findings:
+                prior, feedback = base, ru.repair_request(base, flagged, units)
+            else:
+                feedback = ("\nREPAIR the prior candidate as a whole. Keep correct content and every existing id.\nPRIOR:\n" +
+                            json.dumps(base, ensure_ascii=False) + "\nFINDINGS (code-checked):\n" +
+                            json.dumps({"stage": stage_findings, "units": flagged}, ensure_ascii=False))
+            self.store.event(stage, "seeded_repair", {"units": sorted(flagged), "stage_findings": len(stage_findings)})
         attempt = -1
         while attempt + 1 < rounds:
             attempt += 1
@@ -332,7 +271,9 @@ class Models:
                             "No unfinished strings or trailing commentary. Error: " + str(exc))
                 continue
             if prior is not None:
-                current = keep_unflagged(prior, current, flagged)
+                current = ru.merge(prior, current, flagged, units)
+            else:
+                current = ru.assign_ids(current, units)
             write(directory / f"candidate-{attempt}.json", current)
             if initial is None:
                 initial = current
@@ -367,12 +308,24 @@ class Models:
                     "Do not alternate between demanding a graphic and demanding an image for the same correct explanation. Graphic versus image preferences are minor unless the candidate violates an explicit requirement or misrepresents the facts. Corrections must not introduce facts absent from the evidence. "
                     "Do not count words, estimate exact delivery seconds or reject validated structural constraints: deterministic code owns these. Duration is advisory and actual audio determines final runtime. Use supplied metrics as authoritative. Focus on semantic accuracy, useful clarity, fluent progression and cognitive pacing. "
                     "Return {pass:boolean, score:0..100, issues:[{field,severity:'blocker'|'major'|'minor',problem,evidence,correction}], strengths:[string]}. "
-                    "Pass requires score >=82 and no blocker or major issue.\nTASK:\n" + review_task + "\nCONTEXT:\n" + json.dumps(review_context) +
+                    "Pass requires score >=82 and no blocker or major issue.\n" + ru.pointer_guide(current, units) + "\nTASK:\n" + review_task + "\nCONTEXT:\n" + json.dumps(review_context) +
                     "\nCANDIDATE:\n" + json.dumps(review_candidate) + "\nDETERMINISTIC METRICS:\n" + json.dumps(deterministic_metrics) + "\nDETERMINISTIC ERRORS:\n" + json.dumps(errors) +
                     ("\nPRIOR FINDINGS (previous round; the planner was asked to fix them):\n" + json.dumps(prior_findings) +
                      "\nCheck each one against the CURRENT candidate before repeating it, and quote the current value at that field in its evidence. "
                      "Drop a finding the current candidate already resolves; never report a value the candidate no longer contains."
                      if prior_findings else ""), max_tokens=4500)
+                bad_pointers = ru.pointer_errors(review, current, units)
+                if bad_pointers:
+                    # Code sits between reviewer and planner: a finding that names no unit goes back to the reviewer.
+                    try:
+                        fixed = self.call_json("reviewer", f"{stage}-review-{identity[:8]}-{attempt}-pointers",
+                            "Rewrite only the field pointers of this review; keep every finding, severity and score. "
+                            + ru.pointer_guide(current, units) + "\nPOINTER ERRORS:\n" + json.dumps(bad_pointers) +
+                            "\nREVIEW:\n" + json.dumps(review), max_tokens=4500)
+                        if isinstance(fixed, dict) and isinstance(fixed.get("issues"), list):
+                            review = {**review, "issues": fixed["issues"], "pointer_repair": bad_pointers}
+                    except Exception as exc:
+                        self.store.event(stage, "pointer_repair_failed", {"attempt": attempt + 1, "error": str(exc)[:300]})
                 write(directory / f"review-{attempt}.json", review)
             history.append({"attempt": attempt, "candidate_hash": digest(current), "errors": errors, "review": review})
             passing = not errors and (not experimental or (review is not None and review.get("pass") is True and
@@ -405,7 +358,7 @@ class Models:
                 write(directory / "evaluation.json", summary)
                 write(root / "current.json", {"input_hash": identity, "selected": str(selected), "evaluation": str(directory / "evaluation.json")})
                 return current
-            flagged = flagged_items(current, errors, review)
+            flagged, stage_findings = ru.flag(current, errors, review, units)
             for item in flagged:
                 strikes[item] = strikes.get(item, 0) + 1
             hard = {item for item in flagged if strikes[item] >= SIMPLIFY_AFTER} - simplify
@@ -414,10 +367,18 @@ class Models:
                     rounds += self.config.get("simplify_rounds", 2)
                 simplify |= hard
                 self.store.event(stage, "simplify", {"attempt": attempt + 1, "items": sorted(hard), "max_attempts": rounds})
-            owned = [e for v in flagged.values() for e in (x.get("validation_error") for x in v) if e]
-            prior = current if all(e in owned for e in errors) else None   # a batch-level error may need any item
             prior_findings = [{k: x.get(k) for k in ("field", "severity", "problem")}
                               for x in (review or {}).get("issues", []) if x.get("severity") in {"blocker", "major"}]
-            feedback = repair_feedback(current, errors, review, flagged, simplify)
+            if flagged and not stage_findings:
+                prior = current                                   # targeted: only the flagged units come back
+                feedback = ru.repair_request(current, flagged, units, simplify)
+                self.store.event(stage, "targeted_repair", {"attempt": attempt + 1, "units": sorted(flagged)})
+            else:
+                prior = None                                      # stage-level findings: the only full redraft
+                feedback = ("\nREPAIR the prior candidate as a whole. Keep correct content and every existing id.\nPRIOR:\n" +
+                            json.dumps(current, ensure_ascii=False) + "\nFINDINGS (code-checked):\n" +
+                            json.dumps({"stage": stage_findings, "units": flagged}, ensure_ascii=False))
+                self.store.event(stage, "full_repair", {"attempt": attempt + 1, "stage_findings": len(stage_findings),
+                                                        "unit_findings": len(flagged)})
         write(directory / "evaluation.json", {"stage": stage, "attempts": history, "accepted": False})
         raise RuntimeError(f"{stage} exhausted its bounded planner/reviewer trial; candidates remain in {directory}")

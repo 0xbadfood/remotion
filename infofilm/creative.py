@@ -22,30 +22,35 @@ MUSIC = {"none": "Off", "acestep": "Auto · ACE-Step"}
 def creative_errors(value, requested_mood="auto", requested_balance="auto"):
     errors = []
     if value.get("resolved_mood") not in set(MOODS) - {"auto"}:
-        errors.append("Resolve mood to an available named preset")
+        errors.append("resolved_mood: resolve the mood to an available named preset")
     if requested_mood != "auto" and value.get("resolved_mood") != requested_mood:
-        errors.append("Preserve the explicitly selected mood")
+        errors.append("resolved_mood: preserve the explicitly selected mood")
     if value.get("visual_balance") not in BALANCE_SHARES:
-        errors.append("Resolve visual_balance to image-led, balanced or explanation-led")
+        errors.append("visual_balance: resolve to image-led, balanced or explanation-led")
     if requested_balance != "auto" and value.get("visual_balance") != requested_balance:
-        errors.append("Preserve the explicitly selected visual balance")
+        errors.append("visual_balance: preserve the explicitly selected visual balance")
     for key in ["rationale", "narration_direction", "visual_style", "pacing_direction"]:
         if not isinstance(value.get(key), str) or not 1 <= len(value[key]) <= 1800:
-            errors.append(f"Provide concise {key}")
+            errors.append(f"{key}: provide a concise {key}")
     theme = value.get("theme", {})
     if not isinstance(theme, dict):
         theme = {}
     for key in ["background", "accent", "text"]:
         if not re.fullmatch(r"#[0-9a-fA-F]{6}", str(theme.get(key, ""))):
-            errors.append(f"theme.{key} must be a six-digit hex colour")
+            errors.append(f"theme: theme.{key} must be a six-digit hex colour")
     music = value.get("music", {})
     if not isinstance(music, dict):
         music = {}
     if not isinstance(music.get("caption"), str) or not 1 <= len(music["caption"]) <= 1800:
-        errors.append("Provide a concise instrumental music caption")
+        errors.append("music: provide a concise instrumental music caption")
     if isinstance(music.get("bpm"), bool) or not isinstance(music.get("bpm"), int) or not 40 <= music["bpm"] <= 180:
-        errors.append("Provide music bpm between 40 and 180")
+        errors.append("music: provide music bpm between 40 and 180")
     return errors
+
+
+# Repairable units (repair_units): each brief field; each visual beat, which keeps its timeline anchors.
+CREATIVE_UNITS = {"lists": {}, "fields": True}
+BEAT_UNITS = {"lists": {"scenes": "id"}, "anchors": {"scenes": ["point_id", "start_word_id"]}, "operations": ["scenes"]}
 
 
 def make_creative_brief(models, evidence, mood="auto", intensity="restrained", balance="auto", *, experimental=True):
@@ -69,7 +74,7 @@ def make_creative_brief(models, evidence, mood="auto", intensity="restrained", b
     result = models.loop("creative-brief", task, {"evidence": evidence, "requested_mood": mood,
         "intensity": intensity, "requested_visual_balance": balance, "presets": MOODS,
         "resolved_visual_balances": list(BALANCE_SHARES)},
-        lambda x: creative_errors(x, mood, balance), experimental=experimental)
+        lambda x: creative_errors(x, mood, balance), experimental=experimental, units=CREATIVE_UNITS)
     return {**result, "requested_mood": mood, "intensity": intensity, "requested_visual_balance": balance,
             "narration_strategy": "Mood-aware wording and rhythm with the selected reference voice; direct emotional TTS control is not validated."}
 
@@ -255,7 +260,7 @@ def make_visual_beats(models, film, evidence, brief, *, experimental=True):
                     for p,start,end in zip(aligned,starts,ends)]}
     return models.loop(f"visual-beats-{film['requested_seconds']}", task, context,
                       lambda x: beat_errors(x, film["script"], film["timing"]), experimental=experimental,
-                      metrics=lambda x: visual_metrics(x, film["script"], film["timing"]))
+                      metrics=lambda x: visual_metrics(x, film["script"], film["timing"]), units=BEAT_UNITS)
 
 
 def library_from_beats(films, brief):

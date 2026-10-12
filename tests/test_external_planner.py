@@ -388,5 +388,6 @@ class TargetedPlanRepairTests(unittest.TestCase):
         after = {'chapters': [{'id': 'C01', 'title': 'Drifted'}, {'id': 'C02', 'title': 'Fixed'}, {'id': 'C03', 'title': 'Also fixed'}]}
         kept = keep_unflagged_chapters(before, after, ['C02', 'C03'])
         self.assertEqual([c['title'] for c in kept['chapters']], ['Old one', 'Fixed', 'Also fixed'])
-        renumbered = {'chapters': [{'id': 'C01'}, {'id': 'C02'}]}          # structure changed: keep the new plan as is
-        self.assertIs(keep_unflagged_chapters(before, renumbered, ['C02']), renumbered)
+        renumbered = {'chapters': [{'id': 'C01'}, {'id': 'C02'}]}          # the planner dropped C03
+        merged = keep_unflagged_chapters(before, renumbered, ['C02'])           # renumbering is ignored: merge by id
+        self.assertEqual([c['id'] for c in merged['chapters']], [c['id'] for c in before['chapters']])

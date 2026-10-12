@@ -225,7 +225,9 @@ def create(args):
     if args.until == "script":
         # Long films, phase A: stop after the accepted script. The media phase reuses it from the cache.
         for duration in args.durations:
-            script = make_script(models, evidence, duration, rate, experimental=experimental, creative_brief=brief)
+            accepted = store.root / f"film-{duration}" / "script.json"
+            script = make_script(models, evidence, duration, rate, experimental=experimental, creative_brief=brief,
+                                 seed=read(accepted) if accepted.exists() and (chapter_context or {}).get("continuity_notes") else None)
             write(store.root / f"film-{duration}" / "script.json", script)
             (store.root / f"film-{duration}" / "script.txt").write_text(script_text(script) + "\n")
             stage("script", "succeeded", requested_seconds=duration, points=len(script["points"]))

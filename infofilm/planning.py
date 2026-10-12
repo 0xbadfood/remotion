@@ -44,6 +44,18 @@ def evidence_context(extraction, subject):
     return {"sources": sources, "policy": "Evergreen educational explanation; omit current forecasts and dated economic/population statistics."}
 
 
+# Smallest repairable units per stage (repair_units): code maps findings to these ids and repairs only them.
+EVIDENCE_UNITS = {"lists": {"facts": "id", "uncertainties": "@U", "narrative_priorities": "@N"}, "operations": ["facts"]}
+SCRIPT_UNITS = {"lists": {"points": "id"}, "operations": ["points"]}
+LIBRARY_UNITS = {"lists": {"assets": "id"}}
+STORYBOARD_UNITS = {"lists": {"scenes": "point_id"}, "anchors": {"scenes": ["point_id"]}}
+# A prompt asking the raster generator to write words (Manhattan C07: "labelled as an illustration").
+RASTER_LABEL = re.compile(r"\b(?:labell?ed|marked|captioned|identified|titled)\s+(?:clearly\s+)?as\s+(?:an?\s+)?"
+                          r"(?:illustration|reconstruction|artist'?s impression)\b|\bwith\s+(?:the\s+)?(?:caption|words|text)\s+[\"'“]",
+                          re.I)
+IMAGE_PROMPT_UNITS = {"lists": {"assets": "id", "banners": "scene_key"}, "anchors": {"banners": ["scene_key"]}}
+
+
 def make_evidence(models, extraction, subject="How the Indian monsoon works", audit_notes=None, experimental=True, chapter_context=None):
     context = evidence_context(extraction, subject)
     if audit_notes:
@@ -62,7 +74,7 @@ def make_evidence(models, extraction, subject="How the Indian monsoon works", au
             errors.append("Fact IDs must be unique")
         for fact in facts:
             if not fact.get("claim") or not fact.get("source_ids") or not set(fact["source_ids"]) <= source_ids:
-                errors.append(f"Invalid claim/source mapping: {fact}")
+                errors.append(f"{fact.get('id')}: needs a claim and source_ids drawn only from the supplied sources")
         return errors
     task = (f"Prepare a source-grounded evidence brief on {subject}, usable for short informational films. "
             "Explain the core concepts, causal mechanisms or chronology, relevant context, significance and important qualifications supported by the sources. "
@@ -72,7 +84,8 @@ def make_evidence(models, extraction, subject="How the Indian monsoon works", au
         task += (" This is one chapter of a longer film. Research its owned questions, scope and objective thoroughly. "
                  "Earlier/later chapter context may be a short reminder or handoff; do not retell their material. "
                  "Resolve the assigned research gaps and retain uncertainty where sources cannot establish a claim.")
-    return models.loop("evidence-audit" if audit_notes else "evidence", task, context, validate, experimental=experimental)
+    return models.loop("evidence-audit" if audit_notes else "evidence", task, context, validate, experimental=experimental,
+                       units=EVIDENCE_UNITS)
 
 
 def script_text(script):
@@ -89,13 +102,26 @@ def script_errors(value, evidence, budget=None):
         errors.append("Point IDs must be unique")
     for p in points:
         if not p.get("narration") or not p.get("heading") or not p.get("fact_ids") or not set(p["fact_ids"]) <= facts:
-            errors.append(f"Invalid point or evidence mapping: {p.get('id')}")
+            errors.append(f"{p.get('id')}: needs narration, a heading and fact_ids drawn only from the evidence")
         if word_count(p.get("heading", "")) > 7:
-            errors.append(f"Heading too long: {p.get('id')}")
+            errors.append(f"{p.get('id')}: heading has {word_count(p.get('heading', ''))} words; at most 7")
     return errors
 
 
-def make_script(models, evidence, duration, rate=135, experimental=True, suffix="", correction=None, creative_brief=None):
+def continuity_findings(notes, chapter_id):
+    """Continuity notes as script findings for this chapter: 'C02 P11' -> P11; a pointer naming another chapter (or
+    none) stays stage level, so it can never flag this chapter's points by accident."""
+    findings = []
+    for note in notes or []:
+        field = str(note.get("field", ""))
+        chapters = set(re.findall(r"\bC\d{2,}\b", field))
+        own = re.sub(r"\b" + re.escape(chapter_id) + r"\b", "", field) if chapters == {chapter_id} else None
+        findings.append({**note, "field": own if own and re.search(r"\bP\d+", own) else "stage"})
+    return findings
+
+
+def make_script(models, evidence, duration, rate=135, experimental=True, suffix="", correction=None, creative_brief=None,
+                seed=None):
     budget = round((duration - 1.0) * rate / 60)
     task = (f"Write engaging Indian English narration for a general-audience informational video about {evidence['title']}. "
             "Create a hook, a clear causal progression and a useful closing thought. "
@@ -126,7 +152,12 @@ def make_script(models, evidence, duration, rate=135, experimental=True, suffix=
                      "while keeping this chapter's own facts and roles. The previous chapter will not change.")
     if correction:
         context["measured_duration_feedback"] = correction
-    return models.loop(f"script-{duration}{suffix}", task, context, lambda x: script_errors(x, evidence, budget), experimental=experimental)
+    chapter = evidence.get("chapter_context") or {}
+    repair = None
+    if seed is not None and chapter.get("continuity_notes"):
+        repair = (seed, continuity_findings(chapter["continuity_notes"], (chapter.get("chapter") or {}).get("id", "")))
+    return models.loop(f"script-{duration}{suffix}", task, context, lambda x: script_errors(x, evidence, budget), experimental=experimental,
+                       units=SCRIPT_UNITS, seed=repair)
 
 
 def make_library(models, evidence, scripts, experimental=True):
@@ -138,7 +169,8 @@ def make_library(models, evidence, scripts, experimental=True):
             "These stills provide context and atmosphere. Clouds, rain, mist and heat haze are ordinary landscape features, not forbidden scientific diagrams. Do not force every image to communicate a complete mechanism; the storyboard and narration provide that. "
             "Keep prompts concise but concrete, and provide observable visual acceptance criteria. This is educational general-audience design, not a children's cartoon. "
             "Return {style, assets:[{id:'A01',purpose,prompt,acceptance:[string],fact_ids:[string]}]}.")
-    return models.loop("visual-library", task, {"evidence": evidence, "scripts": scripts}, lambda x: library_errors(x, evidence), experimental=experimental)
+    return models.loop("visual-library", task, {"evidence": evidence, "scripts": scripts}, lambda x: library_errors(x, evidence),
+                       experimental=experimental, units=LIBRARY_UNITS)
 
 
 def library_errors(x, evidence):
@@ -149,7 +181,7 @@ def library_errors(x, evidence):
         errors.append("Need at most 240 assets with unique IDs, allocated from actual visual beats")
     for a in assets:
         if not a.get("prompt") or len(a["prompt"]) > 3500 or not a.get("acceptance") or not set(a.get("fact_ids", [])) <= facts:
-            errors.append(f"Invalid asset {a.get('id')}")
+            errors.append(f"{a.get('id')}: needs a prompt under 3500 characters, acceptance criteria and evidence fact_ids")
     return errors
 
 
@@ -163,7 +195,7 @@ def make_storyboard(models, script, library, evidence, duration, experimental=Tr
             "Text heading <=7 words and summary <=12 words, expressing the spoken point without introducing new claims. "
             "Avoid consecutive reuse of the same image when an appropriate alternate exists. Images use gentle push/pull/drift/hold with text in left 43%; diagrams use the right 55%. "
             "Return {scenes:[{point_id:'P01',kind:'image'|'flow'|'compare'|'cycle',asset_id:'A01' or null,heading,summary,labels:[],details:[],motion:'push'|'pull'|'drift'|'hold',rationale}]}.")
-    return models.loop(f"storyboard-{duration}", task, {"script": script, "evidence": evidence, "library": library}, lambda x: storyboard_errors(x, script, library), experimental=experimental)
+    return models.loop(f"storyboard-{duration}", task, {"script": script, "evidence": evidence, "library": library}, lambda x: storyboard_errors(x, script, library), units=STORYBOARD_UNITS, experimental=experimental)
 
 
 def storyboard_errors(x, script, library):
@@ -177,22 +209,22 @@ def storyboard_errors(x, script, library):
         kind = s.get("kind")
         if kind == "image":
             if s.get("asset_id") not in ids:
-                errors.append("Unknown image asset")
+                errors.append(f"{s.get('point_id')}: unknown image asset {s.get('asset_id')!r}")
         elif kind in {"flow", "compare", "cycle"}:
             diagrams += 1
             n = 2 if kind == "compare" else 3
             if len(s.get("labels", [])) != n or len(s.get("details", [])) != n:
-                errors.append(f"{s.get('point_id')} needs {n} labels and details")
+                errors.append(f"{s.get('point_id')}: {kind} needs {n} labels and {n} details")
             if any(word_count(v) > 4 for v in s.get("labels", [])) or any(word_count(v) > 10 for v in s.get("details", [])):
-                errors.append(f"Diagram copy too long: {s.get('point_id')}")
+                errors.append(f"{s.get('point_id')}: diagram labels must be at most 4 words and details at most 10")
         else:
-            errors.append("Unsupported scene kind")
+            errors.append(f"{s.get('point_id')}: unsupported scene kind {kind!r}")
         if word_count(s.get("heading", "")) > 7 or word_count(s.get("summary", "")) > 12:
-            errors.append(f"Overlay copy too long: {s.get('point_id')}")
+            errors.append(f"{s.get('point_id')}: heading at most 7 words and summary at most 12")
         if s.get("motion") not in {"push", "pull", "drift", "hold"}:
-            errors.append("Unsupported motion")
+            errors.append(f"{s.get('point_id')}: unsupported motion {s.get('motion')!r}")
         if word_count(s.get("banner_override", "")) > 8:
-            errors.append("Banner override is too long")
+            errors.append(f"{s.get('point_id')}: banner override is longer than 8 words")
     return errors
 
 
@@ -250,7 +282,7 @@ def cover_required_people(models, task, base, result, used, contexts, evidence, 
               "visibly depicted, keeping each asset's visual_message meaning. Return {assets:[...]} with only the "
               "rewritten assets, each complete with every field the original has.")
     try:
-        value = models.loop("scene-image-prompts-cast", repair, packet, check, experimental=experimental)
+        value = models.loop("scene-image-prompts-cast", repair, packet, check, experimental=experimental, units=IMAGE_PROMPT_UNITS)
     except Exception as exc:
         report["error"] = f"{type(exc).__name__}: {exc}"[:300]
         if hasattr(models, "store"):
@@ -315,6 +347,8 @@ def make_image_prompts(models, library, films, evidence, orientations, experimen
             "'a softly glowing blank grey screen', 'a sheet of plain off-white paper'). Image models draw what a prompt names, "
             "even after 'no', so never end a prompt with exclusion lists such as 'no text, no labels, no numerals'. "
             "Leave out writing-bearing objects the scene does not need. "
+            "Marking a reconstruction as an illustration is the compositor's job (a banner or caption over the image), "
+            "so a prompt describes only the scene, never a label, caption or words saying it is an illustration. "
             "Do not label a generic illustrative landscape as an exact photographed location. Avoid split panels and atmospheric features that imply a wrong mechanism. "
             "Return {style, assets:[{id,purpose,prompt,acceptance:[string],fact_ids:[string]}], banners:[{scene_key,text:'at most 8 words',reason}]}. "
             "Exactly cover the supplied used assets and image scene keys; an empty banner text is allowed if a banner adds no useful context.")
@@ -375,18 +409,21 @@ def make_image_prompts(models, library, films, evidence, orientations, experimen
                 if classify_review:
                     from .educational_review import PROFILES
                     if a.get('review_profile') not in PROFILES:
-                        errors.append(f"{a.get('id')} needs a supported review_profile")
+                        errors.append(f"{a.get('id')}: needs a supported review_profile")
+                if isinstance(a.get("prompt"), str) and RASTER_LABEL.search(a["prompt"]):
+                    errors.append(f"{a.get('id')}: the prompt asks the image generator to write a label or caption "
+                                  f"({RASTER_LABEL.search(a['prompt']).group(0)!r}); the compositor adds banners, describe only the scene")
                 if (not isinstance(a.get("prompt"), str) or not a["prompt"].strip() or len(a["prompt"]) > 3500
                         or not isinstance(a.get("acceptance"), list) or not a["acceptance"]
                         or not isinstance(a.get("fact_ids"), list)
                         or any(not isinstance(f, str) or f not in allowed_facts for f in a.get("fact_ids", []))):
-                    errors.append(f"Invalid final prompt: {a.get('id')}")
+                    errors.append(f"{a.get('id')}: needs a prompt under 3500 characters, acceptance criteria and fact_ids from this batch's evidence")
             if message_recovery:
                 for asset in assets:
                     for field, minimum, maximum in [("visual_message", 20, 1600), ("setting", 10, 1000), ("visual_style", 10, 800)]:
                         text = asset.get(field)
                         if not isinstance(text, str) or not minimum <= len(text.strip()) <= maximum:
-                            errors.append(f"{asset.get('id')} needs a bounded {field}")
+                            errors.append(f"{asset.get('id')}: needs a {field} of {minimum}-{maximum} characters")
             if person_references:
                 from .person_references import person_errors
                 cast_names = {p["name"].casefold() for p in film_cast or []}
@@ -426,7 +463,8 @@ def make_image_prompts(models, library, films, evidence, orientations, experimen
             base["required_people"] = list(required_people)
     if not message_recovery:
         result = models.loop("scene-image-prompts", task, base,
-                             validator(used, contexts, {f["id"] for f in evidence["facts"]}), experimental=experimental)
+                             validator(used, contexts, {f["id"] for f in evidence["facts"]}), experimental=experimental,
+                             units=IMAGE_PROMPT_UNITS)
     else:
         if type(batch_size) is not int or not 1 <= batch_size <= 8:
             raise ValueError("Image prompt batch_size must be between 1 and 8")
@@ -457,7 +495,7 @@ def make_image_prompts(models, library, films, evidence, orientations, experimen
                 "its narration and facts support it. It is not a requirement for this batch alone; code checks the "
                 "whole chapter after the last batch and repairs any omission, so a person missing here is not an issue."
                 if person_references and film_cast and required_people else ""), packet,
-                validator(batch, batch_contexts, fact_ids), experimental=experimental)
+                validator(batch, batch_contexts, fact_ids), experimental=experimental, units=IMAGE_PROMPT_UNITS)
             result["assets"].extend(partial["assets"])
             result["banners"].extend(partial["banners"])
             if hasattr(models, "store"):
