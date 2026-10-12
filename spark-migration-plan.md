@@ -42,7 +42,8 @@ moves to the Spark; the premium image tier becomes a cloud provider.
 
 ## Order
 
-1. Commit/push both codebases (infofilm done: `967de7b`; Lesson Studio `~/manim` has no git repo yet).
+1. Commit/push both codebases: infofilm `github.com/0xbadfood/remotion` (`967de7b`); Lesson Studio
+   `github.com/0xbadfood/lesson-studio` (initial import; runtime data in `scivid-data/` is copied separately).
 2. Spark: clone, create venvs, install Node deps for the renderer, MFA env, research env (+ fetcher replacement).
 3. Music: ACE-Step + Whisper QA on the Spark; drop the 3090 lease for music.
 4. Premium images: cloud adapter; remove `flux_dev_local` from the policy.
@@ -51,7 +52,6 @@ moves to the Spark; the premium image tier becomes a cloud provider.
 
 ## Decisions needed
 
-- Lesson Studio repo: create one (which GitHub remote?) or copy `~/manim` by rsync.
 - Premium image provider (and whether it must accept reference images for person cards).
 - Keep the arbiter LLM resident on the Spark (41 GB; nights' digest work) now that the pair is cloud?
 - Who updates the public URL / proxy for `remotion.photovault.live`.
