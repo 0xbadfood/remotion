@@ -40,7 +40,9 @@ CONTRACT = {
   'mood': {'preset': 'serious', 'direction': '<specific narration delivery and emotional development for this chapter>',
            'rationale': 'Evidence and narrative reason'},
   'music': {'direction': '<specific instruments, energy, motif development and transition for this chapter; instrumental under speech>', 'bpm': 80},
-  'visual_direction': 'Scenes and explanatory overlays suited to this chapter; image count is planned only after MFA',
+  'visual_direction': 'Scenes and explanatory overlays suited to this chapter; image count is planned only after MFA. '
+                      'Each image is one full-frame scene: ask for comparisons, labels and captions as native overlays, '
+                      'never split screens, panels or text inside the generated image',
   'production': {'kind': 'illustrated', 'rationale': 'Why this visual medium serves the chapter objective',
                  'animation_brief': None},
   'section_card': {'title': 'Chapter title', 'date_label': '',

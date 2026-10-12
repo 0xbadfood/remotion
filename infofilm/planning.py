@@ -379,6 +379,9 @@ def make_image_prompts(models, library, films, evidence, orientations, experimen
             "Marking a reconstruction as an illustration is the compositor's job (a banner or caption over the image), "
             "so a prompt describes only the scene, never a label, caption or words saying it is an illustration. "
             "Do not label a generic illustrative landscape as an exact photographed location. Avoid split panels and atmospheric features that imply a wrong mechanism. "
+            "These code-owned image rules (one full-frame scene, no split screens or panels, no generated text) take precedence over "
+            "any chapter visual_direction or creative brief wording that asks for panels, split screens, side-by-side layouts or labels: "
+            "the compositor realises those with native overlays (e.g. a compare layout), so stage each such scene as one coherent full-frame image. "
             "Return {style, assets:[{id,purpose,prompt,acceptance:[string],fact_ids:[string]}], banners:[{scene_key,text:'at most 8 words',reason}]}. "
             "Exactly cover the supplied used assets and image scene keys; an empty banner text is allowed if a banner adds no useful context.")
     if classify_review:

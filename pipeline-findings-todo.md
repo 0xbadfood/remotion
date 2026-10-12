@@ -112,6 +112,10 @@ rescue chapters; the film ran 46% long.
   targeted repair asked nine times and got the same text back. Designations (Y-12, B-29, U-235) now count as one
   word, banner errors show code's token breakdown, and a flagged unit returned unchanged is called out in the next
   request ("UNCHANGED: ... change it").
+- [x] C06 image prompts: the parent plan's visual direction asked for split-screen panels for the debate chapter;
+  the image rules forbid panels. Haiku followed the rule, Luna enforced the direction, six reviews failed. The
+  image-prompt task now states that code-owned image rules override visual direction (panels/labels become native
+  overlays), and the parent plan's visual_direction must not ask the generator for panels or text.
 - Cast survived with code ids R01-R12 and C01:F03 refs; 10 of 12 referenced. C02 must show 8 people.
 
 ## Manhattan Project trial (15-min long film, 2026-10-13): stopped for the build, to be redone
