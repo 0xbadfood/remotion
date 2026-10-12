@@ -103,7 +103,7 @@ class Queue:
         payload = {"subject": request["subject"], "durations": request["durations"],
             "orientation": request["orientation"], "review_mode": request["review_mode"],
             "image_review": request.get('image_review', True),
-            "premium_rescue": request.get('premium_rescue', True),
+            "premium_rescue": request.get('premium_rescue', False),
             "generation_mode": request.get("generation_mode", "short"),
             "production_target": request.get("production_target", "video"),
             "subject_graph": request.get("subject_graph", False),
@@ -126,9 +126,11 @@ class Queue:
             raise ValueError('image_review must be boolean')
         if type(payload['premium_rescue']) is not bool:
             raise ValueError('premium_rescue must be boolean')
-        if not payload['premium_rescue'] and config.get('image_terminal_recovery', {}).get('enabled'):
-            # Runs that test other aspects skip the cloud rescue: the best of the local tries is kept and tagged.
-            config['image_terminal_recovery'] = {**config['image_terminal_recovery'], 'max_candidates': 0}
+        terminal = config.get('image_terminal_recovery', {})
+        if terminal.get('enabled'):
+            # Default: no premium escalation; the best-scored local take is kept and tagged. A run may opt in.
+            candidates = terminal.get('opt_in_candidates', 3) if payload['premium_rescue'] else 0
+            config['image_terminal_recovery'] = {**terminal, 'max_candidates': candidates}
         if type(payload['animation_chapters']) is not bool:
             raise ValueError('animation_chapters must be boolean')
         if payload['animation_chapters']:
@@ -156,7 +158,7 @@ class Queue:
                     old = json.loads(previous["request"])
                     defaults = {"omni_speed": .8, "mood": "auto", "mood_intensity": "restrained", "visual_balance": "auto", "music_engine": "none",
                                 "generation_mode": "short", "start_year": None, "end_year": None, "subject_graph": False,
-                                "production_target": "video", "image_review": True, "premium_rescue": True, "animation_chapters": False}
+                                "production_target": "video", "image_review": True, "premium_rescue": False, "animation_chapters": False}
                     if any(old.get(k, defaults.get(k)) != payload.get(k) for k in ["subject", "durations", "orientation", "review_mode", "reference_audio", "reference_transcript", "tts_engine", *defaults]):
                         raise ValueError("This submission key was already used for different settings")
                     return self.get(previous["id"])

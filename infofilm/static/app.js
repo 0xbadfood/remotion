@@ -125,7 +125,7 @@ async function refreshSelected() {
   $('run-meta').textContent = `${generationLabel(job)} advisory · ${job.settings.orientation} · ${job.settings.tts_engine === 'omnivoice' ? 'OmniVoice' : 'VibeVoice'} · ${mood} · ${job.settings.music_engine === 'acestep' ? 'ACE-Step score' : 'no score'}`;
   if (job.settings.generation_mode === 'long') $('run-meta').textContent += ` · subject graph ${job.settings.subject_graph ? 'on' : 'off'}`;
   if (job.settings.animation_chapters) $('run-meta').textContent += ' · animation chapters enabled';
-  $('run-meta').textContent += ` · image review ${job.settings.image_review === false ? 'off' : 'on'}${job.settings.premium_rescue === false ? ' · no premium rescue' : ''}`;
+  $('run-meta').textContent += ` · image review ${job.settings.image_review === false ? 'off' : 'on'}${job.settings.premium_rescue ? ' · premium rescue' : ''}`;
   const resumeSettings = JSON.stringify([job.id, job.settings.image_review]);
   if (state.signatures.resumeSettings !== resumeSettings) {
     $('resume-image-review').value = job.settings.image_review === false ? 'off' : 'on';

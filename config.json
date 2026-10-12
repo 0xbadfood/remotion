@@ -66,7 +66,7 @@
   },
   "image_recovery_mode": "message_v1",
   "image_recovery_provider": "qwen_local",
-  "image_recovery_max_attempts": 3,
+  "image_recovery_max_attempts": 4,
   "vibe_silence_cleanup": true,
   "silence_db": -40.0,
   "silence_max_pause_seconds": 4.0,
@@ -74,7 +74,8 @@
   "image_terminal_recovery": {
     "enabled": true,
     "provider": "cloud_premium",
-    "max_candidates": 3
+    "max_candidates": 0,
+    "opt_in_candidates": 3
   },
   "shared_gpu_services": [
     "music"

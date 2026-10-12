@@ -123,7 +123,10 @@ def current_image_review(models, case, candidate, prompt, name, max_json_attempt
         "Do not diagnose provider weakness or recommend model escalation from this single image. Technical corruption "
         "uses diagnose_backend. Return {visual_message:string copied exactly, pass:boolean, reason_keys:[allowed key], "
         "issues:[concrete visible defect string], limitations:[uncertain/minor observation string], "
-        "repair_mode:'none'|'targeted'|'simplify'|'diagnose_backend', mode_reason:string, correction:string}. "
+        "repair_mode:'none'|'targeted'|'simplify'|'diagnose_backend', mode_reason:string, correction:string, "
+        "message_marks:number 0..50 for conveying the informative meaning, prompt_marks:number 0..30 for matching the "
+        "requested concrete scene, usability_marks:number 0..20 for a coherent, usable illustration}. "
+        "Marks are independent of pass/fail: a failed image still gets a meaningful score, used to rank takes. "
         "A pass has empty issues/reason_keys/correction and repair_mode none. A failure needs evidence and correction.\n"
         "REASON KEYS:\n" + json.dumps(IMAGE_REVIEW_REASONS) + "\nCURRENT INPUT:\n" + json.dumps(packet)
     )
@@ -144,8 +147,10 @@ def current_image_review(models, case, candidate, prompt, name, max_json_attempt
         else:
             value = normalize_inventory(value)
             errors = review_errors(value, message, require_inventory=component_checks_enabled(asset), reference_available=bool(reference_kwargs))
+            from .image_terminal import mark_errors, total_marks
+            errors += mark_errors(value)
         if not errors:
-            return value
+            return {**value, 'score': total_marks(value)}
         feedback = "\nCorrect the response schema for this same current image. Errors: " + json.dumps(errors)
     raise RepairContractError("Current-image review JSON contract failed: " + "; ".join(errors))
 

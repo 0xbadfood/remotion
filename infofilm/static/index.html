@@ -132,8 +132,8 @@
             <label for="image-review">Generated image review</label>
             <select id="image-review"><option value="on">On · review and repair images</option><option value="off">Off · generate planned images once</option></select>
             <p class="hint">Off skips image reviews, prompt repairs and premium recovery. Script and image planning reviews follow the separate review setting below.</p>
-            <label class="check"><input id="premium-rescue" type="checkbox" checked><span>Premium image rescue</span></label>
-            <p class="hint">When an image fails all local tries, up to three cloud images (about $0.07 each) join the scoring. Off keeps the best local try, tagged for review: cheaper for runs that test other aspects.</p>
+            <label class="check"><input id="premium-rescue" type="checkbox"><span>Premium image rescue</span></label>
+            <p class="hint">Off (default): an image that fails all four local takes keeps its best-scored take, tagged for review. On: up to three cloud images (about $0.07 each) join the ranking.</p>
             <label for="llm-configuration">LLM configuration</label>
             <select id="llm-configuration"><option value="">Current LLM settings</option></select>
             <details class="advanced"><summary>Review options</summary><label class="check"><input id="review-mode" type="checkbox" checked><span>Use the second-model planning review loop</span></label><p class="hint">It reviews meaning and visual planning with bounded corrections. Saved measurements track its benefit and cost.</p></details>

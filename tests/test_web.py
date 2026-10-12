@@ -170,22 +170,20 @@ class WebTests(unittest.TestCase):
         unknown = self.submit(submission_id='submission-test-02', llm_configuration='missing')
         self.assertEqual(unknown.status_code, 409)
 
-    def test_premium_rescue_off_freezes_best_local_selection(self):
+    def test_premium_rescue_is_an_opt_in_per_run(self):
         from infofilm.core import read
-        config = read(self.config); config['image_terminal_recovery'] = {'enabled': True, 'provider': 'cloud_premium', 'max_candidates': 3}
+        config = read(self.config)
+        config['image_terminal_recovery'] = {'enabled': True, 'provider': 'cloud_premium', 'max_candidates': 0, 'opt_in_candidates': 3}
         write(self.config, config)
         self.login()
-        on = self.submit(submission_id='premium-on').json()
-        self.assertEqual(read(Path(on['project'] if 'project' in on else self.app.state.queue.get(on['id'])['project'])
-                              / 'config-snapshot.json')['image_terminal_recovery']['max_candidates'], 3)
-        self.assertTrue(on['settings']['premium_rescue'])
-        off = self.submit(premium_rescue=False, submission_id='premium-off')
-        self.assertEqual(off.status_code, 202, off.text)
-        job = off.json(); self.assertFalse(job['settings']['premium_rescue'])
-        frozen = read(Path(self.app.state.queue.get(job['id'])['project']) / 'config-snapshot.json')
-        self.assertEqual(frozen['image_terminal_recovery'], {'enabled': True, 'provider': 'cloud_premium', 'max_candidates': 0})
+        frozen = lambda job: read(Path(self.app.state.queue.get(job['id'])['project']) / 'config-snapshot.json')['image_terminal_recovery']
+        default = self.submit(submission_id='premium-default').json()
+        self.assertFalse(default['settings']['premium_rescue']); self.assertEqual(frozen(default)['max_candidates'], 0)
+        opted = self.submit(premium_rescue=True, submission_id='premium-on')
+        self.assertEqual(opted.status_code, 202, opted.text)
+        self.assertTrue(opted.json()['settings']['premium_rescue']); self.assertEqual(frozen(opted.json())['max_candidates'], 3)
         self.assertEqual(self.submit(premium_rescue='no', submission_id='premium-invalid').status_code, 422)
-        self.assertEqual(self.submit(premium_rescue=True, submission_id='premium-off').status_code, 409)
+        self.assertEqual(self.submit(premium_rescue=False, submission_id='premium-on').status_code, 409)
 
     def test_image_review_switch_and_resume_preserve_upstream_settings(self):
         from infofilm.core import read

@@ -105,6 +105,23 @@ class TerminalImageTests(unittest.TestCase):
             self.assertIn('best_local_selection', states); self.assertNotIn('premium_rescue', states)
             store.db.close()
 
+    def test_final_ranking_reuses_each_takes_score_and_code_picks_the_highest(self):
+        config = {**self.config, 'image_terminal_recovery': {'enabled': True, 'provider': 'flux_dev_local', 'max_candidates': 0}}
+        with tempfile.TemporaryDirectory() as folder:
+            store = Store(folder); root, original = self.setup(folder)
+            second = image(root/'takes/take-01/candidate-0.png', 'blue')
+            state = read(root/'message-state.json')
+            state['takes'][0]['review'] = {**self.score(62), 'repair_mode': 'targeted', 'mode_reason': 'Small fix.'}
+            state['takes'].append({'provider': 'qwen_local', 'candidate': str(second), 'sha256': digest(second.read_bytes()),
+                                   'settings': {'prompt': 'A clerk examines plain parchment, closer.'},
+                                   'review': {**self.score(78), 'repair_mode': 'targeted', 'mode_reason': 'Small fix.'}})
+            write(root/'message-state.json', state)
+            with patch('infofilm.image_terminal.score_image', side_effect=AssertionError('Takes are already scored')):
+                result = recover(config, store, root, self.case, Mock(), terminal_settings(config))
+            self.assertEqual(result['file'], str(second)); self.assertEqual(result['review']['score'], 78)
+            self.assertEqual(result['review']['score_source'], 'take_review'); self.assertTrue(result['needs_review'])
+            store.db.close()
+
     def test_score_schema_rejects_nan_boolean_and_out_of_range_marks(self):
         for bad in [float('nan'), True, 51, -1]:
             value = self.score(80);value['message_marks'] = bad

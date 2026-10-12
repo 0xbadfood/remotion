@@ -171,7 +171,8 @@ class PersonReferenceTests(unittest.TestCase):
         self.assertIn('panel 1: Albert Einstein', prompt)
         self.assertIn('one composed scene', prompt)
         models = Mock(); models.call.return_value = {'visual_message': case['visual_message'], 'pass': True,
-            'reason_keys': [], 'issues': [], 'limitations': [], 'correction': '', 'repair_mode': 'none', 'component_inventory': []}
+            'reason_keys': [], 'issues': [], 'limitations': [], 'correction': '', 'repair_mode': 'none', 'component_inventory': [],
+            'message_marks': 40, 'prompt_marks': 24, 'usability_marks': 16}
         current_image_review(models, case, self.portrait, prompt, 'review')
         self.assertEqual(models.call.call_args.kwargs['reference_image_paths'], [Path(card['file'])])
         self.assertIn('first image', models.call.call_args.args[2])

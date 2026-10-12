@@ -45,7 +45,7 @@ class EducationalReviewTests(unittest.TestCase):
 
     def test_production_review_sends_targeted_inventory_guidance_with_current_prompt(self):
         models=Mock();v={**self.review(),'visual_message':'The liver supports digestion.',
-                         'repair_mode':'none','mode_reason':''};models.call.return_value=v
+                         'repair_mode':'none','mode_reason':'','message_marks': 40, 'prompt_marks': 24, 'usability_marks': 16, };models.call.return_value=v
         v['component_inventory'][0].update(placement_status='not_applicable',reference_checked=False,
                                            evidence='One sac is visible; no source image was supplied')
         asset={'id':'A001','prompt':'One liver and one gallbladder.', 'review_profile':'scientific_diagram'}
@@ -67,7 +67,7 @@ class EducationalReviewTests(unittest.TestCase):
 
     def test_historical_scene_does_not_activate_science_inventory(self):
         models=Mock();v={**self.review(),'visual_message':'A plane is parked on a tarmac.',
-                         'repair_mode':'none','mode_reason':''}
+                         'repair_mode':'none','mode_reason':'','message_marks': 40, 'prompt_marks': 24, 'usability_marks': 16, }
         v['component_inventory'][0].update(reference_checked=False)
         models.call.return_value=v
         asset={'id':'A001','review_profile':'narrative'}

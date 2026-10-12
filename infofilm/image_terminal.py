@@ -26,16 +26,29 @@ def terminal_settings(config):
     return {**value, 'protocol': PROTOCOL}
 
 
+MARKS = [('message_marks', 50), ('prompt_marks', 30), ('usability_marks', 20)]
+
+
+def mark_errors(value):
+    errors = []
+    for key, maximum in MARKS:
+        score = value.get(key) if isinstance(value, dict) else None
+        if type(score) not in {int, float} or not math.isfinite(score) or not 0 <= score <= maximum:
+            errors.append(f'{key} must be finite, 0..{maximum}')
+    return errors
+
+
+def total_marks(value):
+    return round(sum(value[key] for key, _ in MARKS), 3)
+
+
 def score_errors(value, message, *, require_inventory=False, reference_available=None):
     errors = image_review_errors(value, require_inventory=require_inventory, reference_available=reference_available)
     if not isinstance(value, dict):
         return errors
     if value.get('visual_message') != message:
         errors.append('Echo visual_message exactly')
-    for key, maximum in [('message_marks', 50), ('prompt_marks', 30), ('usability_marks', 20)]:
-        score = value.get(key)
-        if type(score) not in {int, float} or not math.isfinite(score) or not 0 <= score <= maximum:
-            errors.append(f'{key} must be finite, 0..{maximum}')
+    errors.extend(mark_errors(value))
     if 'score' in value and not errors:
         expected = round(sum(value[k] for k in ['message_marks', 'prompt_marks', 'usability_marks']), 3)
         if type(value['score']) not in {float, int} or value['score'] != expected:
@@ -197,8 +210,15 @@ def recover(config, store, root, case, models, policy, *, session_managed=False)
             raise ValueError('Image candidate changed before scoring')
         check_candidate(path, store, case['asset_id'])
         score_path = rescue / f'score-{ordinal:02d}-{item["sha256"][:12]}.json'
-        review = read(score_path) if score_path.exists() else score_image(models, case, path, target,
-                      'terminal-score-' + case['asset_id'] + '-' + identity[:12] + '-' + str(ordinal))
+        take_review = item.get('review') or {}
+        if score_path.exists():
+            review = read(score_path)
+        elif type(take_review.get('score')) in {int, float} and not mark_errors(take_review):
+            # Every take is scored at review time; the final ranking reuses that score (code picks the highest).
+            review = {**take_review, 'score_protocol': PROTOCOL, 'score_source': 'take_review'}
+        else:
+            review = score_image(models, case, path, target,
+                                 'terminal-score-' + case['asset_id'] + '-' + identity[:12] + '-' + str(ordinal))
         if score_errors(review, case['visual_message']):
             raise ValueError('Saved terminal score is invalid')
         write(score_path, review)

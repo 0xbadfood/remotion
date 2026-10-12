@@ -15,7 +15,7 @@ from infofilm.planning import script_text
 
 class ImageRecoveryTests(unittest.TestCase):
     def setUp(self):
-        self.config = configuration()
+        self.config = {**configuration(), 'image_recovery_max_attempts': 3}   # tests pin the take budget, not the live config
         self.config['image_terminal_recovery'] = {'enabled': False}
         self.message = 'Revenue collection became a major source of Company authority.'
         self.asset = {'id': 'A001', 'visual_message': self.message, 'setting': 'Bengal in the eighteenth century.',
@@ -32,7 +32,8 @@ class ImageRecoveryTests(unittest.TestCase):
         return {'visual_message': self.message, 'pass': passed, 'reason_keys': [] if passed else ['unwanted_text'],
                 'issues': [] if passed else ['Generated caption'], 'limitations': [], 'component_inventory': [],
                 'repair_mode': 'none' if passed else mode, 'mode_reason': '' if passed else 'A small concrete fix.',
-                'correction': '' if passed else 'Use plain parchment.'}
+                'correction': '' if passed else 'Use plain parchment.',
+                'message_marks': 44 if passed else 30, 'prompt_marks': 26 if passed else 18, 'usability_marks': 18 if passed else 12}
 
     def replacement(self, text=None, mode='targeted'):
         return {'visual_message': self.message, 'prompt': text or 'A Company clerk holds folded plain parchment beside a closed unmarked ledger.',
@@ -407,5 +408,6 @@ class MessagePlanningTests(unittest.TestCase):
     def test_invalid_json_review_gets_bounded_recovery(self):
         helper=ImageRecoveryTests();helper.setUp()
         models=Mock();models.call.side_effect=[ValueError('invalid JSON'),helper.verdict()]
-        self.assertTrue(current_image_review(models,helper.case,Path('/tmp/image.png'),'Actual prompt','test')['pass'])
+        review=current_image_review(models,helper.case,Path('/tmp/image.png'),'Actual prompt','test')
+        self.assertTrue(review['pass']); self.assertEqual(review['score'],88)       # every take gets a code total
         self.assertEqual(models.call.call_count,2)
