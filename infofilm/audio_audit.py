@@ -16,7 +16,25 @@ AUDIT_POLICY = "english-completeness-equivalent-years-v6"
 DEFAULT_FALLBACK_MODELS = ("Systran/faster-whisper-small", "openai/whisper-large-v3-turbo")
 
 
-def audit_with_escalation(config, store, audio, text, points=None):
+def script_differences(audit):
+    """The normalized spans where the transcript departs from the script: the failure's fingerprint."""
+    expected, observed = audit["expected_text"].split(), audit["transcript_text"].split()
+    return [{"id": f"D{n+1:02d}", "expected": " ".join(expected[i:j]), "observed": " ".join(observed[k:l]), "operation": tag}
+            for n, (tag, i, j, k, l) in enumerate(
+                x for x in SequenceMatcher(None, expected, observed, autojunk=False).get_opcodes() if x[0] != "equal")]
+
+
+def same_failure(audit, earlier):
+    """Two independent takes that fail with the same departures from the script: Whisper is writing the same speech
+    the same way (a likely false positive), not the voice misspeaking twice."""
+    if not audit.get("transcript_text") or not earlier.get("transcript_text") or not audit.get("expected_text"):
+        return False
+    strip = lambda diffs: [(d["expected"], d["observed"], d["operation"]) for d in diffs]
+    current = strip(script_differences(audit))
+    return bool(current) and current == strip(script_differences(earlier))
+
+
+def audit_with_escalation(config, store, audio, text, points=None, earlier_audits=None):
     """Adjudicate ASR disagreement before requesting another speech take."""
     from quiz_harness.audio_audit import WhisperAuditClient, DEFAULT_WHISPER_MODEL
     from .core import write
@@ -61,6 +79,14 @@ def audit_with_escalation(config, store, audio, text, points=None):
         store.event("audio-audit", "needs_crosscheck" if model != models[-1] else "failed", {
             "audio": str(audio), "model": model, "score": result["score"], "reasons": result["reasons"]})
     assert selected is not None
+    earlier = [a for a in earlier_audits or [] if a.get("status") == "failed"]
+    if (selected["status"] != "passed" and earlier and selected.get("transcript_words") != 0
+            and config.get("audio_audit_llm_review", True) and same_failure(selected, earlier[-1])):
+        store.event("audio-audit", "repeated_failure_arbiter", {"audio": str(audio), "reasons": selected["reasons"],
+                    "differences": script_differences(selected)})
+        reviewed = adjudicate_transcript(config, store, audio, text, selected, repeated=earlier[-1])
+        if reviewed is not None:
+            selected = reviewed
     result = {**selected, "recognizer_attempts": history,
               "expected_prompt_supplied": False, "audit_device": "cpu"}
     if result["status"] == "passed" and len(history) > 1:
@@ -72,26 +98,37 @@ def audit_with_escalation(config, store, audio, text, points=None):
     return result
 
 
-def adjudicate_transcript(config, store, audio, text, audit):
-    """Let the LLM distinguish foreign-name ASR errors from changed content."""
-    if not audit.get("reasons") or set(audit["reasons"]) - {"text_mismatch", "low_coverage", "point_coverage"}:
+def same_number(difference):
+    """Code check for a number written differently by ASR: both sides spell the same characters once numbers are words
+    ('p nine' vs 'P9', 'u two hundred thirty five' vs 'U235'). A changed value never passes."""
+    compact = lambda value: re.sub(r"[^a-z]", "", canonical_numeric_text(value).lower())
+    return bool(compact(difference["expected"])) and compact(difference["expected"]) == compact(difference["observed"])
+
+
+def adjudicate_transcript(config, store, audio, text, audit, repeated=None):
+    """Let the LLM distinguish ASR rendering errors from changed content. Normally only name-type disagreements; for a
+    repeated identical failure (`repeated` is the earlier take's audit) any reason, with numbers checked by code."""
+    if not audit.get("reasons"):
+        return None
+    if repeated is None and set(audit["reasons"]) - {"text_mismatch", "low_coverage", "point_coverage"}:
         return None
     if not config.get("reviewer_url"):
         return None
     from .core import digest, write
     from .llm import Models
 
-    expected = audit["expected_text"].split()
-    observed = audit["transcript_text"].split()
-    differences = [{"id": f"D{n+1:02d}", "expected": " ".join(expected[i:j]),
-                    "observed": " ".join(observed[k:l]), "operation": tag}
-                   for n, (tag, i, j, k, l) in enumerate(
-                       x for x in SequenceMatcher(None, expected, observed, autojunk=False).get_opcodes()
-                       if x[0] != "equal")]
+    differences = script_differences(audit)
     if not differences:
         return None
     payload = {"script": text, "raw_transcript": audit.get("raw_transcript", audit["transcript_text"]),
                "normalized_differences": differences}
+    if repeated is not None:
+        payload["repeated_failure"] = {
+            "note": "A second, independently generated take failed with exactly these differences; the earlier take's "
+                    "transcript is below. Identical departures across takes usually mean the recognizer writes the same "
+                    "correct speech differently from the script (number formatting, joined designations, names).",
+            "earlier_raw_transcript": repeated.get("raw_transcript", repeated.get("transcript_text")),
+            "earlier_reasons": repeated.get("reasons")}
     prompt = (
         "Adjudicate an English narration ASR disagreement. You receive the approved script and an unprompted "
         "Whisper transcript, NOT the audio. Short clips exaggerate word error percentages: a non-English proper noun "
@@ -108,7 +145,9 @@ def adjudicate_transcript(config, store, audio, text, audit):
         "Review EVERY supplied difference by its exact id. Do not claim to have heard or verified pronunciation. "
         "Return {decision:'accept'|'retry'|'uncertain',meaning_preserved:boolean,complete:boolean,"
         "differences:[{id,kind:'non_english_name_variant'|'asr_spelling'|'word_boundary'|'harmless_disfluency'|"
-        "'meaning_change'|'missing_content'|'uncertain',explanation:string}],reason:string}. "
+        "'number_format'|'meaning_change'|'missing_content'|'uncertain',explanation:string}],reason:string}. "
+        "number_format means the same number written differently (digits joined to letters, digits for words); "
+        "code verifies it, so a changed value must be meaning_change. "
         "Accept only when all differences are benign and both meaning_preserved and complete are true.\n"
         + json.dumps(payload, ensure_ascii=False)
     )
@@ -120,11 +159,16 @@ def adjudicate_transcript(config, store, audio, text, audit):
         return None
     items = review.get("differences")
     ids = [d["id"] for d in differences]
-    allowed = {"non_english_name_variant", "asr_spelling", "word_boundary", "harmless_disfluency"}
+    allowed = {"non_english_name_variant", "asr_spelling", "word_boundary", "harmless_disfluency", "number_format"}
     valid = (isinstance(items, list) and len(items) == len(ids)
              and all(isinstance(i, dict) for i in items)
              and sorted(str(i.get("id")) for i in items) == sorted(ids))
-    accepted = (valid and review.get("decision") == "accept" and review.get("meaning_preserved") is True
+    by_id = {d["id"]: d for d in differences}
+    numbers_checked = valid and all(
+        same_number(by_id[str(i.get("id"))]) for i in items
+        if i.get("kind") == "number_format" or _NUMBER_WORDS.intersection(
+            (by_id[str(i.get("id"))]["expected"] + " " + by_id[str(i.get("id"))]["observed"]).split()))
+    accepted = (valid and numbers_checked and review.get("decision") == "accept" and review.get("meaning_preserved") is True
                 and review.get("complete") is True and all(i.get("kind") in allowed for i in items))
     write(store.root / "audio-semantic-reviews" / (identity + ".json"),
           {"audio": str(audio), "input": payload, "asr_audit": audit, "review": review,
@@ -133,7 +177,8 @@ def adjudicate_transcript(config, store, audio, text, audit):
         "audio": str(audio), "decision": review.get("decision"), "accepted": accepted,
         "differences": items, "reason": review.get("reason"), "original_score": audit["score"]})
     return {**audit, "status": "passed" if accepted else "failed", "reasons": [] if accepted else audit["reasons"],
-            "acceptance_method": "llm_transcript_adjudication" if accepted else "asr_failed",
+            "acceptance_method": ("arbiter_repeated_failure" if repeated is not None else "llm_transcript_adjudication")
+                                 if accepted else "asr_failed", "numbers_code_checked": numbers_checked,
             "asr_audit": audit, "semantic_review": review, "review_contract_valid": valid}
 
 
@@ -174,6 +219,8 @@ _NUMBER_WORDS = set(
 def spoken_numeric_text(text):
     """Expand notation before punctuation stripping; retain values and units."""
     value = unicodedata.normalize("NFKC", str(text or ""))
+    # ASR joins designations the narration speaks apart: 'P9', 'U235', 'B29' for 'P nine', 'U two hundred thirty five'.
+    value = re.sub(r"(?<=[A-Za-z])(?=\d)", " ", value)
     # ASR writes spoken ranges as 7-10, and ratios as 1.4:1.
     value = re.sub(r"(?<=\d)\s*[-–—]\s*(?=\d)", " to ", value)
     value = re.sub(r"(?<=\d)\s*:\s*(?=\d)", " to ", value)

@@ -66,6 +66,21 @@ class NumericSpeechTests(unittest.TestCase):
         self.assertIn("numeric_mismatch", bad["reasons"])
         self.assertEqual(canonical_numeric_text("twenty one people"), "twenty one people")
 
+    def test_audit_accepts_joined_designations_but_rejects_a_changed_number(self):
+        # Manhattan C06: narration said 'P nine' correctly; every Whisper model wrote 'P9'.
+        for expected, heard in [("It was one of three plants in the P-9 Project.", "It was one of three plants in the P9 project."),
+                                ("They separated U-235 at Oak Ridge.", "They separated U235 at Oak Ridge."),
+                                ("A B-29 bomber flew the mission.", "A B29 bomber flew the mission.")]:
+            with self.subTest(expected=expected):
+                audit = score_english_transcript(expected_text=mfa_numeric_text(expected), transcript_text=heard,
+                                                 audio_duration_seconds=4, speech_span_seconds=3.8)
+                self.assertNotIn("numeric_mismatch", audit["reasons"])
+        changed = score_english_transcript(expected_text=mfa_numeric_text("They separated U-235 at Oak Ridge."),
+                                           transcript_text="They separated U238 at Oak Ridge.",
+                                           audio_duration_seconds=4, speech_span_seconds=3.8)
+        self.assertIn("numeric_mismatch", changed["reasons"])
+        self.assertEqual(canonical_numeric_text("the 21st of May in the 1940s"), canonical_numeric_text("the 21st of May in the 1940s"))
+
     def test_caption_mapping_preserves_year_and_quantity_in_same_point(self):
         text = "In 1970, 1970 soldiers arrived."
         tokenize = lambda value: re.findall(r"[a-z0-9]+", value.lower())

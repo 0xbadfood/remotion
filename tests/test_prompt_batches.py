@@ -191,6 +191,20 @@ class OutputContractTests(unittest.TestCase):
             self.assertNotIn('PRIOR FINDINGS',reviews[0]);self.assertIn('invented injury',reviews[1].split('PRIOR FINDINGS')[1])
             store.db.close()
 
+    def test_scene_repair_cannot_insert_renumber_or_retime_scenes(self):
+        from infofilm.llm import flagged_items, keep_unflagged
+        scene=lambda i,w,kind='image',brief='ok':{'id':f'S{i:02d}','point_id':'P01','start_word_id':w,'kind':kind,'image_brief':brief}
+        prior={'scenes':[scene(1,'w0001'),scene(2,'w0010','diagram','labels far too long'),scene(3,'w0020')]}
+        flagged=flagged_items(prior,['S02: diagram labels/details are too long'],None)
+        self.assertEqual(list(flagged),['S02'])
+        # The draft fixes S02 but also splits it, renumbering S03 -> S04 and moving its start word.
+        draft={'scenes':[scene(1,'w0001','image','rewritten'),scene(2,'w0012','image','short fixed'),
+                         scene(3,'w0016','image','new split'),scene(4,'w0020','image','renumbered')]}
+        merged=keep_unflagged(prior,draft,flagged)['scenes']
+        self.assertEqual([x['id'] for x in merged],['S01','S02','S03'])
+        self.assertEqual(merged[0],prior['scenes'][0]); self.assertEqual(merged[2],prior['scenes'][2])
+        self.assertEqual(merged[1]['image_brief'],'short fixed'); self.assertEqual(merged[1]['start_word_id'],'w0010')
+
     def test_repair_keeps_unflagged_assets_unchanged(self):
         with tempfile.TemporaryDirectory() as directory:
             store=Store(directory);models=Models({'planner_url':'p','reviewer_url':'r','max_repairs':1},store)

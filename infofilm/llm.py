@@ -54,14 +54,34 @@ def flagged_items(candidate, errors, review):
     return flagged
 
 
+ANCHORS = ("id", "point_id", "start_word_id")   # a repaired scene keeps its place in the timeline
+
+
 def keep_unflagged(prior, draft, flagged):
-    """Assets are independent: restore every asset the last review did not flag, so a repair cannot break them."""
-    before = {str(a.get("id")): a for a in prior.get("assets") or [] if isinstance(a, dict)}
-    after = draft.get("assets")
-    if not flagged or not before or not isinstance(after, list) or \
-            [str(a.get("id")) if isinstance(a, dict) else None for a in after] != list(before):
+    """Targeted repair is enforced by code: the candidate stays the prior one, with only the flagged items taken from
+    the draft (matched by id). Items the draft added, dropped or renumbered are ignored, so a repair cannot rebuild
+    the rest (Manhattan C03: visual beats inserted scenes, renumbered 16 later ones and broke their diagrams).
+    A replaced scene keeps its timeline anchors so its neighbours stay valid."""
+    if not flagged:
         return draft
-    return {**draft, "assets": [a if str(a.get("id")) in flagged else before[str(a.get("id"))] for a in after]}
+    result = dict(draft)
+    for key in ITEM_LISTS:
+        before = [a for a in prior.get(key) or [] if isinstance(a, dict)]
+        after = {str(a.get("id")): a for a in draft.get(key) or [] if isinstance(a, dict) and a.get("id")}
+        if not before or not after:
+            continue
+        merged = []
+        for item in before:
+            ident = str(item.get("id"))
+            if ident in flagged and ident in after:
+                replacement = dict(after[ident])
+                if key == "scenes":
+                    replacement.update({k: item[k] for k in ANCHORS if k in item})
+                merged.append(replacement)
+            else:
+                merged.append(item)
+        result[key] = merged
+    return result
 
 
 def repair_feedback(prior, errors, review, flagged, simplify):

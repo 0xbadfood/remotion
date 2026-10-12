@@ -141,7 +141,12 @@ def _check_clip(config, project, point, clip, name):
             clip, pauses = cleanup(clip, config, store, name + '-' + point['id'])
         except ValueError as exc:
             return {'audit': {'status': 'failed', 'score': 0, 'reasons': ['silence_gate_failed'], 'error': str(exc)}}
-        audit = audit_audio(config, store, clip, point["narration"])
+        # The point's earlier takes (take-0 .. take-N-1): a repeat of the same failure goes to the arbiter.
+        take = clip.parent.name
+        earlier = [read(p) for p in sorted(clip.parent.parent.glob("take-*/audit.json"), key=lambda p: int(p.parent.name.split("-")[1]))
+                   if p.parent.name != take and p.parent.name.split("-")[1].isdigit()
+                   and int(p.parent.name.split("-")[1]) < int(take.split("-")[1])] if take.startswith("take-") else []
+        audit = audit_audio(config, store, clip, point["narration"], earlier_audits=earlier)
         if audit["status"] != "passed":
             return {"audit": audit}
         try:

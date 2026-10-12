@@ -5,6 +5,76 @@ images amdserver image factory, music local ACE-Step; voice and images reached t
 127.0.0.1:18092). Record findings here first; fix them after the analysis is complete. Related, older notes:
 `performance-todo.md` (scheduling design), `todo-next.md`.
 
+## BUILD NEXT, in this order (user decision 2026-10-13, after the Manhattan Project run)
+
+Rules every planning stage must follow (from the audit of all 12 production planning stages, 2026-10-13):
+1. Smallest repairable unit per stage, with a **stable id assigned by code** (never invented, renumbered or reused by
+   the planner); a changed id list outside an explicit structural operation is a validation error.
+2. **Strict pointers checked by code**: reviewer findings and validator errors name `"<unit id>"`,
+   `"<unit id>.<subfield>"` or `"stage"`. A review with unparseable pointers gets a schema repair; the raw review is
+   never forwarded to the planner.
+3. **Code always sits between reviewer and planner**: code maps findings to units, builds a repair request with only
+   the flagged units (their findings, read-only neighbours as context); the planner returns only those units; code
+   merges by id, keeps timeline anchors and re-validates the whole candidate.
+4. **Structural edits are explicit operations** (insert, split, remove, reorder) requested by a finding and applied by
+   code, which assigns the new ids.
+5. Whole-candidate issues (counts, cross-unit duplication, arc) are stage-level: the only full redraft, still via code.
+
+### 1. Structure compliant with targeted repair
+- [ ] Strict pointer format in every reviewer prompt and every validator message; code validation of reviews
+  (schema repair on bad pointers). Found in Manhattan C03: `scenes[S17]`, `S20 (P10, ...)` and
+  `assets[].people_in_frame (A001-A008)` matched no unit, so the planner got the whole raw review; script errors put
+  the id last ("Invalid point mapping: P03"); one evidence error prints the whole fact instead of its id.
+- [ ] Code-assigned stable ids for every unit: facts, uncertainties, points, scenes, assets, banners (today keyed by
+  scene_key), cast people (today keyed by name), orientation cautions and coverage rules, creative-brief fields.
+
+### 2. Logic for targeted repair
+- [ ] Generic engine in `llm.loop`: repair request with only the flagged units, partial planner response, merge by id,
+  anchors kept, structural operations, stage-level fallback. (Today `keep_unflagged` enforces only assets and
+  scenes, and the planner still returns the whole candidate.)
+- [ ] Wire every stage, by impact: script points and the continuity gate (both rewrite a whole chapter script today),
+  evidence facts, film cast, longform orientation, image-prompt banners, creative-brief fields; parent plan returns
+  only the flagged chapters.
+
+| Stage | Unit | Stable id today | Code-enforced repair today |
+|---|---|---|---|
+| Parent plan | chapter | yes (`C01`) | yes (flagged chapters, merge, repair_scope); returns whole plan |
+| Longform orientation | anchor; caution/coverage rule | anchors yes; others no | no (full redraft) |
+| Chapter evidence | fact; uncertainty | facts model-assigned; others no | no |
+| Chapter script | point | model-assigned (`P01`) | no |
+| Creative brief | field | field names | no |
+| Visual beats | scene | model-assigned (`S01`) | yes since 2026-10-13 (merge by id, anchors kept) |
+| Image prompts (batches) | asset; banner | assets yes; banners by scene_key | assets yes; banner errors force a full batch redraft |
+| Cast coverage repair | asset | yes | yes (planner returns only chosen assets): the target pattern |
+| Film cast | person | no (name) | no |
+| Continuity gate | point within a chapter | finding names `C02 P11` | no (redrafts the whole chapter script) |
+| Per-image take repair | one image's scene | yes | yes |
+| Person reference choice | one decision | n/a | n/a |
+
+### 3. Hybrid planning: central beat sheet for long films (option C, user decision 2026-10-13)
+
+Today chapters write their scripts alone from a central outline, and a pairwise continuity gate patches conflicts
+afterwards (redrafting only the later chapter, before any voice work). Its blind spots: it compares only neighbours,
+so duplication between non-adjacent chapters (e.g. C02 and C05) is never seen; it can change only the later chapter;
+and nothing controls pacing or length across the film. Apollo 13: C01 revealed the splashdown and verdict before the
+rescue chapters; the film ran 46% long.
+
+- [ ] **Central beat sheet** between chapter evidence and chapter scripts:
+  1. Central outline (as today): chapters, owned topics, research angles.
+  2. Per-chapter research and evidence (as today, parallel).
+  3. **New:** one central call sees every chapter's evidence summary and fixes, per chapter: the beats (points with
+     fact ids), what is revealed where (no spoilers ahead of their chapter, no repeats anywhere in the film), the
+     handoffs (how each chapter opens from the last and closes into the next), which named people appear where
+     (feeds the cast's `show_in` directly), and a **word budget** from the narrator's measured words per minute.
+     Reviewed once by the reviewer for duplication across all chapters, arc and budget; targeted repair per chapter.
+  4. Chapter scripts in parallel: each writes the prose for its own beats; reviews stay chapter-sized.
+  5. Continuity becomes a light confirmation against the beat sheet (should rarely redraft).
+- Absorbs: script-stage continuity after multi-queue (Valkyrie decision above), the Valkyrie C02/C03 duplicate as
+  a test case, the Apollo length overrun (word budget), and makes chapter-only plan repair a natural fit.
+- Rejected alternatives: fully central script writing (one ~2,500-word output and review degrade with film length;
+  loses parallel writing and chapter-sized repair); keeping solo chapters with a wider gate (still patches after
+  the fact, cannot manage length).
+
 ## Agreed optimization plan (2026-10-11)
 
 After watching the Valkyrie test run end to end, the user settled on five changes, in this order. Details for each

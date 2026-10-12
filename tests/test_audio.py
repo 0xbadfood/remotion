@@ -257,6 +257,60 @@ class AuditEscalationTests(unittest.TestCase):
             finally:
                 store.db.close()
 
+    def repeated(self, directory, heard, verdict, earlier_heard=None):
+        """A take fails with numeric_mismatch; the earlier take failed with `earlier_heard` (default: the same)."""
+        from infofilm.audio_audit import audit_with_escalation
+        store = Store(directory)
+        audit = lambda words: {"status": "failed", "score": .9, "reasons": ["numeric_mismatch"], "transcript_words": 6,
+                               "expected_text": "one of three plants in the p nine project",
+                               "transcript_text": "one of three plants in the " + words + " project",
+                               "raw_transcript": "One of three plants in the " + words.upper() + " project."}
+        try:
+            with patch("infofilm.audio_audit.audit_english_audio", side_effect=lambda a, *rest, **kw: {**audit(heard), "model": a.model}), \
+                 patch("infofilm.llm.Models.call_json", return_value=verdict) as llm:
+                result = audit_with_escalation({"reviewer_url": "local", "audio_audit_fallback_models": []}, store,
+                                               wav(store.root / "take-1" / "point.wav"), "One of three plants in the P-9 Project.",
+                                               earlier_audits=[audit(earlier_heard or heard)])
+            return result, llm.call_count
+        finally:
+            store.db.close()
+
+    def verdict(self, kind="number_format"):
+        return {"decision": "accept", "complete": True, "meaning_preserved": True, "reason": "Recognizer formatting.",
+                "differences": [{"id": "D01", "kind": kind, "explanation": "Same designation written as P9."}]}
+
+    def test_repeated_identical_failure_goes_to_the_arbiter_and_a_number_format_passes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            result, calls = self.repeated(directory, "p9", self.verdict())
+        self.assertEqual(calls, 1); self.assertEqual(result["status"], "passed")      # 'p nine' == 'p9' once numbers are words
+        self.assertEqual(result["acceptance_method"], "arbiter_repeated_failure"); self.assertTrue(result["numbers_code_checked"])
+
+    def test_repeated_failure_cannot_wave_through_a_changed_number(self):
+        with tempfile.TemporaryDirectory() as directory:
+            result, calls = self.repeated(directory, "p8", self.verdict())
+        self.assertEqual(calls, 1); self.assertEqual(result["status"], "failed")      # the arbiter said format; code says 9 != 8
+        self.assertFalse(result["numbers_code_checked"])
+
+    def test_different_failures_mean_a_real_speech_problem_and_no_arbiter(self):
+        with tempfile.TemporaryDirectory() as directory:
+            result, calls = self.repeated(directory, "p9", self.verdict(), earlier_heard="p seven")
+        self.assertEqual(calls, 0); self.assertEqual(result["status"], "failed")
+
+    def test_first_failure_of_a_number_never_reaches_the_arbiter(self):
+        from infofilm.audio_audit import audit_with_escalation
+        with tempfile.TemporaryDirectory() as directory:
+            store = Store(directory)
+            failed = {"status": "failed", "score": .9, "reasons": ["numeric_mismatch"], "transcript_words": 6,
+                      "expected_text": "the p nine project", "transcript_text": "the p9 project"}
+            try:
+                with patch("infofilm.audio_audit.audit_english_audio", return_value=failed), \
+                     patch("infofilm.llm.Models.call_json", side_effect=AssertionError("No arbiter on a first failure")):
+                    result = audit_with_escalation({"reviewer_url": "local", "audio_audit_fallback_models": []}, store,
+                                                   wav(store.root / "take-0" / "point.wav"), "The P-9 Project.")
+                self.assertEqual(result["status"], "failed")
+            finally:
+                store.db.close()
+
     def test_changed_numbers_bypass_llm_acceptance(self):
         from infofilm.audio_audit import adjudicate_transcript
         with tempfile.TemporaryDirectory() as directory:

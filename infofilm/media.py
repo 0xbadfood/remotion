@@ -165,10 +165,10 @@ def render_audio(config, store, text, name):
     return _gate_vibe_audio(config, store, final, info, name)
 
 
-def audit_audio(config, store, audio, text, points=None):
+def audit_audio(config, store, audio, text, points=None, earlier_audits=None):
     sys.path.insert(0, config["quiz_root"])
     from .audio_audit import audit_with_escalation
-    return audit_with_escalation(config, store, audio, text, points=points)
+    return audit_with_escalation(config, store, audio, text, points=points, earlier_audits=earlier_audits)
 
 
 def map_source_words(points, aligned, tokenize, source_tokenize=None):

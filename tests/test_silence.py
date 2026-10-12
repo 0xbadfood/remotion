@@ -99,7 +99,7 @@ class SilenceGateTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             path = wav(Path(folder)/'voice.wav', [(1, 2000), (5, 0), (1, 2000)])
             seen = []
-            def audit(config, store, audio, text):
+            def audit(config, store, audio, text, earlier_audits=None):
                 seen.append(audio)
                 return {'status': 'passed', 'score': 1}
             def align(config, store, audio, script, name):
