@@ -50,9 +50,12 @@ moves to the Spark; the premium image tier becomes a cloud provider.
   checkpoints (15 s test: 112 s, 6.4 GB peak); Whisper large-v3; filmora backend + MFA runner + MFA models copied;
   interface state, keys, voices, scivid-data, textbook-digest, NCERT books copied; infofilm tests 732/734 pass (the two
   failures only lack node on PATH in a plain shell).
-- **Open: word alignment (MFA).** MFA 3 needs kalpy, which has no aarch64 build (nor baumwelch). Until resolved, films
-  stop at the timing step. Options: torchaudio MMS forced aligner (native, GPU; recommended), MFA as a service on an x86
-  host, or build kalpy from source.
+- **Word alignment: done with MMS** (`infofilm/mms_align.py`, `config.json` `"aligner": "mms"`). torchaudio MMS_FA
+  model + a CTC Viterbi pass in torch on the GPU; same output shape and tokenizer as MFA, plus per-word confidence.
+  Benchmark against saved MFA alignments: 304 Lesson Studio narrations (63 min) at 121× real time, starts within
+  100 ms of MFA for 86.9% of words (98.6% within 200 ms); 124 infofilm narrations with names and dates (37 min) at 118×
+  real time, 95.5% within 100 ms (99.9% within 200 ms), median 42 ms; no failures. Word-list differences are only MFA
+  splitting possessives ("earth 's"). MFA stays selectable (`"aligner": "mfa"`) on x86 hosts.
 
 ## Order
 

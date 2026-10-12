@@ -81,5 +81,6 @@
   ],
   "research_python": "/home/nitin/remotion/.venv/bin/python",
   "mfa_slots": 3,
-  "render_slots": 2
+  "render_slots": 2,
+  "aligner": "mms"
 }

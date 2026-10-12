@@ -281,7 +281,8 @@ def align_audio(config, store, audio, script, name, *, spoken_points=None):
     module, module_path = _mfa_adapter(config)
     info = audio_info(audio)
     history = []
-    store.event(name, "running", {"engine": "MFA", "audio": str(audio), "max_attempts": len(profiles)})
+    store.event(name, "running", {"engine": "MMS" if config.get("aligner", "mfa") == "mms" else "MFA",
+                                  "audio": str(audio), "max_attempts": len(profiles)})
     last_error = None
     for index, candidate in enumerate(profiles, 1):
         directory = candidate["directory"]
@@ -301,10 +302,16 @@ def align_audio(config, store, audio, script, name, *, spoken_points=None):
                 # The adapter also retries decoder failures with wider beams. MFA is CPU-heavy: parallel chapters
                 # share a fixed number of alignment slots (a queue), instead of oversubscribing the cores.
                 with resource_slot("mfa", config.get("mfa_slots", max(2, (os.cpu_count() or 8) // 8))):
-                    payload, _, metadata = module.run_mfa_alignment(
-                        module.DEFAULT_MFA_BIN, module.DEFAULT_MAMBA_BIN, module.DEFAULT_MFA_ROOT, Path(audio), candidate["text"],
-                        module.DEFAULT_ACOUSTIC_MODEL, module.DEFAULT_DICTIONARY_MODEL, module.DEFAULT_G2P_MODEL,
-                        directory / "work", beam=candidate["beam"], retry_beam=candidate["retry_beam"])
+                    if config.get("aligner", "mfa") == "mms":
+                        # MMS forced alignment (GPU, any architecture); same output shape and tokenizer as MFA.
+                        from .mms_align import align as mms_align
+                        payload, metadata = mms_align(Path(audio), candidate["text"], tokenize=module.tokenize,
+                                                      device=config.get("aligner_device"))
+                    else:
+                        payload, _, metadata = module.run_mfa_alignment(
+                            module.DEFAULT_MFA_BIN, module.DEFAULT_MAMBA_BIN, module.DEFAULT_MFA_ROOT, Path(audio), candidate["text"],
+                            module.DEFAULT_ACOUSTIC_MODEL, module.DEFAULT_DICTIONARY_MODEL, module.DEFAULT_G2P_MODEL,
+                            directory / "work", beam=candidate["beam"], retry_beam=candidate["retry_beam"])
                 write(raw, payload)
                 write(directory / "mfa-metadata.json", metadata)
             aligned = [{"id": f"mfa{i+1:04d}", "word": str(entry[2]), "start": float(entry[0]), "end": float(entry[1])}
@@ -340,7 +347,8 @@ def align_audio(config, store, audio, script, name, *, spoken_points=None):
         write(legacy / "alignment-attempts.json", history)
         value = {"schema_version": "infofilm.timing.v1", "audio": str(audio), "audio_sha256": info["audio_sha256"],
                  "text_sha256": digest(text), "words": words, "points": points, "audio_info": info,
-                 "provenance": {"engine": "MFA", "adapter": str(module_path), "metadata": metadata,
+                 "provenance": {"engine": "MMS" if config.get("aligner", "mfa") == "mms" else "MFA",
+                                "adapter": str(module_path), "metadata": metadata,
                                 "orthographic_input": candidate["text"], "original_transcript_preserved": True,
                                 "alignment_attempts": history, "had_retry": index > 1,
                                 "validation": "exact source lexemes with spoken numeric expansion, MFA clitic spans and sequential bounds",
