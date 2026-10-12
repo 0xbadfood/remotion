@@ -215,7 +215,7 @@ def recover(config, store, root, case, models, policy, *, session_managed=False)
                 'premium_provider': policy['provider'], 'scores': str(rescue / 'scores.json'),
                 'premium_candidates': policy['max_candidates'], 'rule': 'highest marks; premium wins ties'}}
     asset = case['library']['assets'][0]
-    value.update({k: asset[k] for k in ['people_in_frame', 'person_reference_status', 'reference_card'] if k in asset})
+    value.update({k: asset[k] for k in ['people_in_frame', 'person_reference_status', 'reference_card', 'reference_faces'] if k in asset})
     write(selection, value)
     state.update(status='best_available', selected=value, terminal_recovery=value['terminal_recovery'])
     write(root / 'message-state.json', state)

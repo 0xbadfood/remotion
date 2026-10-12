@@ -391,7 +391,7 @@ def run_message_loop(config, store, root, case, models, settings, progress):
                 "provider_id": settings["provider"], "total_attempts": ordinal + 1})
             asset = case['library']['assets'][0]
             if 'people_in_frame' in asset:
-                state['selected'].update({k: asset[k] for k in ['people_in_frame', 'person_reference_status', 'reference_card'] if k in asset})
+                state['selected'].update({k: asset[k] for k in ['people_in_frame', 'person_reference_status', 'reference_card', 'reference_faces'] if k in asset})
         elif review["repair_mode"] == "diagnose_backend":
             state["status"] = "backend_error"
         elif ordinal + 1 >= settings["max_image_attempts"]:

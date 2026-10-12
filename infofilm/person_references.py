@@ -13,6 +13,9 @@ from .llm_settings import llm_config
 from .core import ROOT, digest, read, write
 
 PROTOCOL = 'infofilm.person-references.v1'
+FACE_PROTOCOL = 'infofilm.person-faces.v1'
+FACE_MODEL = ROOT / 'models' / 'face_detection_yunet_2023mar.onnx'
+MAX_SEPARATE_FACES = 3          # Qwen follows up to three reference images; more people share one text-free strip
 
 
 def reference_settings(config):
@@ -139,6 +142,86 @@ def build_contact_card(root, references, settings):
     return result
 
 
+def face_box(image):
+    """Head-and-shoulders crop box: the detected face widened 2.2x, from half a face above it to 1.6 faces below its
+    top (chin and collar, above name tags and patches). The largest face wins in a group photo; without a detector
+    result, the top centre of the portrait."""
+    width, height = image.size
+    faces = []
+    try:
+        import cv2
+        import numpy as np
+    except ImportError:
+        cv2 = None
+    if cv2 is not None and FACE_MODEL.exists():
+        try:
+            cv2.utils.logging.setLogLevel(cv2.utils.logging.LOG_LEVEL_ERROR)
+            pixels = cv2.cvtColor(np.asarray(image), cv2.COLOR_RGB2BGR)
+            detector = cv2.FaceDetectorYN.create(str(FACE_MODEL), '', (width, height), 0.7)
+            found = detector.detect(pixels)[1]
+            faces = [] if found is None else [tuple(map(float, f[:4])) for f in found]
+        except cv2.error:
+            faces = []
+    if faces:
+        x, y, w, h = max(faces, key=lambda f: f[2] * f[3])
+        centre, side = x + w / 2, w * 2.2
+        box = (centre - side / 2, y - h * 0.5, centre + side / 2, y + h * 1.6)
+        method = 'face' if len(faces) == 1 else 'largest_face'
+    else:
+        side = min(width, height * 0.6)
+        box = ((width - side) / 2, 0, (width + side) / 2, side * 1.1)
+        method = 'top_centre'
+    box = (max(0, int(box[0])), max(0, int(box[1])), min(width, int(box[2])), min(height, int(box[3])))
+    return box, method, len(faces)
+
+
+def face_reference(root, ref):
+    """One person's text-free face crop for the image generator, cached by source checksum."""
+    validate_reference(ref)
+    directory = Path(root) / 'faces' / ref['sha256'][:20]
+    saved = directory / 'face.json'
+    if saved.exists():
+        value = read(saved)
+        validate_reference(value)
+        return value
+    with Image.open(ref['file']) as image:
+        image = ImageOps.exif_transpose(image).convert('RGB')
+        box, method, faces = face_box(image)
+        crop = image.crop(box)
+    directory.mkdir(parents=True, exist_ok=True)
+    target = directory / 'face.png'
+    crop.save(target)
+    value = {'protocol': FACE_PROTOCOL, 'file': str(target), 'sha256': digest(target.read_bytes()),
+             'person': ref['person']['name'], 'source_sha256': ref['sha256'], 'box': list(box),
+             'method': method, 'faces_detected': faces}
+    write(saved, value)
+    return value
+
+
+def build_face_references(root, references):
+    """Generator conditioning without any printed text: separate face crops for up to three people, otherwise one
+    left-to-right strip. The labeled contact card stays with the reviewer, which needs the names."""
+    faces = [face_reference(root, ref) for ref in references]
+    if len(faces) <= MAX_SEPARATE_FACES:
+        return {'protocol': FACE_PROTOCOL, 'combined': False, 'people': [f['person'] for f in faces],
+                'images': [{'file': f['file'], 'sha256': f['sha256']} for f in faces], 'faces': faces}
+    identity = digest([f['sha256'] for f in faces])
+    target = Path(root) / 'faces' / 'strips' / (identity[:20] + '.png')
+    if not target.exists():
+        tiles = []
+        for face in faces:
+            with Image.open(face['file']) as image:
+                tile = image.convert('RGB'); tile.thumbnail((320, 400), Image.Resampling.LANCZOS); tiles.append(tile)
+        strip = Image.new('RGB', (sum(t.width for t in tiles) + 16 * (len(tiles) + 1), max(t.height for t in tiles) + 32), '#d9d6d0')
+        x = 16
+        for tile in tiles:
+            strip.paste(tile, (x, 16)); x += tile.width + 16
+        target.parent.mkdir(parents=True, exist_ok=True)
+        strip.save(target)
+    return {'protocol': FACE_PROTOCOL, 'combined': True, 'people': [f['person'] for f in faces],
+            'images': [{'file': str(target), 'sha256': digest(target.read_bytes())}], 'faces': faces}
+
+
 def prepare_person_references(config, store, library):
     settings = reference_settings(config)
     if not settings['enabled']:
@@ -188,6 +271,7 @@ def prepare_person_references(config, store, library):
                 missing.append({'person': person, 'reason': ref['reason']})
         if refs:
             asset['reference_card'] = build_contact_card(cache_root, refs, settings)
+            asset['reference_faces'] = build_face_references(cache_root, refs)
         asset['person_reference_status'] = {'referenced': len(refs), 'unavailable': missing}
         if asset['people_in_frame']:
             store.event(asset['id'], 'person_references_bound', {'people_in_frame': [p['name'] for p in asset['people_in_frame']],
@@ -205,6 +289,14 @@ def prepare_person_references(config, store, library):
 
 
 def reference_addendum(asset):
+    faces = asset.get('reference_faces')
+    if faces:
+        order = ('one reference image with the faces left to right: ' if faces['combined'] else 'reference images in order: ')
+        names = '; '.join(f"{index}. {name}" for index, name in enumerate(faces['people'], 1))
+        return ('\nAppearance reference: the attached ' + order + names + '. They show faces only. Preserve each '
+                "person's observable facial features in the requested scene and treatment; adapt age, hair and clothing "
+                'to the scene period, since a source photo may come from another adult period. Render a single '
+                'full-frame scene in which these people appear naturally, with the scene\'s own lighting and poses.')
     card = asset.get('reference_card')
     if not card:
         return ''
@@ -217,6 +309,11 @@ def reference_addendum(asset):
 
 
 def bind_reference_params(params, asset):
+    faces = asset.get('reference_faces')
+    if faces:
+        for image in faces['images']:
+            validate_reference(image)
+        return {**params, 'reference_images': [dict(image) for image in faces['images']]}
     card = asset.get('reference_card')
     if not card:
         return params

@@ -69,7 +69,7 @@ def generate_unreviewed_images(config, store, library, *, on_progress=None):
                      'visual_message': asset.get('visual_message'), 'protocol': PROTOCOL,
                      'selection_status': 'unreviewed', 'review_performed': False,
                      'review': {'status': 'skipped', 'pass': None, 'reason': 'disabled_by_user'}, 'total_attempts': 1}
-            value.update({k: asset[k] for k in ['people_in_frame', 'person_reference_status', 'reference_card'] if k in asset})
+            value.update({k: asset[k] for k in ['people_in_frame', 'person_reference_status', 'reference_card', 'reference_faces'] if k in asset})
             write(root / 'selected.json', value)
             output[asset['id']] = value
             write(store.root / 'image_manifest.json', output)

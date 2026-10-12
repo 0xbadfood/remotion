@@ -233,7 +233,16 @@ Result: 21:51 film, 7 chapters, 126 images; 2 h 39 min wall clock including thre
 - [ ] **MMS out-of-memory** on the Spark (5 workers × MMS + VibeVoice + arbiter): release the model's GPU memory
   after each alignment and fall back to CPU on CUDA OOM; audit events still label alignment "MFA".
 - [ ] Rescues cluster on images with named people (10 of 18 vs 6 of 105); Gemini won all 19 rescues. Consider sending
-  people scenes to the premium tier earlier instead of three local takes first.
+  people scenes to the premium tier earlier instead of three local takes first (re-measure after the face references).
+- [x] **Text failures had two causes.** (1) Qwen copied the labeled reference card (names + biography) into the image:
+  15 first-take and 19 later failures in Apollo 13; only 5 of 15 such images ever lost the text, 10 went to rescue.
+  Qwen now gets text-free head-and-shoulders face crops (OpenCV YuNet detector, `models/`; separate images for up to
+  three people, one strip above that); the labeled card stays with the reviewer. A/B on C05 A003/A005/A006 (same
+  prompt and seed): all three old takes reproduced the card, all three new takes are one full-frame scene, no text.
+  (2) Text drawn in the scene (18 images) was fixed by repairs in 17 cases; the planner now describes such surfaces
+  positively from the first prompt ("plain unlabeled tick marks") instead of ending with "no text" lists.
+- [ ] Targeted negative prompt (guidance on, ~2x render time) for unwanted_text retakes only: needs factory support;
+  only if text failures persist after the two fixes above.
 - [ ] Per-take scores: normal reviews are pass/fail only; add the three marks so take-to-take improvement is visible.
 - [ ] Research gap: Gene Kranz never reached the scripts (named once in sources); cast "Lousma" lacks a first name.
 

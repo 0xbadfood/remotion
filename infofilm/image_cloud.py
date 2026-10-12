@@ -65,8 +65,9 @@ def render_cloud(config, store, root, attempt, params):
     if not key:
         raise RuntimeError(f"The premium image connection {endpoint.get('label')} needs an API key (LLM settings)")
     content = [{"type": "text", "text": params["prompt"] + (
-        "\n\nThe attached labelled reference cards show the real appearance of the named people; match their faces, "
-        "but do not reproduce the cards, labels or text." if references else "")}]
+        "\n\nThe attached reference photos show the real faces of the named people, in the order the prompt lists; "
+        "match their faces, but never show the photos themselves as panels or insets, and add no captions or text."
+        if references else "")}]
     if references:
         from .person_references import validate_reference
         for ref in references:

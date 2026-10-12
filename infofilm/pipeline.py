@@ -314,7 +314,7 @@ def finish_visuals(args, config, store, models, evidence, sources, brief, films,
         if asset['id'] in asset_by_id and 'review_profile' in asset_by_id[asset['id']]:
             asset['review_profile'] = asset_by_id[asset['id']]['review_profile']
         if reference_enabled and asset['id'] in asset_by_id:
-            asset.update({k: asset_by_id[asset['id']][k] for k in ['people_in_frame', 'person_reference_status', 'reference_card']
+            asset.update({k: asset_by_id[asset['id']][k] for k in ['people_in_frame', 'person_reference_status', 'reference_card', 'reference_faces']
                           if k in asset_by_id[asset['id']]})
     write(store.root / "visual-library.json", library)
     banner_by_scene = {b["scene_key"]: b["text"] for b in prompts["banners"]}

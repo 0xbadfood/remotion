@@ -17,8 +17,9 @@ from infofilm.image_studio import studio_payload
 from infofilm.llm import Models
 from infofilm.person_reference_worker import (commons_candidates, download_portrait, public_url,
                                             research_person, selection_errors, tavily_candidates)
-from infofilm.person_references import (bind_reference_params, build_contact_card, person_errors,
-    person_key, prepare_person_references, reference_settings, submit_qwen_job)
+from infofilm.person_references import (bind_reference_params, build_contact_card, build_face_references,
+    face_box, face_reference, person_errors, person_key, prepare_person_references, reference_addendum,
+    reference_review_kwargs, reference_settings, submit_qwen_job)
 from infofilm.planning import make_image_prompts
 from test_prompt_batches import PromptBatchTests
 
@@ -212,6 +213,7 @@ class PersonReferenceTests(unittest.TestCase):
                 return {'assets': [fixed]}
             self.assertIn('historical documentary', task); self.assertEqual(context['required_people'], ['Albert Einstein'])
             self.assertIn('not a requirement for this batch alone', task)       # batches never demand chapter-wide coverage
+            self.assertIn('plain, blank or unmarked surfaces', task)            # text-free surfaces described positively
             self.assertNotIn('in at least one asset of this chapter', task)
             assets = copy.deepcopy(context['used_assets'])
             for asset in assets:
@@ -286,6 +288,54 @@ class PersonReferenceTests(unittest.TestCase):
         saved = read(self.store.root/'film-60/storyboard.json')['scenes'][0]
         self.assertEqual(saved['people_in_frame'], [PERSON])
         self.assertEqual(saved['reference_card_sha256'], first['reference_card']['sha256'])
+
+
+class FaceReferenceTests(unittest.TestCase):
+    """The generator gets text-free face crops; the labeled card (names, context) stays with the reviewer."""
+    def setUp(self):
+        self.folder = tempfile.TemporaryDirectory(); self.addCleanup(self.folder.cleanup)
+        self.root = Path(self.folder.name)
+
+    def ref(self, name, color='#b09070'):
+        path = self.root / f'{name}.png'
+        image = Image.new('RGB', (600, 760), color); image.putpixel((0, 0), (0, 0, 0)); image.save(path)
+        return {'file': str(path), 'sha256': digest(path.read_bytes()), 'person': {**PERSON, 'name': name},
+                'status': 'ready', 'depiction_kind': 'photograph', 'source_url': 'https://example.org/' + name}
+
+    def test_detected_face_gives_a_head_and_shoulders_box_above_name_tags(self):
+        import numpy as np
+        detector = Mock(); detector.detect.return_value = (1, np.array([[250., 100., 100., 120.] + [0.] * 10 + [0.95]]))
+        with patch('cv2.FaceDetectorYN.create', return_value=detector):
+            box, method, faces = face_box(Image.new('RGB', (600, 760)))
+        self.assertEqual((method, faces), ('face', 1))
+        self.assertEqual(box, (190, 40, 410, 292))          # 2.2x face width; half a face above, 1.6 faces below its top
+
+    def test_no_face_falls_back_to_top_centre_and_the_crop_is_cached(self):
+        face = face_reference(self.root / 'refs', self.ref('Jim Lovell'))
+        self.assertEqual(face['method'], 'top_centre'); self.assertEqual(face['person'], 'Jim Lovell')
+        self.assertTrue(Path(face['file']).exists())
+        with patch('infofilm.person_references.face_box', side_effect=AssertionError('No recrop')):
+            self.assertEqual(face_reference(self.root / 'refs', self.ref('Jim Lovell')), face)
+
+    def test_up_to_three_people_are_separate_images_and_more_share_one_strip(self):
+        names = ['Jim Lovell', 'Fred Haise', 'Jack Swigert', 'Glynn Lunney']
+        refs = [self.ref(n, c) for n, c in zip(names, ['#b09070', '#a08060', '#907050', '#806040'])]
+        three = build_face_references(self.root / 'refs', refs[:3])
+        self.assertFalse(three['combined']); self.assertEqual(len(three['images']), 3); self.assertEqual(three['people'], names[:3])
+        four = build_face_references(self.root / 'refs', refs)
+        self.assertTrue(four['combined']); self.assertEqual(len(four['images']), 1); self.assertEqual(four['people'], names)
+
+    def test_generator_gets_faces_in_order_and_reviewer_keeps_the_labeled_card(self):
+        refs = [self.ref('Jim Lovell'), self.ref('Fred Haise', '#a08060')]
+        settings = reference_settings({'person_references': {'enabled': True}})
+        asset = {'reference_card': build_contact_card(self.root / 'refs', refs, settings),
+                 'reference_faces': build_face_references(self.root / 'refs', refs)}
+        bound = bind_reference_params({'prompt': 'Scene'}, asset)['reference_images']
+        self.assertEqual([b['sha256'] for b in bound], [i['sha256'] for i in asset['reference_faces']['images']])
+        self.assertEqual(reference_review_kwargs(asset)['reference_image_paths'], [Path(asset['reference_card']['file'])])
+        addendum = reference_addendum(asset)
+        self.assertIn('1. Jim Lovell; 2. Fred Haise', addendum); self.assertNotIn('panel', addendum)
+        self.assertIn('single full-frame scene', addendum)
 
 
 class PortraitResearchTests(unittest.TestCase):

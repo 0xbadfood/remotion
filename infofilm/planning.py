@@ -310,6 +310,11 @@ def make_image_prompts(models, library, films, evidence, orientations, experimen
             "Use contextual banners, season/place labels or short process labels where they help the viewer understand the actual scene. "
             "Return exact banner text separately: the compositor places crisp banners over the image. Plan a clean upper-right banner area with no important subject underneath. "
             "Do not ask the raster generator to draw typography, maps or arrows; native diagrams and banners supply those precisely. "
+            "Describe text-free surfaces positively in the scene itself: screens, gauges, dials, documents, signs, patches, "
+            "badges and maps appear as plain, blank or unmarked surfaces (for example 'a dial with plain unlabeled tick marks', "
+            "'a softly glowing blank grey screen', 'a sheet of plain off-white paper'). Image models draw what a prompt names, "
+            "even after 'no', so never end a prompt with exclusion lists such as 'no text, no labels, no numerals'. "
+            "Leave out writing-bearing objects the scene does not need. "
             "Do not label a generic illustrative landscape as an exact photographed location. Avoid split panels and atmospheric features that imply a wrong mechanism. "
             "Return {style, assets:[{id,purpose,prompt,acceptance:[string],fact_ids:[string]}], banners:[{scene_key,text:'at most 8 words',reason}]}. "
             "Exactly cover the supplied used assets and image scene keys; an empty banner text is allowed if a banner adds no useful context.")
