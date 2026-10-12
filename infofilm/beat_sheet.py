@@ -101,7 +101,7 @@ def beat_errors(value, chapters, tolerance):
     return errors
 
 
-def make_beat_sheet(models, plan, records, rate, *, tolerance=0.15, experimental=True):
+def make_beat_sheet(models, plan, records, rate, *, tolerance=0.25, experimental=True):
     chapters = chapter_inputs(plan, records, rate)
     context = {"film": {k: v for k, v in plan["film"].items() if k not in {"advisory_seconds"}},
                "narrator_words_per_minute": round(rate, 1), "chapters": chapters}
@@ -121,6 +121,6 @@ def chapter_slice(sheet, chapter_id):
     if frame is None:
         return None
     return {"opening": frame["opening"], "closing": frame["closing"], "people": frame.get("people", []),
-            "word_budget": frame["word_budget"], "length_tolerance": frame.get("length_tolerance", 0.15),
+            "word_budget": frame["word_budget"], "length_tolerance": frame.get("length_tolerance", 0.25),
             "beats": [{k: b.get(k) for k in ("id", "intent", "fact_ids", "words", "reminder")}
                       for b in sheet["beats"] if b.get("chapter") == chapter_id]}

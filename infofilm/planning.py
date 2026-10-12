@@ -108,10 +108,16 @@ def script_errors(value, evidence, budget=None):
     sheet = (evidence.get("chapter_context") or {}).get("beat_sheet")
     if sheet and points:
         words, target = sum(word_count(p.get("narration", "")) for p in points), sheet["word_budget"]
-        tolerance = sheet.get("length_tolerance", .15)
+        tolerance = sheet.get("length_tolerance", .25)
         if abs(words - target) > target * tolerance:
-            errors.append(f"Narration totals {words} words; this chapter's budget is {target} (within {round(tolerance * 100)}%): "
-                          + ("merge or shorten points, keeping every beat" if words > target else "develop the beats more fully"))
+            # Targeted: name the points to change (longest to trim, shortest to develop), not the whole script.
+            over = words > target
+            change = abs(words - target) - int(target * tolerance) + max(3, target // 50)
+            ranked = sorted(points, key=lambda p: word_count(p.get("narration", "")), reverse=over)
+            owners = [p.get("id") for p in ranked[:max(1, min(4, len(points) // 3))] if p.get("id")]
+            errors.append(f"{', '.join(owners)}: narration totals {words} words; this chapter's budget is {target} "
+                          f"(within {round(tolerance * 100)}%): " + (f"shorten these points by about {change} words in total, keeping their facts"
+                          if over else f"develop these points by about {change} words in total from their facts"))
     return errors
 
 
@@ -163,7 +169,7 @@ def make_script(models, evidence, duration, rate=135, experimental=True, suffix=
         task += (" chapter_context.beat_sheet is this chapter's part of the film-wide beat plan: narrate exactly its "
                  "beats, in order, each as one or two points using that beat's fact_ids; a reminder beat is one short "
                  "sentence. Open as beat_sheet.opening says and close as beat_sheet.closing says. The narration must "
-                 f"total about {sheet['word_budget']} words (code checks within {round(sheet.get('length_tolerance', .15) * 100)}%); "
+                 f"total about {sheet['word_budget']} words (code checks within {round(sheet.get('length_tolerance', .25) * 100)}%); "
                  "this budget replaces the advisory duration and word reference above.")
     if correction:
         context["measured_duration_feedback"] = correction

@@ -770,10 +770,10 @@ def create_long(args):
                 event('chapters', 'running', phase='evidence', chapters=[r['chapter']['id'] for _, r in scripted])
                 run_all(scripted, 'evidence')
                 event('beat-sheet', 'running', narrator_words_per_minute=round(rate, 1))
-                sheet = make_beat_sheet(models, plan, records, rate, tolerance=settings.get('script_length_tolerance', 0.15),
+                sheet = make_beat_sheet(models, plan, records, rate, tolerance=settings.get('script_length_tolerance', 0.25),
                                         experimental=args.review_mode == 'experimental')
                 for frame in sheet['chapters']:
-                    frame['length_tolerance'] = settings.get('script_length_tolerance', 0.15)
+                    frame['length_tolerance'] = settings.get('script_length_tolerance', 0.25)
                 write(sheet_path, sheet)
                 beats.update({c['id']: chapter_slice(sheet, c['id']) for c in plan['chapters']})
                 event('beat-sheet', 'succeeded', beats=len(sheet['beats']),

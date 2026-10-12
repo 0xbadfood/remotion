@@ -65,7 +65,9 @@ class BeatSheetTests(unittest.TestCase):
         point = lambda words: {"id": "P01", "heading": "Fission", "fact_ids": ["F01"], "narration": " ".join(["word"] * words)}
         self.assertEqual(script_errors({"points": [point(21)]}, evidence), [])
         long = script_errors({"points": [point(30)]}, evidence)
-        self.assertEqual(len(long), 1); self.assertIn("Narration totals 30 words; this chapter's budget is 20", long[0])
+        self.assertEqual(len(long), 1); self.assertIn("P01: narration totals 30 words; this chapter's budget is 20", long[0])
+        many = {"points": [{**point(n), "id": f"P{i:02d}"} for i, n in enumerate([4, 9, 3, 8, 2, 4], 1)]}
+        self.assertTrue(script_errors(many, evidence)[0].startswith("P02, P04: narration totals 30 words"))   # longest named
 
 
 if __name__ == "__main__":

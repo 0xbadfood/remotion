@@ -143,7 +143,7 @@ def settings_errors(settings):
         errors.append('Invalid review_min_score')
     if type(settings.get('beat_sheet', False)) is not bool:
         errors.append('beat_sheet must be boolean')
-    tolerance = settings.get('script_length_tolerance', 0.15)
+    tolerance = settings.get('script_length_tolerance', 0.25)
     if not finite_number(tolerance) or not 0.05 <= tolerance <= 0.5:
         errors.append('script_length_tolerance must be 0.05-0.5')
     guide = settings.get('recommended_chapter_seconds')

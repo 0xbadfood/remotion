@@ -255,6 +255,7 @@ class Models:
                             json.dumps(base, ensure_ascii=False) + "\nFINDINGS (code-checked):\n" +
                             json.dumps({"stage": stage_findings, "units": flagged}, ensure_ascii=False))
             self.store.event(stage, "seeded_repair", {"units": sorted(flagged), "stage_findings": len(stage_findings)})
+        mechanical, mechanical_cap = 0, self.config.get("validation_rounds", 3)
         attempt = -1
         while attempt + 1 < rounds:
             attempt += 1
@@ -359,6 +360,9 @@ class Models:
                 write(root / "current.json", {"input_hash": identity, "selected": str(selected), "evaluation": str(directory / "evaluation.json")})
                 return current
             flagged, stage_findings = ru.flag(current, errors, review, units)
+            if errors and review is None and mechanical < mechanical_cap:
+                # A round lost only to code checks (no review) does not use up the review budget.
+                mechanical += 1; rounds += 1
             for item in flagged:
                 strikes[item] = strikes.get(item, 0) + 1
             hard = {item for item in flagged if strikes[item] >= SIMPLIFY_AFTER} - simplify

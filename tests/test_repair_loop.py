@@ -63,6 +63,16 @@ class RepairLoopTests(unittest.TestCase):
         self.assertEqual(result["points"][1]["narration"], "good")
         self.assertIn("FLAGGED UNITS", prompts[1][2])
 
+    def test_rounds_lost_only_to_code_checks_do_not_use_up_the_review_budget(self):
+        validator = lambda x: ["P01: heading has 9 words; at most 7"] if x["points"][0]["narration"].startswith("bad") else []
+        bad = lambda n: {"units": {"points": [{"id": "P01", "narration": f"bad {n}"}]}}
+        review = {"pass": False, "score": 70, "issues": [{"field": "P02", "severity": "major", "problem": "x"}]}
+        responses = [script("bad 0", "Two."), bad(1), bad(2), {"units": {"points": [{"id": "P01", "narration": "Good."}]}},
+                     review, {"units": {"points": [{"id": "P02", "narration": "Fixed."}]}}, passing(),
+                     {"preferred": "A", "reasons": [], "regressions": []}]
+        result, _ = self.run_loop(responses, validator)          # 3 review rounds + 3 mechanical ones
+        self.assertEqual([p["narration"] for p in result["points"]], ["Good.", "Fixed."])
+
     def test_cast_people_get_code_assigned_ids(self):
         units = {"lists": {"people": "id"}, "assign": {"people": "R"}}
         result, prompts = self.run_loop([{"people": [{"name": "Leslie Groves"}, {"name": "J. Robert Oppenheimer"}]},
