@@ -157,6 +157,13 @@ rescue chapters; the film ran 46% long.
   loses parallel writing and chapter-sized repair); keeping solo chapters with a wider gate (still patches after
   the fact, cannot manage length).
 
+## Pre-photography likeness (user question, 2026-10-13)
+
+- [x] People born before 1850 were marked "unavailable" and never searched, which also cut off the
+  `historical_portrait` path (paintings, engravings, busts) built for them. They were still drawn (cast coverage),
+  but each scene invented the face. Now they are searched as documented portraits, never photographs; "unavailable"
+  only when nothing documented exists.
+
 ## How a Jet Engine Works (20-min target, 2026-10-13): first "how it works" film
 
 - Parent plan passed in round 1 at 94.1 (the highest yet). Hybrid structure: principle, then intake to nozzle, then

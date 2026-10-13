@@ -380,21 +380,22 @@ class PortraitResearchTests(unittest.TestCase):
         self.assertEqual(reused['person'], later)
         self.assertEqual(reused['sha256'], self.ref['sha256'])
 
-    def test_people_born_before_1850_get_no_reference_search(self):
+    def test_people_born_before_1850_are_searched_as_documented_portraits(self):
+        # Previously skipped outright, so pre-photography figures (Clive, Napoleon) got no likeness at all.
         from infofilm import person_reference_worker as worker
         folder = tempfile.TemporaryDirectory(); self.addCleanup(folder.cleanup); root = Path(folder.name)
-        napoleon = {'name': 'Napoleon Bonaparte', 'appearance_context': 'First Consul, 1800', 'reference_kind': 'historical_portrait',
+        napoleon = {'name': 'Napoleon Bonaparte', 'appearance_context': 'First Consul, 1800', 'reference_kind': 'photograph',
                    'birth_year': 1769}
         self.assertEqual(person_errors([napoleon]), [])
         self.assertTrue(person_errors([{**napoleon, 'birth_year': '1769'}]))
         request = write(root/'request.json', {'people': {'n': napoleon}, 'settings': reference_settings({}),
             'directory': str(root/'run'), 'cache_root': str(root/'refs'), 'project': str(root/'project'),
             'model_config': {'planner_url': 'p', 'reviewer_url': 'r'}})
-        with patch.object(worker, 'research_person') as researched, patch.object(worker.sys, 'argv', ['worker', str(request)]):
+        unavailable = {'protocol': worker.PROTOCOL, 'status': 'unavailable', 'reason': 'no documented portrait'}
+        with patch.object(worker, 'research_person', return_value=unavailable) as researched, \
+             patch.object(worker.sys, 'argv', ['worker', str(request)]):
             worker.main()
-        researched.assert_not_called()
-        result = read(root/'run'/'result.json')['people']['n']
-        self.assertEqual(result['status'], 'unavailable'); self.assertIn('1850', result['reason'])
+        self.assertEqual(researched.call_args.args[0]['reference_kind'], 'historical_portrait')   # never a photograph
 
     def test_reference_download_failure_tries_other_documented_candidate_and_saves_provenance(self):
         with tempfile.TemporaryDirectory() as folder:

@@ -297,6 +297,10 @@ def main():
             return ReferenceSearchClient()
         results = {}
         for position, (key, person) in enumerate(request['people'].items(), 1):
+            if isinstance(person.get('birth_year'), int) and person['birth_year'] < PHOTO_ERA_BIRTH_YEAR:
+                # Before photography the likeness comes from a documented portrait (painting, engraving, miniature,
+                # bust, coin), never a photograph; without one the person is still drawn from the evidence.
+                person = {**person, 'reference_kind': 'historical_portrait'}
             urls = {k: request['model_config'][k] for k in ('planner_url', 'reviewer_url') if k in request['model_config']}
             archive_id = digest({'protocol': PROTOCOL, 'person': person, 'settings': request['settings'],
                                  'models': urls})[:20]
@@ -309,10 +313,7 @@ def main():
             store.event('person-reference', 'running', {'name': person['name'], 'appearance_context': person['appearance_context'],
                         'position': position, 'total': len(request['people'])})
             shared = by_name / 'result.json'
-            if isinstance(person.get('birth_year'), int) and person['birth_year'] < PHOTO_ERA_BIRTH_YEAR:
-                result = {'protocol': PROTOCOL, 'status': 'unavailable', 'person': person,
-                          'reason': f"Born {person['birth_year']}, before {PHOTO_ERA_BIRTH_YEAR}: no reliable photograph; drawn from the evidence"}
-            elif not (archive / 'result.json').exists() and shared.exists():
+            if not (archive / 'result.json').exists() and shared.exists():
                 result = {**read(shared), 'person': person}
                 validate_reference(result)
                 write(archive / 'result.json', result)
