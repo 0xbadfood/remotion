@@ -64,6 +64,14 @@ RASTER_LABEL = re.compile(r"\b(?:labell?ed|marked|captioned|identified|titled)\s
 IMAGE_PROMPT_UNITS = {"lists": {"assets": "id", "banners": "scene_key"}, "anchors": {"banners": ["scene_key"]}}
 
 
+def image_prompt_units(contexts):
+    """IMAGE_PROMPT_UNITS plus each asset's banners: a review pointing at 'A017.banner' repairs the banner of A017's
+    scene, which is its own unit (Cuba C04 stalled six rounds repairing the asset while the banner never changed)."""
+    links = {asset: [row["scene_key"] for row in rows if isinstance(row, dict) and row.get("scene_key")]
+             for asset, rows in (contexts or {}).items()}
+    return {**IMAGE_PROMPT_UNITS, "links": {"banner": links}}
+
+
 def make_evidence(models, extraction, subject="How the Indian monsoon works", audit_notes=None, experimental=True, chapter_context=None):
     context = evidence_context(extraction, subject)
     if audit_notes:
@@ -499,7 +507,7 @@ def make_image_prompts(models, library, films, evidence, orientations, experimen
     if not message_recovery:
         result = models.loop("scene-image-prompts", task, base,
                              validator(used, contexts, {f["id"] for f in evidence["facts"]}), experimental=experimental,
-                             units=IMAGE_PROMPT_UNITS)
+                             units=image_prompt_units(contexts))
     else:
         if type(batch_size) is not int or not 1 <= batch_size <= 8:
             raise ValueError("Image prompt batch_size must be between 1 and 8")
@@ -530,7 +538,8 @@ def make_image_prompts(models, library, films, evidence, orientations, experimen
                 "its narration and facts support it. It is not a requirement for this batch alone; code checks the "
                 "whole chapter after the last batch and repairs any omission, so a person missing here is not an issue."
                 if person_references and film_cast and required_people else ""), packet,
-                validator(batch, batch_contexts, fact_ids), experimental=experimental, units=IMAGE_PROMPT_UNITS)
+                validator(batch, batch_contexts, fact_ids), experimental=experimental,
+                units=image_prompt_units(batch_contexts))
             result["assets"].extend(partial["assets"])
             result["banners"].extend(partial["banners"])
             if hasattr(models, "store"):

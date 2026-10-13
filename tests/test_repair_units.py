@@ -108,3 +108,24 @@ class RasterLabelTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class LinkedPointerTests(unittest.TestCase):
+    """Cuba C04 image prompts: 'A017.banner' flagged the asset, so the banner unit (160:S18) never changed in 6 rounds."""
+
+    def test_asset_banner_pointer_repairs_the_scene_banner(self):
+        from infofilm import repair_units as ru
+        from infofilm.planning import image_prompt_units
+        candidate = {"assets": [{"id": "A017", "prompt": "Two letters on a desk."}, {"id": "A018", "prompt": "Sea."}],
+                     "banners": [{"scene_key": "160:S18", "text": "Two Soviet messages, October 26 and 27, 1962"},
+                                 {"scene_key": "160:S19", "text": "Quarantine line"}]}
+        spec = image_prompt_units({"A017": [{"scene_key": "160:S18"}], "A018": [{"scene_key": "160:S19"}]})
+        self.assertEqual(ru.resolve("A017.banner", candidate, spec), ["160:S18"])
+        self.assertEqual(ru.resolve("A017.prompt", candidate, spec), ["A017"])
+        self.assertEqual(ru.resolve("A017", candidate, spec), ["A017"])
+        review = {"issues": [{"severity": "major", "field": "A017.banner", "problem": "Dates both letters"}]}
+        flagged, stage = ru.flag(candidate, [], review, spec)
+        self.assertEqual((list(flagged), stage), (["160:S18"], []))
+        self.assertIn("A banner is its own unit: point at its id (160:S18, 160:S19)", ru.pointer_guide(candidate, spec))
+        # Without links the old behaviour stands.
+        self.assertEqual(ru.resolve("A017.banner", candidate, {"lists": {"assets": "id", "banners": "scene_key"}}), ["A017"])

@@ -8,7 +8,9 @@ A stage declares its units in a spec:
 - a string list ("@U"): code gives entry i the id U01, U02, ...;
 - "fields": True makes every other top-level key of a single-object output a unit (e.g. a creative brief);
 - "anchors": fields a replaced item keeps from the prior candidate (its place in the timeline);
-- "operations": lists where a repair may insert or remove items (code assigns the new ids).
+- "operations": lists where a repair may insert or remove items (code assigns the new ids);
+- "links": {subfield: {item id: [unit ids]}}: a pointer '<item>.<subfield>' naming something that lives in another
+  unit is redirected to it (Cuba C04: 'A017.banner' means the banner unit of A017's scene, '160:S18').
 
 Rules (pipeline-findings-todo.md, BUILD NEXT): ids are stable once a candidate exists; reviewer findings and validator
 errors point at unit ids; code maps findings to units, asks the planner for only the flagged units, merges them back by
@@ -28,6 +30,7 @@ def normalized(spec):
     spec = dict(DEFAULT_SPEC if spec is None else spec)
     spec.setdefault("lists", {}); spec.setdefault("fields", False)
     spec.setdefault("anchors", {}); spec.setdefault("operations", []); spec.setdefault("assign", {})
+    spec.setdefault("links", {})
     return spec
 
 
@@ -102,6 +105,12 @@ def resolve(pointer, candidate, spec=None):
                 hits.append(ident)
         elif re.search(r"(?<![\w-])" + re.escape(ident) + r"(?![\w])", text):
             hits.append(ident)
+    for ident, subfield in re.findall(r"([\w:-]+)\.([A-Za-z_]+)", text):     # linked subfields
+        targets = spec["links"].get(subfield) or spec["links"].get(subfield.rstrip("s")) or {}
+        if ident in targets and ident in hits and not (known[ident][0] == "item" and subfield in (
+                candidate[known[ident][1]][known[ident][2]] or {})):
+            hits.remove(ident)
+            hits.extend(t for t in targets[ident] if t in known)
     return list(dict.fromkeys(h for h in order if h in set(hits)))
 
 
@@ -225,12 +234,15 @@ def apply_operation(result, operation, flagged, spec):
 
 def pointer_guide(candidate, spec=None):
     """Reviewer instruction: the unit ids it may point at."""
+    spec = normalized(spec)
     known = list(units(candidate, spec))
     shown = ", ".join(known[:80]) + (f" ... ({len(known)} units)" if len(known) > 80 else "")
     return ("POINTERS: every blocker/major issue's field must start with the id of the smallest unit it concerns "
             "(one of: " + shown + "), optionally '<id>.<subfield>' (e.g. '" + (known[0] if known else "ID") + ".prompt'), "
             "or several ids separated by commas. Use 'stage' only for problems of the whole candidate (counts, "
-            "duplication across units, overall arc). Never point by list position.")
+            "duplication across units, overall arc). Never point by list position."
+            + "".join(f" A {name} is its own unit: point at its id ({', '.join(sorted({t for ts in links.values() for t in ts})[:12])}), "
+                      f"not at the item it belongs to." for name, links in spec["links"].items() if links))
 
 
 def repair_request(prior, flagged, spec=None, simplify=(), extra=""):

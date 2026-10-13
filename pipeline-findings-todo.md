@@ -142,6 +142,14 @@ rescue chapters; the film ran 46% long.
     chapter as `plan_findings`, which chapter research, the beat sheet and the script must honour. The planning
     event shows `accepted_with_findings`.
   - Replayed on the real Cuba rounds: round 2 would have been accepted, carrying one C04 handoff finding.
+- Fresh run: research 6 sources / 5 sites after two floor nudges (20 facts); parent plan passed normally in round 2
+  (91.8 -> 93.8). Cast 12 people, 8 referenced.
+- [x] C04 scene-image-prompts batch 3 exhausted 6 rounds (76/78/76/76/76/76) on one finding: the banner "Two Soviet
+  messages, October 26 and 27, 1962" dates an undated letter. The reviewer pointed at `A017.banner`, but banners are
+  their own units (`160:S18`), so code repaired asset A017 every round and the banner never changed. Fix: unit specs
+  take `links` (`<item>.<subfield>` -> the units it lives in); image prompts link each asset's banner to its scene's
+  banner unit, and the pointer guide tells the reviewer to point at banner ids. Not a case for a score-based exit:
+  the scores were below 82, and the finding was right.
 
 ## Manhattan Project redo (first run after the build, 2026-10-13)
 
