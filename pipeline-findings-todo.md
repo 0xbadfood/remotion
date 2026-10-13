@@ -34,6 +34,8 @@ Opus, not Sonnet. Code calls it when a repair stalls: the same finding in consec
 unchanged, a score plateau, or rounds exhausted.
 - **It writes the fixed unit itself.** It doesn't advise, and its output isn't reviewed again, so no new failure modes
   open up. Code still runs its deterministic checks: schema, ids, word counts, raster-text rules.
+- Code checks always apply. A failed check gets a few retries **between code and the arbiter only**: the code errors go
+  back to the arbiter, and no reviewer or other model joins the loop.
 - **The context is unit-level and complete enough to write the unit alone.** For a failed scene plan: the evidence
   digest, the scene's notes (narration, beat, neighbours, composition, banner rules), the failed candidate and the
   findings. Then it makes the scene, and that's all.
