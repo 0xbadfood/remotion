@@ -18,7 +18,7 @@ When something breaks:
 3. **Only code and prompt fixes between run and resume.** Settings that feed the long-film identity (duration,
    planner settings in `external-planner.json`) are fingerprinted, and changing them breaks resume. Change them for
    the next film, or move `longform-project.json` aside knowingly (the plan gets redone).
-4. **Restart `remotion-video.service`** so the worker loads the fix, then **Resume saved run** in the portal.
+4. **Restart the film service** (`systemctl --user restart remotion-video.service`) so the worker loads the fix, then **Resume saved run** in the portal.
    Research, evidence, beat sheet, cast and finished chapters are reused, and images resume from the chapter snapshots.
 5. **Images never stop a film.** After 4 local takes the best-scoring take is used and tagged for review. Premium rescue
    is per-run opt-in (off by default).
