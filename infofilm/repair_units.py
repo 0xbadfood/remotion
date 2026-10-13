@@ -106,6 +106,11 @@ def resolve(pointer, candidate, spec=None):
         elif re.search(r"(?<![\w-])" + re.escape(ident) + r"(?![\w])", text):
             hits.append(ident)
     for ident, subfield in re.findall(r"([\w:-]+)\.([A-Za-z_]+)", text):     # linked subfields
+        if subfield in spec["lists"] and ident in hits and known.get(ident, ("", ""))[1] != subfield:
+            # '<id>.<another list>' (jet engine C02: 'F16.narrative_priorities') means that list, not item <id>.
+            hits.remove(ident)
+            hits.extend(i for i, (kind, key, _) in known.items() if key == subfield)
+            continue
         targets = spec["links"].get(subfield) or spec["links"].get(subfield.rstrip("s")) or {}
         if ident in targets and ident in hits and not (known[ident][0] == "item" and subfield in (
                 candidate[known[ident][1]][known[ident][2]] or {})):

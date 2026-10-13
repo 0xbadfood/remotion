@@ -157,6 +157,16 @@ rescue chapters; the film ran 46% long.
   loses parallel writing and chapter-sized repair); keeping solo chapters with a wider gate (still patches after
   the fact, cannot manage length).
 
+## How a Jet Engine Works (20-min target, 2026-10-13): first "how it works" film
+
+- Parent plan passed in round 1 at 94.1 (the highest yet). Hybrid structure: principle, then intake to nozzle, then
+  history, then the Brayton cycle; 6 chapters, 16:30 planned. 5 sources from 3 sites (NASA Glenn).
+- [x] C02 evidence failed 7 rounds on one finding pointed `F16.narrative_priorities`: code repaired fact F16, and the
+  priority ("squeezes air into smaller spaces", phrasing taken from the parent plan's chapter objective) never
+  changed. Pointers `<id>.<another list>` now resolve to that list's units.
+- [ ] Underlying conflict: the evidence reviewer rejected the parent plan's own phrasing. Consider passing plan-wording
+  findings back as plan_findings, or letting the evidence stage flag the objective wording.
+
 ## Royal Bengal Tiger of the Sundarbans (20-min long film, 2026-10-13): no cast, nature subject
 
 - Parent plan passed in round 1 (92.8), the first first-round pass. Thematic structure, 8 chapters, conservation

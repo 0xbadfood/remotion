@@ -156,3 +156,15 @@ class ScreenUnchangedTests(unittest.TestCase):
         lone = ru.screen_unchanged({"pass": False, "score": 85, "issues": [
             {"severity": "major", "field": "A011", "problem": "x"}]}, before, after, set(), spec)
         self.assertTrue(lone["pass"])                                                # nothing left blocking, score >= 82
+
+
+class OtherListPointerTests(unittest.TestCase):
+    """Jet engine C02 evidence: 'F16.narrative_priorities' flagged fact F16 for six rounds; the priority never changed."""
+
+    def test_pointer_to_another_list_resolves_to_that_list(self):
+        from infofilm import repair_units as ru
+        from infofilm.planning import EVIDENCE_UNITS
+        candidate = {"facts": [{"id": "F16", "claim": "Compressors raise pressure."}],
+                     "uncertainties": ["Ratios vary."], "narrative_priorities": ["Say it squeezes air.", "Open with thrust."]}
+        self.assertEqual(ru.resolve("F16.narrative_priorities", candidate, EVIDENCE_UNITS), ["N01", "N02"])
+        self.assertEqual(ru.resolve("F16.claim", candidate, EVIDENCE_UNITS), ["F16"])
