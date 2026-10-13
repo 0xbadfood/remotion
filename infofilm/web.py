@@ -560,6 +560,41 @@ def create_app(config_path=ROOT / "config.json", directory=ROOT / "artifacts/int
         except ValueError as exc:
             raise HTTPException(409, str(exc))
 
+    youtube_states = {}
+
+    @app.get("/api/youtube")
+    def youtube_status():
+        from . import youtube
+        return {**youtube.status(queue.root), "redirect_uri": PUBLIC_ORIGIN + youtube.CALLBACK_PATH}
+
+    @app.post("/api/youtube/connect")
+    def youtube_connect():
+        from . import youtube
+        token = secrets.token_urlsafe(24)
+        now = time.time()
+        for key in [k for k, expiry in youtube_states.items() if expiry < now]:
+            youtube_states.pop(key, None)
+        youtube_states[token] = now + 900
+        try:
+            return {"url": youtube.authorization_url(queue.root, PUBLIC_ORIGIN + youtube.CALLBACK_PATH, token)}
+        except ValueError as exc:
+            raise HTTPException(409, str(exc))
+
+    @app.get("/api/youtube/oauth/callback")
+    def youtube_callback(state: str = "", code: str = "", error: str = ""):
+        # A top-level navigation back from Google: the login cookie (SameSite=Lax) and the one-time state both apply.
+        from fastapi.responses import RedirectResponse
+        from . import youtube
+        if youtube_states.pop(state, 0) < time.time():
+            return RedirectResponse("/?youtube=expired", status_code=303)
+        if error or not code:
+            return RedirectResponse("/?youtube=denied", status_code=303)
+        try:
+            youtube.connect(queue.root, code, PUBLIC_ORIGIN + youtube.CALLBACK_PATH)
+        except youtube.YouTubeError:
+            return RedirectResponse("/?youtube=failed", status_code=303)
+        return RedirectResponse("/?youtube=connected", status_code=303)
+
     @app.post("/api/jobs/{job_id}/youtube", status_code=202)
     def youtube_upload(job_id: str, body: YouTubeUpload):
         from .youtube import start

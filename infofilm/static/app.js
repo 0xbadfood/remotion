@@ -250,7 +250,7 @@ async function enter() {
   }
   $('mood').value = settings.default_mood; $('omni-speed').value = settings.default_omni_speed;
   const hash = new URLSearchParams(location.hash.slice(1)); state.selected = hash.get('run');
-  await Promise.all([services(), refresh(), loadLLM()]);
+  await Promise.all([services(), refresh(), loadLLM(), refreshYouTube()]);
 }
 // ---------------------------------------------------------------- LLM settings
 function option(value, label) { const node = el('option', label); node.value = value; return node; }
@@ -418,4 +418,26 @@ $('revise-narration-button').addEventListener('click', async event => {
 $('refresh-services').addEventListener('click', event => { event.preventDefault(); services(); });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
 setInterval(() => { if (!document.hidden) refresh(); }, 5000);
+async function refreshYouTube() {
+  // Header control: shows whether uploads can authorize; a click starts Google's consent flow for the test channel.
+  const button = $('youtube-connect');
+  try {
+    const y = await api('/api/youtube');
+    button.textContent = y.connected ? `YouTube ✓${y.channel_title ? ' ' + y.channel_title : ''}` : 'Connect YouTube';
+    button.title = y.connected ? 'Connected. Click to reconnect another channel.' : (y.problem || 'Connect the test channel for uploads');
+  } catch { button.textContent = 'YouTube'; }
+}
+$('youtube-connect').addEventListener('click', async () => {
+  try { const {url} = await api('/api/youtube/connect', {method: 'POST'}); window.location.href = url; }
+  catch (error) { alert(error.message); }
+});
+{
+  const outcome = new URLSearchParams(window.location.search).get('youtube');
+  if (outcome) {
+    const messages = {connected: 'YouTube channel connected.', denied: 'YouTube access was not granted.',
+      expired: 'The YouTube sign-in took too long; please connect again.', failed: 'Google did not complete the YouTube connection; please try again.'};
+    alert(messages[outcome] || 'YouTube connection finished.');
+    history.replaceState(null, '', window.location.pathname);
+  }
+}
 api('/api/session').then(session => session.authenticated ? enter() : showLogin()).catch(error => { $('login-error').textContent = error.message; });

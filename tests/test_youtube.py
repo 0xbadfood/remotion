@@ -46,3 +46,30 @@ class YouTubeUploadTests(unittest.TestCase):
         self.assertEqual(title, "Thirteen Days")
         self.assertIn("C01 Roots", text)
         self.assertIn("https://history.state.gov/x", text)
+
+
+class YouTubeConnectTests(unittest.TestCase):
+    def test_consent_code_becomes_a_stored_refresh_token_and_status_reports_it(self):
+        from infofilm.youtube import authorization_url, connect, oauth_client, save, status, credentials
+        with tempfile.TemporaryDirectory() as root:
+            save(root, {"client_id": "client", "client_secret": "secret", "refresh_token": "expired"})
+            url = authorization_url(root, "https://remotion.photovault.live/api/youtube/oauth/callback", "state1")
+            self.assertIn("scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fyoutube.upload", url)
+            self.assertIn("access_type=offline", url)
+
+            def google(request):
+                if request.url.path == "/token" and b"authorization_code" in request.content:
+                    return httpx.Response(200, json={"access_token": "a", "refresh_token": "fresh"})
+                if request.url.path == "/token":
+                    ok = b"refresh_token=fresh" in request.content
+                    return httpx.Response(200 if ok else 400, json={"access_token": "a"} if ok else {"error": "invalid_grant"})
+                return httpx.Response(200, json={"items": [{"snippet": {"title": "Test Channel"}}]})
+
+            self.assertFalse(status(root, transport=httpx.MockTransport(google))["connected"])
+            self.assertEqual(connect(root, "code", "https://x/cb", transport=httpx.MockTransport(google)), "Test Channel")
+            self.assertEqual(credentials(root)["refresh_token"], "fresh")
+            self.assertEqual(oauth_client(root)["client_id"], "client")
+            report = status(root, transport=httpx.MockTransport(google))
+            self.assertTrue(report["connected"])
+            self.assertEqual(report["channel_title"], "Test Channel")
+            self.assertEqual(oct(Path(root, "youtube-secrets.json").stat().st_mode & 0o777), "0o600")
