@@ -199,3 +199,25 @@ class LadderTests(unittest.TestCase):
         self.assertIn("ABSTRACT VISUAL PLEASE", prompts[6])                              # strike 3: rung 2
         self.assertEqual(sum("-draft-" in c.args[1] for c in models.call.call_args_list), 4)  # rung 3 needs no draft
         self.assertEqual(ladder_calls, [(2, "A01"), (3, "A01")])
+
+
+class MalformedReviewTests(unittest.TestCase):
+    """Jet engine cast: the reviewer echoed {"people": []} every round, so a valid empty cast ran out of rounds."""
+
+    def test_malformed_review_is_retried_then_code_checks_decide(self):
+        folder = tempfile.TemporaryDirectory(); self.addCleanup(folder.cleanup)
+        store = Store(folder.name); self.addCleanup(store.db.close)
+        models = Models({"planner_url": "p", "reviewer_url": "r", "max_repairs": 2}, store)
+        models.call = Mock(side_effect=[{"people": []}, {"people": []}, {"people": []},
+                                        {"preferred": "tie", "reasons": [], "regressions": []}])
+        result = models.loop("film-cast", "Task", {}, lambda x: [], units={"lists": {"people": "id"}})
+        self.assertEqual(result, {"people": []})
+        names = [c.args[1] for c in models.call.call_args_list]
+        self.assertTrue(names[2].endswith("-format"))                        # one format retry, then accepted
+
+    def test_well_formed_retry_is_used(self):
+        folder = tempfile.TemporaryDirectory(); self.addCleanup(folder.cleanup)
+        store = Store(folder.name); self.addCleanup(store.db.close)
+        models = Models({"planner_url": "p", "reviewer_url": "r", "max_repairs": 2}, store)
+        models.call = Mock(side_effect=[script("One."), {"points": []}, passing()])
+        self.assertEqual(models.loop("script-60", "Task", {}, lambda x: [], units=UNITS)["points"][0]["narration"], "One.")

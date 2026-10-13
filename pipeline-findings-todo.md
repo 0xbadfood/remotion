@@ -172,6 +172,12 @@ rescue chapters; the film ran 46% long.
   dimmed and blurred behind those scenes. Any failure leaves the gradient. Live test on jet C02: a compressor cutaway
   with airflow, no text, about 45 s. Follow-up: ladder rung 3 could reuse the chapter backdrop.
 - Run stopped by the user to fix and restart fresh.
+- **Fresh run: the first clean run** (no stop, resume or fix): 16:38 film, 7 chapters, 1 h 22 min. 101 images:
+  58 first take (57%), 21 on 2, 10 on 3, 12 on 4; 9 tagged best-available (scores 53-67), 5 of them in C02 and C03
+  (compressor, combustion and turbine cutaways). 6 chapter backdrops generated.
+- [x] Cast (castless film) exhausted 4 rounds while the job went on: the reviewer echoed the candidate
+  ({"people": []}) instead of a review. Reviews are now shape-checked; a malformed one is retried once with the format
+  spelled out, and if it is still malformed the round is accepted on code checks (`code_checks_only`).
 
 ## Royal Bengal Tiger of the Sundarbans (20-min long film, 2026-10-13): no cast, nature subject
 

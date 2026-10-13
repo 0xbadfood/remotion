@@ -81,8 +81,13 @@ class ModelOutputError(ValueError):
 PASS_SCORE, SCREENED_FLOOR = 82, 65
 
 
+def review_shaped(review):
+    return (isinstance(review, dict) and isinstance(review.get("issues"), list)
+            and isinstance(review.get("score"), (int, float)) and not isinstance(review.get("score"), bool))
+
+
 def review_decision(review, errors, experimental, config=None):
-    """Accept a round or not: (accepted, reason). Reasons: "clean" (code checks pass, the review passes with score at
+    """Accept a round or not: (accepted, reason). Reasons: "code_checks_only" (the reviewer twice returned no review), "clean" (code checks pass, the review passes with score at
     least PASS_SCORE and no blocker/major), "screened" (code removed every blocking finding, e.g. a moved target or a
     batch demanding a person code adds later, and the reviewer's score, which still counts those findings, is at
     least SCREENED_FLOOR), "unreviewed" (non-experimental mode, code checks pass), or why it was rejected.
@@ -95,6 +100,8 @@ def review_decision(review, errors, experimental, config=None):
         return False, "code_errors"
     if not experimental:
         return True, "unreviewed"
+    if isinstance(review, dict) and review.get("malformed_review"):
+        return True, "code_checks_only"          # the reviewer twice failed to return a review; code checks passed
     if not isinstance(review, dict) or not isinstance(review.get("score"), (int, float)):
         return False, "no_review"
     issues = [i for i in review.get("issues") or [] if isinstance(i, dict)]
@@ -386,6 +393,20 @@ class Models:
                      "\nCheck each one against the CURRENT candidate before repeating it, and quote the current value at that field in its evidence. "
                      "Drop a finding the current candidate already resolves; never report a value the candidate no longer contains."
                      if prior_findings else ""), max_tokens=4500)
+                if not review_shaped(review):
+                    # Jet engine cast: the reviewer echoed the candidate ({"people": []}) instead of a review.
+                    self.store.event(stage, "review_malformed", {"attempt": attempt + 1, "keys": sorted(review)[:8]
+                                                                 if isinstance(review, dict) else None})
+                    try:
+                        review = self.call_json("reviewer", f"{stage}-review-{identity[:8]}-{attempt}-format",
+                            "Your previous answer was not a review. Review the candidate below and return ONLY "
+                            "{pass:boolean, score:0..100, issues:[{field,severity,problem,evidence,correction}], "
+                            "strengths:[string]}; do not repeat the candidate.\nTASK:\n" + review_task +
+                            "\nCANDIDATE:\n" + json.dumps(review_candidate), max_tokens=4500)
+                    except Exception as exc:
+                        review = {"malformed": str(exc)[:200]}
+                    if not review_shaped(review):
+                        review = {"pass": True, "score": None, "issues": [], "malformed_review": True}
                 bad_pointers = ru.pointer_errors(review, current, units)
                 if bad_pointers:
                     # Code sits between reviewer and planner: a finding that names no unit goes back to the reviewer.
