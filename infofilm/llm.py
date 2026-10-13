@@ -216,7 +216,8 @@ class Models:
                             "with the requested fields, concise issues and evidence. Error: " + str(exc))
                 self.store.event(name, "format_retry", {"attempt": index + 1, "max_attempts": 2, "error": str(exc)})
 
-    def loop(self, stage, task, context, validator, *, experimental=True, metrics=None, units=None, seed=None):
+    def loop(self, stage, task, context, validator, *, experimental=True, metrics=None, units=None, seed=None,
+             max_tokens=7000):
         """Planner/reviewer trial with targeted repair: `units` declares the stage's smallest repairable units
         (see repair_units); code maps findings to units, asks for only the flagged units and merges them by id."""
         from . import repair_units as ru
@@ -257,16 +258,22 @@ class Models:
             self.store.event(stage, "seeded_repair", {"units": sorted(flagged), "stage_findings": len(stage_findings)})
         mechanical, mechanical_cap = 0, self.config.get("validation_rounds", 3)
         unchanged = []                                  # flagged units the planner returned unchanged last round
+        tokens = max_tokens                             # raised when a draft hits the output limit (escalation)
         attempt = -1
         while attempt + 1 < rounds:
             attempt += 1
             try:
-                current = self.call("planner", f"{stage}-draft-{identity[:8]}-{attempt}", prompt + feedback)
+                current = self.call("planner", f"{stage}-draft-{identity[:8]}-{attempt}", prompt + feedback,
+                                    max_tokens=tokens)
             except ModelOutputError as exc:
                 errors = [str(exc)]
                 history.append({"attempt": attempt, "candidate_hash": None, "errors": errors, "review": None})
+                previous = tokens
+                if "output limit" in str(exc):
+                    # Asking for brevity alone repeats the failure (Dandi March beat sheet, 8 chapters): raise the cap.
+                    tokens = min(round(tokens * 1.6), self.config.get("max_output_tokens", 12000))
                 self.store.event(stage, "output_retry", {"attempt": attempt + 1,
-                    "max_attempts": rounds, "error": str(exc),
+                    "max_attempts": rounds, "error": str(exc), "max_tokens": previous, "next_max_tokens": tokens,
                     "retrying": attempt + 1 < rounds})
                 feedback += ("\nThe previous output failed its JSON/output-length contract. Return one complete compact JSON object. "
                             "Keep all required fields and entries, use concise strings and avoid repeated decorative detail. "

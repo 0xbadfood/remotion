@@ -114,3 +114,19 @@ class ContinuitySeedTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class OutputLimitEscalationTests(unittest.TestCase):
+    """Dandi March beat sheet: four drafts at the same 7,000-token cap, each told only to be concise."""
+
+    def test_output_limit_raises_the_cap_for_the_next_draft(self):
+        from infofilm.llm import ModelOutputError
+        folder = tempfile.TemporaryDirectory(); self.addCleanup(folder.cleanup)
+        store = Store(folder.name); self.addCleanup(store.db.close)
+        models = Models({"planner_url": "p", "reviewer_url": "r", "max_repairs": 3}, store)
+        limit = ModelOutputError("LLM response reached its 7000-token output limit; raw response preserved")
+        models.call = Mock(side_effect=[limit, limit, script("One."), passing()])
+        result = models.loop("beat-sheet", "Task", {}, lambda x: [], experimental=True, units=UNITS, max_tokens=7000)
+        self.assertEqual(result["points"][0]["narration"], "One.")
+        caps = [c.kwargs.get("max_tokens") for c in models.call.call_args_list[:3]]
+        self.assertEqual(caps, [7000, 11200, 12000])                          # x1.6, then the 12k ceiling

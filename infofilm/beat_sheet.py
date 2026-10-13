@@ -111,7 +111,9 @@ def make_beat_sheet(models, plan, records, rate, *, tolerance=0.25, experimental
     context = {"film": {k: v for k, v in plan["film"].items() if k not in {"advisory_seconds"}},
                "narrator_words_per_minute": round(rate, 1), "chapters": chapters}
     value = models.loop("beat-sheet", TASK, context, lambda v: beat_errors(v, chapters, tolerance),
-                        experimental=experimental, units=UNITS)
+                        experimental=experimental, units=UNITS,
+                        # Every chapter's beats in one answer: about 1,000 tokens per chapter plus reasoning.
+                        max_tokens=min(12000, max(7000, 1000 * len(chapters) + 3000)))
     budgets = {c["id"]: c["word_budget"] for c in chapters}
     for frame in value["chapters"]:
         frame["word_budget"] = budgets[frame["id"]]          # code-owned, whatever the planner wrote
