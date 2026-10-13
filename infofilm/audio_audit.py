@@ -98,10 +98,28 @@ def audit_with_escalation(config, store, audio, text, points=None, earlier_audit
     return result
 
 
+ROMAN = re.compile(r"m{0,3}(cm|cd|d?c{0,3})(xc|xl|l?x{0,3})(ix|iv|v?i{0,3})", re.I)
+ROMAN_VALUES = {"i": 1, "v": 5, "x": 10, "l": 50, "c": 100, "d": 500, "m": 1000}
+
+
+def roman_value(text):
+    """Integer value of a Roman numeral ('IV' -> 4), else None."""
+    token = str(text).strip().lower()
+    if not token or not ROMAN.fullmatch(token):
+        return None
+    total = 0
+    for here, after in zip(token, token[1:] + " "):
+        value = ROMAN_VALUES[here]
+        total += -value if ROMAN_VALUES.get(after, 0) > value else value
+    return total
+
+
 def same_number(difference):
     """Code check for a number written differently by ASR: both sides spell the same characters once numbers are words
-    ('p nine' vs 'P9', 'u two hundred thirty five' vs 'U235'). A changed value never passes."""
-    compact = lambda value: re.sub(r"[^a-z]", "", canonical_numeric_text(value).lower())
+    ('p nine' vs 'P9', 'u two hundred thirty five' vs 'U235', 'Phase IV' vs 'four'). A changed value never passes."""
+    def compact(value):
+        roman = roman_value(value)
+        return re.sub(r"[^a-z]", "", canonical_numeric_text(str(roman) if roman else value).lower())
     return bool(compact(difference["expected"])) and compact(difference["expected"]) == compact(difference["observed"])
 
 

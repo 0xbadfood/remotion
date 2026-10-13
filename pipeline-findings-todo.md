@@ -170,6 +170,8 @@ rescue chapters; the film ran 46% long.
   seen"), code demanded integer birth years nobody knows, the planner dropped them, and so on. Non-fatal (the film
   went on castless). Fix: the cast task leaves out private individuals used as examples and experts quoted only as
   sources (a named private person's likeness is never generated); birth_year may be null when unknown.
+- [x] C03 narration P06 failed 3 takes on "NTCA Phase IV" spoken as "four": the arbiter accepted (number format),
+  but code's number check did not know Roman numerals and overruled it. `same_number` now reads Roman numerals.
 
 ## Dandi March (20-min long film, 2026-10-13)
 

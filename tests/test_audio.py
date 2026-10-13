@@ -433,3 +433,14 @@ class OmniRetryTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RomanNumeralNumberTests(unittest.TestCase):
+    """Tiger film C03: 'NTCA Phase IV' spoken as 'four'; the arbiter accepted, code's number check overruled it."""
+
+    def test_roman_numerals_match_their_spoken_value(self):
+        from infofilm.audio_audit import roman_value, same_number
+        self.assertTrue(same_number({"expected": "iv", "observed": "four"}))
+        self.assertTrue(same_number({"expected": "IV", "observed": "4"}))
+        self.assertFalse(same_number({"expected": "iv", "observed": "five"}))   # a changed value never passes
+        self.assertEqual((roman_value("XIV"), roman_value("iiii"), roman_value("tiger")), (14, None, None))
