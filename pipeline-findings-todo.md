@@ -28,6 +28,17 @@ When something breaks:
 A run is **clean** when it finishes with no resume and no code fix. Target: 2-3 clean runs in a row
 (Cuban Missile Crisis next).
 
+## Production: premium arbiter (user design, 2026-10-13; not built)
+
+Opus, not Sonnet. Code calls it when a repair stalls: the same finding in consecutive rounds, a flagged unit returned
+unchanged, a score plateau, or rounds exhausted.
+- **It writes the fixed unit itself.** It doesn't advise, and its output isn't reviewed again, so no new failure modes
+  open up. Code still runs its deterministic checks: schema, ids, word counts, raster-text rules.
+- **The context is unit-level and complete enough to write the unit alone.** For a failed scene plan: the evidence
+  digest, the scene's notes (narration, beat, neighbours, composition, banner rules), the failed candidate and the
+  findings. Then it makes the scene, and that's all.
+- Every stalled stage in the 50-100 dev runs is recorded with its signature; that set defines when the arbiter is called.
+
 ## BUILD NEXT, in this order (user decision 2026-10-13, after the Manhattan Project run)
 
 Rules every planning stage must follow (from the audit of all 12 production planning stages, 2026-10-13):
