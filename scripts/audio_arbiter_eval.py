@@ -37,9 +37,13 @@ PROMPT = ("Transcribe this English narration verbatim, word for word, exactly as
           "titles in words as they are spoken. Return only the transcript.")
 
 
-def collect(controls):
+SOURCES = {"spark": ROOT / "artifacts" / "runs", "aiserver": OUT / "aiserver" / "runs"}   # aiserver: copied takes
+
+
+def collect(controls, sources=("spark",), every_fake=False):
     cases, passed = [], []
-    for audit_path in sorted(ROOT.glob("artifacts/runs/*/chapters/*/audio/vibevoice/*/points/*/take-*/**/audit.json")):
+    paths = [p for source in sources for p in sorted(SOURCES[source].glob("**/points/*/take-*/**/audit.json"))]
+    for audit_path in paths:
         audit = json.loads(audit_path.read_text())
         wav = audit_path.parent / "narration.wav"
         if not wav.is_file() or not audit.get("expected_text") or not audit.get("raw_transcript"):
@@ -61,23 +65,32 @@ def collect(controls):
     random.Random(7).shuffle(passed)
     controls_cases = passed[:controls]
     names = sorted({w for c in controls_cases for w in re.findall(r"\b[A-Z][a-z]{3,}\b", c["whisper_raw"])})
+    # every_fake: each control yields one fake of every kind that applies to it (no fallback between kinds).
     fakes = [fake for index, case in enumerate(controls_cases)
-             if (fake := mutate(case, index % 4, names)) is not None]
+             for mode in (range(4) if every_fake else [index % 4])
+             if (fake := mutate(case, mode, names, strict=every_fake)) is not None]
     return cases + controls_cases + fakes
 
 
-def mutate(case, mode, names):
-    """The control's audio against a script changed by code. The change is the only true difference."""
+def mutate(case, mode, names, strict=False):
+    """The control's audio against a script changed by code. The change is the only true difference. strict: return
+    None when this kind does not apply instead of falling back to the next kind."""
     words = case["expected_text"].split()
-    rng = random.Random(case["id"])
+    rng = random.Random(f"{case['id']}-{mode}")
+    first = mode
     if mode == 0:     # a changed number
         spots = [i for i, w in enumerate(words) if w in _NUMBER_WORDS and w not in {"hundred", "thousand", "point"}]
         swap = {"one": "two", "two": "three", "three": "four", "four": "five", "five": "six", "six": "seven",
                 "seven": "eight", "eight": "nine", "nine": "one", "ten": "eleven", "first": "second",
-                "second": "third", "third": "fourth"}
+                "second": "third", "third": "fourth", "eleven": "twelve", "twelve": "thirteen",
+                "fifteen": "sixteen", "eighteen": "nineteen", "nineteen": "eighteen", "twenty": "thirty",
+                "thirty": "forty", "forty": "fifty", "fifty": "sixty", "sixty": "seventy", "seventy": "eighty",
+                "eighty": "ninety", "ninety": "seventy"}
         spots = [i for i in spots if words[i] in swap]
         if not spots:
             mode = 1
+            if strict:
+                return None
         else:
             i = rng.choice(spots); words[i] = swap[words[i]]; change = "number"
     if mode == 1:     # a swapped name
@@ -85,19 +98,23 @@ def mutate(case, mode, names):
         others = [n.lower() for n in names]
         if not present or len(others) < 2:
             mode = 2
+            if strict:
+                return None
         else:
             i = rng.choice(present); words[i] = rng.choice([n for n in others if n != words[i]]); change = "name"
     if mode == 2:     # negation
         spots = [i for i, w in enumerate(words) if w in {"was", "were", "is", "are", "did", "could", "would", "had"}]
         if not spots:
             mode = 3
+            if strict:
+                return None
         else:
             i = rng.choice(spots); words.insert(i + 1, "not"); change = "negation"
     if mode == 3:     # a dropped clause
         if len(words) < 16:
             return None
         i = rng.randrange(3, len(words) - 8); del words[i:i + 5]; change = "dropped_clause"
-    return {**case, "id": case["id"] + "-fake", "kind": "fake", "change": change, "expected_text": " ".join(words)}
+    return {**case, "id": f"{case['id']}-fake{first}", "kind": "fake", "change": change, "expected_text": " ".join(words)}
 
 
 def transcribe(url, audio, cache):
@@ -139,11 +156,15 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--controls", type=int, default=20)
     parser.add_argument("--url", default="http://localhost:8001/v1")
+    parser.add_argument("--sources", default="spark", help="comma list of: " + ", ".join(SOURCES))
+    parser.add_argument("--every-fake", action="store_true", help="one fake of every applicable kind per control")
+    parser.add_argument("--set", default="", help="subfolder for this case set (e.g. holdout)")
     args = parser.parse_args()
-    OUT.mkdir(parents=True, exist_ok=True)
-    cases = collect(args.controls)
-    (OUT / "cases.json").write_text(json.dumps(cases, indent=1))
-    cache_path = OUT / "transcripts.json"
+    out = OUT / args.set if args.set else OUT
+    out.mkdir(parents=True, exist_ok=True)
+    cases = collect(args.controls, args.sources.split(","), args.every_fake)
+    (out / "cases.json").write_text(json.dumps(cases, indent=1))
+    cache_path = OUT / "transcripts.json"     # shared: keyed by audio hash
     cache = json.loads(cache_path.read_text()) if cache_path.exists() else {}
     rows = []
     for number, case in enumerate(cases, 1):
@@ -169,7 +190,7 @@ def main():
         summary[kind] = {"cases": len(group), **{rule: sum(r[rule] for r in group)
                          for rule in ("whisper_pass", "gemma_pass", "two_ears_pass")}}
     summary["gemma_seconds_mean"] = round(sum(r["gemma_seconds"] for r in rows) / max(len(rows), 1), 2)
-    (OUT / "report.json").write_text(json.dumps({"summary": summary, "rows": rows}, indent=1))
+    (out / "report.json").write_text(json.dumps({"summary": summary, "rows": rows}, indent=1))
     print(json.dumps(summary, indent=1))
 
 

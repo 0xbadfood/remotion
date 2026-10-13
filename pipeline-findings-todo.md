@@ -185,7 +185,16 @@ rescue chapters; the film ran 46% long.
   Result: fakes 0/19 accepted, controls 19/19, text-arbiter accepts 10/10, Whisper failures 11/14; the 3 rejected
   are genuinely bad (Cuba P03 truncated after two words, Tiger P07 invented phrase, Tiger P04 "2020" for "2022").
 - [x] Gemma refused once ("Please provide the audio") in 64: detect and retry, else fall back.
-- [ ] Thresholds were tuned on these 64 cases: build a holdout (more number fakes, new runs) before trusting them.
+- [x] Holdout from the aiserver's 12 old runs (copied to artifacts/audio-arbiter-eval/aiserver; 192 cases: 14 Whisper
+  failures, 14 text-arbiter accepts, 40 controls, 124 fakes incl. 17 number fakes). Frozen rule: controls 40/40,
+  fakes 5/124 accepted. All 5 misses and 2 Tamil-name rejections were comparison flaws (joined-name rule swallowing
+  "not", word-level alignment drift, accents), so the rule became word-level: fail when both ears missed the same
+  script word or heard the same extra word. After fixing: Spark fakes 0/19, holdout fakes 1/124 (a fake-maker
+  artifact, "this" -> "that"), controls 59/59. Rejected real takes are bad audio (truncations, skipped
+  "Kulottunga", invented phrases, "2020" for "2022", garbled dates) or close name calls (Stulpnagel, Vijayalaya,
+  echec), which go to a retake or the fallback.
+- [ ] The holdout was used to fix the rule, so it is no longer clean: the next runs' takes are the true holdout
+  (run the eval on them before wiring the rule in as the deciding check).
 - [ ] Wire into the audit: Gemma transcript on every point (about 10 s) or only on Whisper failure; decide the
   fallback when Gemma is unusable (text arbiter over all transcripts, user idea) and the llm-gemma4 service unit.
 
