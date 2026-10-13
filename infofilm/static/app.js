@@ -169,6 +169,7 @@ async function refreshSelected() {
   $('run-error-text').textContent = job.error || '';
   $('resume').textContent = paused ? 'Resume after cache fill' : 'Resume saved run';
   $('resume').disabled = job.status === 'waiting_for_assets' && !job.can_resume_assets;
+  $('discard').hidden = !job.can_discard;
   $('asset-waits').replaceChildren(...(job.asset_waits || []).map(wait => {
     const section = el('section');
     section.append(el('h3', `${wait.chapter} · ${wait.kind === 'assets' ? (wait.ready ? 'Assets ready' : 'Drawing assets needed') : 'Motion support needed'}`));
@@ -391,6 +392,16 @@ $('resume').addEventListener('click', async event => {
   event.target.disabled = true;
   try { await post(`/api/jobs/${encodeURIComponent(state.selected)}/resume`, {image_review: $('resume-image-review').value === 'on'}); await refresh(); }
   catch (error) { $('run-error-text').textContent = error.message; }
+  finally { event.target.disabled = false; }
+});
+$('discard').addEventListener('click', async event => {
+  // Only offered for an incomplete run that a newer run has superseded.
+  if (!confirm('Delete this incomplete run and all its files? This cannot be undone.')) return;
+  event.target.disabled = true;
+  try {
+    await post(`/api/jobs/${encodeURIComponent(state.selected)}/discard`, {});
+    state.selected = null; history.replaceState(null, '', window.location.pathname); await refresh();
+  } catch (error) { $('run-error-text').textContent = error.message; }
   finally { event.target.disabled = false; }
 });
 $('continue-video-button').addEventListener('click', async event => {

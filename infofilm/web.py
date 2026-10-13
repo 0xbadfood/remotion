@@ -530,6 +530,15 @@ def create_app(config_path=ROOT / "config.json", directory=ROOT / "artifacts/int
         except ValueError as exc:
             raise HTTPException(409, str(exc))
 
+    @app.post("/api/jobs/{job_id}/discard")
+    def discard(job_id: str):
+        try:
+            return queue.discard(job_id)
+        except KeyError:
+            raise HTTPException(404, "Run not found")
+        except ValueError as exc:
+            raise HTTPException(409, str(exc))
+
     @app.post("/api/jobs/{job_id}/music", status_code=202)
     def revise_music(job_id: str, body: MusicRevision):
         try:

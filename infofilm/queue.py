@@ -4,6 +4,7 @@ from __future__ import annotations
 import contextlib
 import fcntl
 import json
+import shutil
 import os
 import re
 import sqlite3
@@ -169,6 +170,42 @@ class Queue:
                 (job_id, payload["subject"], json.dumps(payload), str(project), "queued", now, now, idempotency_key))
         self.wake.set()
         return self.get(job_id)
+
+    def can_discard(self, job):
+        """An incomplete run (failed or interrupted) that a newer run has superseded: it was never resumed after
+        another run started, so its files only take space."""
+        if job["status"] not in {"failed", "interrupted"}:
+            return False
+        with self.connection() as db:
+            newer = db.execute("SELECT 1 FROM jobs WHERE created > ? AND id != ? LIMIT 1", (job["updated"], job["id"])).fetchone()
+        return newer is not None
+
+    def discard(self, job_id):
+        """Delete a superseded incomplete run: its project, partial outputs and renderer media, then its record."""
+        job = self.get(job_id)
+        if not self.can_discard(job):
+            raise ValueError("Only an incomplete run that a newer run has superseded can be discarded")
+        runs = (ROOT / "artifacts" / "runs").resolve()
+        project = Path(job["project"]).resolve()
+        if project.parent != runs:
+            raise ValueError("Run folder is outside artifacts/runs; not deleting it")
+        public = (ROOT / "renderer" / "public").resolve()
+        media = set()
+        for timeline in project.rglob("timeline.json"):
+            try:
+                scenes = read(timeline)["data"]["scenes"]
+            except (KeyError, ValueError, OSError):
+                continue
+            media |= {(public / s[k]).parent for s in scenes for k in ("src", "backdrop") if s.get(k)}
+        removed = []
+        for folder in [project, ROOT / "output" / project.name, *sorted(media)]:
+            folder = Path(folder).resolve()
+            if folder.is_dir() and (folder == project or folder.parent in {(ROOT / "output").resolve(), public}):
+                shutil.rmtree(folder)
+                removed.append(str(folder))
+        with self.connection() as db:
+            db.execute("DELETE FROM jobs WHERE id=?", (job_id,))
+        return {"discarded": job_id, "removed": removed}
 
     def resume(self, job_id, *, image_review=None):
         if image_review is not None and type(image_review) is not bool:
@@ -422,6 +459,7 @@ class Queue:
                       "pending" if job["status"] == "queued" and job["request"].get("resume_from") == "music" and key in {"music", "video"} else
                       "pending" if job["status"] == "queued" and job["request"].get("resume_from") == "narration" and key in {"narration", "timing", "scenes", "music", "video"} else
                       "succeeded" if job["status"] == "succeeded" else states.get(key, "pending"))} for key,label in stages]
+        result["can_discard"] = self.can_discard(job)
         result["can_revise_music"] = (not long and job["status"] == "succeeded" and (project / "delivery.json").is_file()
                                       and (project / "creative-brief.json").is_file())
         result["can_revise_narration"] = result["can_revise_music"] and (project / "image_manifest.json").is_file()
