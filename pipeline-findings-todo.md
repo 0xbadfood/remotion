@@ -134,6 +134,21 @@ rescue chapters; the film ran 46% long.
   loses parallel writing and chapter-sized repair); keeping solo chapters with a wider gate (still patches after
   the fact, cannot manage length).
 
+## Dandi March (20-min long film, 2026-10-13)
+
+- [x] Beat sheet (8 chapters) hit the 7000-token output cap twice; retries kept the same cap. Loop drafts now raise
+  the cap x1.6 up to 12000, and the beat sheet starts at about 1000 tokens per chapter. Every other model call retries
+  a cut-off once with 30% more room (user rule). Resume passed.
+- Audio: 4 arbiter rulings in 8 chapters (2 accept name variants such as Sabarmati and Dandi; 2 retry real misreads:
+  "Philip Miller" for Webb Miller, 322 for 320 injured). 3 cross-checks passed without the arbiter.
+- [ ] Cast: only 4 of 9 people got photo references (Gandhi, Naidu and Azad are well photographed). Investigate.
+- [x] C07 image prompts batch 2: 6 rounds at score 78, each blocking on units nobody changed, and the reviewer
+  removed Ghaffar Khan, demanded him back, then removed him again. Fixes in the shared repair loop:
+  `screen_unchanged` (blocking findings may only name changed or asked-about units), `coverage_screen` (a batch
+  finding demanding a required person is advisory; code's whole-chapter coverage repair owns omissions), and
+  `review_decision`: a round passes clean at 82, or at 75 or more when code screened away every blocking finding
+  (development stand-in for the production premium arbiter).
+
 ## Cuban Missile Crisis (20-min long film, 2026-10-13): stopped at the parent plan, restarted fresh
 
 - [x] Research fetched 2 of 16 allowed sources (13 facts for 20 minutes; Manhattan had 5 and 20): the agent decides

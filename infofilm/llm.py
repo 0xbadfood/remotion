@@ -75,6 +75,37 @@ class ModelOutputError(ValueError):
     """A saved response failed the output contract; safe to retry within a budget."""
 
 
+PASS_SCORE, SCREENED_FLOOR = 82, 75
+
+
+def review_decision(review, errors, experimental, config=None):
+    """Accept a round or not: (accepted, reason). Reasons: "clean" (code checks pass, the review passes with score at
+    least PASS_SCORE and no blocker/major), "screened" (code removed every blocking finding, e.g. a moved target or a
+    batch demanding a person code adds later, and the reviewer's score, which still counts those findings, is at
+    least SCREENED_FLOOR), "unreviewed" (non-experimental mode, code checks pass), or why it was rejected.
+
+    Development stand-in: in production this decision moves to the premium arbiter path (an Opus-class model that
+    writes the stuck unit itself from unit-level context, with only code checks after it; pipeline-findings-todo.md,
+    "Production: premium arbiter"). Until then a fixed score floor decides when screened findings are enough."""
+    config = config or {}
+    if errors:
+        return False, "code_errors"
+    if not experimental:
+        return True, "unreviewed"
+    if not isinstance(review, dict) or not isinstance(review.get("score"), (int, float)):
+        return False, "no_review"
+    issues = [i for i in review.get("issues") or [] if isinstance(i, dict)]
+    if any(i.get("severity") in {"blocker", "major"} for i in issues):
+        return False, "blocking_findings"
+    score = review["score"]
+    if review.get("pass") is True and score >= config.get("review_pass_score", PASS_SCORE):
+        return True, "clean"
+    screened = any(i.get("downgraded") for i in issues)
+    if screened and score >= config.get("screened_score_floor", SCREENED_FLOOR):
+        return True, "screened"
+    return False, "score_below_floor" if screened else "review_failed"
+
+
 class Models:
     def __init__(self, config, store):
         self.config, self.store = config, store
@@ -361,10 +392,12 @@ class Models:
                 review = ru.screen_unchanged(review, reviewed, current, raised, units)
                 reviewed = current
                 write(directory / f"review-{attempt}.json", review)
-            history.append({"attempt": attempt, "candidate_hash": digest(current), "errors": errors, "review": review})
-            passing = not errors and (not experimental or (review is not None and review.get("pass") is True and
-                isinstance(review.get("score"), (int, float)) and review["score"] >= 82 and
-                not any(x.get("severity") in {"blocker", "major"} for x in review.get("issues", []))))
+            passing, decision = review_decision(review, errors, experimental, self.config)
+            history.append({"attempt": attempt, "candidate_hash": digest(current), "errors": errors, "review": review,
+                            "decision": decision})
+            if passing and decision != "clean":
+                self.store.event(stage, "accepted_after_screening", {"attempt": attempt + 1, "decision": decision,
+                                                                      "score": (review or {}).get("score")})
             if passing:
                 write(selected, current)
                 summary = {"stage": stage, "initial_hash": digest(initial), "selected_hash": digest(current),
