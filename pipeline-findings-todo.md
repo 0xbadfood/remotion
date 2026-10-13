@@ -148,6 +148,9 @@ resume. YouTube upload from the portal works (Cuba uploaded).
   minutes (Cuba: 17). **Plan (user, later): an offline database of famous people**: vetted, license-checked
   portrait references plus name variants, built ahead of time, so the pipeline looks well-known people up instantly
   and searches online only for the long tail. Should fix coverage and cut the cast stage's time.
+  Sizing (user): about 1000 people cover 80% of history films' cast needs. Candidate list: Wikidata humans ranked by
+  sitelink count or Wikipedia pageviews; images: Wikimedia Commons, public domain or CC only, with several era
+  portraits per person and Wikidata name aliases as variants.
 - [x] C07 image prompts batch 2: 6 rounds at score 78, each blocking on units nobody changed, and the reviewer
   removed Ghaffar Khan, demanded him back, then removed him again. Fixes in the shared repair loop:
   `screen_unchanged` (blocking findings may only name changed or asked-about units), `coverage_screen` (a batch
