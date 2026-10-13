@@ -157,6 +157,14 @@ rescue chapters; the film ran 46% long.
   loses parallel writing and chapter-sized repair); keeping solo chapters with a wider gate (still patches after
   the fact, cannot manage length).
 
+## Royal Bengal Tiger of the Sundarbans (20-min long film, 2026-10-13): no cast, nature subject
+
+- Parent plan passed in round 1 (92.8), the first first-round pass. Thematic structure, 8 chapters, conservation
+  framing (3 chapters on people); the user judged it fair for the wording given.
+- [ ] Source quality: the floor counts sources and sites, not reputation; a pet magazine got in, and there was no
+  primary census report. Consider a reputation preference (government, UNESCO, journals, universities first) in the
+  research prompt or code ranking. Local Wikipedia (roadmap 3) would also seed better sources.
+
 ## Dandi March (20-min long film, 2026-10-13)
 
 Result: 19:31 for 20:00 (-2%), 8 chapters, 1 h 49 min with two fix-and-resume stops. C07 passed clean at 88 on
