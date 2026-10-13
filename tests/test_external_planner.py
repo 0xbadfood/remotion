@@ -391,3 +391,114 @@ class TargetedPlanRepairTests(unittest.TestCase):
         renumbered = {'chapters': [{'id': 'C01'}, {'id': 'C02'}]}          # the planner dropped C03
         merged = keep_unflagged_chapters(before, renumbered, ['C02'])           # renumbering is ignored: merge by id
         self.assertEqual([c['id'] for c in merged['chapters']], [c['id'] for c in before['chapters']])
+
+
+def stalled_review(field, problem='States an unsupported claim', severity='major', score=88):
+    return {'pass': False, 'rubric': {key: score for key in RUBRIC},
+            'issues': [{'severity': severity, 'field': field, 'problem': problem, 'evidence': 'S1 does not say this',
+                        'correction': 'Qualify the claim'}], 'strengths': ['Clear chronology']}
+
+
+class PlanUnitTests(unittest.TestCase):
+    """Cuban Missile Crisis, 2026-10-13: three rounds, each review blocking on something new, and no way out."""
+
+    def test_finding_fields_resolve_to_units_and_only_those_change(self):
+        from infofilm.external_planner import issue_units, keep_unflagged_units
+        _, _, _, plan = fixture()
+        units = issue_units(plan, {'field': 'chapters[C02].exit_handoff; chapters[C03].scope.description, film.coverage'})
+        self.assertEqual(units, ['chapters[C02].exit_handoff', 'chapters[C03].scope', 'coverage'])
+        self.assertEqual(issue_units(plan, {'field': 'chapters.C03.exit_handoff'}), ['chapters[C03].exit_handoff'])
+        self.assertEqual(issue_units(plan, {'field': 'research_gaps'}), ['research_gaps'])
+        self.assertEqual(issue_units(plan, {'field': 'the whole plan'}), [])
+        self.assertIn('chapters[C01].title', issue_units(plan, {'field': 'chapters[C01]'}))
+        drifted = copy.deepcopy(plan)
+        drifted['chapters'][1]['exit_handoff'] = 'Fixed handoff.'
+        drifted['chapters'][1]['title'] = 'Unasked retitle'                     # outside the scope: restored by code
+        drifted['film']['title'] = 'Unasked film title'
+        merged = keep_unflagged_units(plan, drifted, ['chapters[C02].exit_handoff'])
+        self.assertEqual(merged['chapters'][1]['exit_handoff'], 'Fixed handoff.')
+        self.assertEqual(merged['chapters'][1]['title'], plan['chapters'][1]['title'])
+        self.assertEqual(merged['film']['title'], plan['film']['title'])
+
+    def test_review_cannot_newly_block_on_unchanged_text_and_source_needs_become_gaps(self):
+        from infofilm.external_planner import screen_findings
+        _, _, _, plan = fixture()
+        candidate = copy.deepcopy(plan)
+        candidate['chapters'][1]['exit_handoff'] = 'Repaired handoff.'
+        review = {'pass': False, 'rubric': {k: 85 for k in RUBRIC}, 'issues': [
+            {'severity': 'major', 'field': 'chapters[C03].title', 'problem': 'Title implies one channel'},   # unchanged, never asked
+            {'severity': 'major', 'field': 'chapters[C02].exit_handoff', 'problem': 'Still overstated'},     # changed: stays
+            {'severity': 'major', 'field': 'film.coverage; research_gaps',
+             'problem': 'Soviet perspectives are not grounded', 'correction': 'Add primary or scholarly sources beyond S1'}]}
+        screened = screen_findings(candidate, plan, copy.deepcopy(review), raised={'chapters[C02].exit_handoff'})
+        self.assertEqual([i['severity'] for i in screened['issues']], ['minor', 'major', 'minor'])
+        self.assertIn('research gap', screened['issues'][2]['downgraded'])
+        self.assertEqual(candidate['research_gaps'][-1], {'question': 'Add primary or scholarly sources beyond S1', 'chapter_id': 'C03'})
+        self.assertFalse(screened['pass'])
+        # A finding the planner was asked to fix and returned unchanged still blocks.
+        asked = screen_findings(plan, plan, copy.deepcopy(review), raised={'chapters[C03].title'})
+        self.assertEqual(asked['issues'][0]['severity'], 'major')
+        # An unsupported-claim finding that mentions sources is not a research gap when it points at narrative text.
+        claim = {'pass': False, 'rubric': {k: 85 for k in RUBRIC}, 'issues': [{'severity': 'major', 'field': 'chapters[C02].exit_handoff',
+                 'problem': 'Asserts a decision beyond the supplied sources'}]}
+        self.assertEqual(screen_findings(candidate, plan, claim, raised=set())['issues'][0]['severity'], 'major')
+
+    def test_stalemate_accepts_the_best_round_and_carries_its_findings(self):
+        settings, request, brief, plan = fixture()
+        models = Mock()
+        models.call.side_effect = [plan, stalled_review('chapters[C02].exit_handoff', score=86),
+                                   plan, stalled_review('chapters[C02].exit_handoff', score=90),
+                                   plan, stalled_review('chapters[C02].exit_handoff', score=84),
+                                   {'preferred': 'tie', 'reasons': [], 'regressions': [], 'limitations': []}]
+        with tempfile.TemporaryDirectory() as directory:
+            store = Store(directory)
+            selected, report = plan_film({'planner_url': 'http://one', 'reviewer_url': 'http://two'}, store, request, brief, settings, models=models)
+            self.assertEqual(report['status'], 'accepted_with_findings')
+            self.assertEqual(report['attempts'][1]['accepted_with_findings'], 1)
+            self.assertEqual(selected['chapters'][1]['plan_findings'][0]['correction'], 'Qualify the claim')
+            self.assertNotIn('plan_findings', selected['chapters'][0])
+            self.assertEqual(read(store.root / 'chapter-plan.json'), selected)
+            self.assertFalse(plan_errors(selected, request, brief, settings))
+            # Round 3 is told the flagged field came back unchanged.
+            third = models.call.call_args_list[4].args[2]
+            self.assertIn('"unchanged_last_round": ["chapters[C02].exit_handoff"]', third)
+            store.db.close()
+
+    def test_structural_or_low_scoring_stalemates_still_stop(self):
+        settings, request, brief, plan = fixture()
+        for review_value in (stalled_review('coverage', problem='Required anchor is missing'),     # not narrative wording
+                             stalled_review('chapters[C02].exit_handoff', score=70),              # below the minimum
+                             stalled_review('chapters[C02].exit_handoff', severity='blocker')):
+            models = Mock()
+            models.call.side_effect = [plan, review_value] * settings['max_attempts']
+            with tempfile.TemporaryDirectory() as directory:
+                store = Store(directory)
+                with self.assertRaisesRegex(RuntimeError, 'bounded attempts'):
+                    plan_film({'planner_url': 'http://one', 'reviewer_url': 'http://two'}, store, request, brief, settings, models=models)
+                store.db.close()
+        models = Mock()
+        models.call.side_effect = [plan, stalled_review('chapters[C02].exit_handoff')] * settings['max_attempts']
+        with tempfile.TemporaryDirectory() as directory:
+            store = Store(directory)
+            with self.assertRaisesRegex(RuntimeError, 'bounded attempts'):
+                plan_film({'planner_url': 'http://one', 'reviewer_url': 'http://two'}, store, request, brief,
+                          {**settings, 'accept_with_findings': False}, models=models)
+            store.db.close()
+
+    def test_minor_findings_on_repaired_chapters_travel_with_the_repair(self):
+        settings, request, brief, plan = fixture()
+        first = stalled_review('chapters[C02].scope')
+        first['issues'].append({'severity': 'minor', 'field': 'chapters[C02].exit_handoff', 'problem': 'Only channel is too strong',
+                                'evidence': 'S1', 'correction': 'Say a secret channel'})
+        first['issues'].append({'severity': 'minor', 'field': 'chapters[C03].mood', 'problem': 'Mood is flat',
+                                'evidence': 'S1', 'correction': 'Vary it'})
+        models = Mock()
+        models.call.side_effect = [plan, first, plan, review()]
+        with tempfile.TemporaryDirectory() as directory:
+            store = Store(directory)
+            plan_film({'planner_url': 'http://one', 'reviewer_url': 'http://two'}, store, request, brief, settings, models=models, compare=False)
+            repair = models.call.call_args_list[2].args[2]
+            self.assertIn('Only channel is too strong', repair)
+            self.assertNotIn('Mood is flat', repair)                                # another chapter: not in this repair
+            self.assertIn('"units": ["chapters[C02].scope", "chapters[C02].exit_handoff"]', repair)
+            store.db.close()

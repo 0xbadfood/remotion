@@ -57,7 +57,9 @@ def research(config, store, subject, *, subject_guidance=None, budget=None):
             raise RuntimeError('Research failed: ' + reason) from exc
         raise
     sources = read(output)
-    store.event("research","succeeded",{"fetched_sources":len(sources["results"]),"archive":str(directory)})
+    floor = read(directory / "result.json").get("source_floor") if (directory / "result.json").exists() else None
+    store.event("research","succeeded",{"fetched_sources":len(sources["results"]),"archive":str(directory),
+                                        **({"source_floor": floor} if floor and floor.get("min_sources") else {})})
     return sources
 
 

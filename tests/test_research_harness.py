@@ -209,3 +209,46 @@ class ResearchHarnessTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class SourceFloorTests(unittest.TestCase):
+    """Cuban Missile Crisis, 2026-10-13: the agent called two fetched sources sufficient for a 20-minute film."""
+
+    def tools(self):
+        tools = ResearchTools(tavily=None, obscura_path=Path('/unused'), max_fetches=16)
+        tools.source_summarizer = lambda url, text: {'text': 'A useful qualified explanation.'}
+        pages = ['https://history.state.gov/a', 'https://nsarchive.gwu.edu/b', 'https://www.britannica.com/c',
+                 'https://history.state.gov/d', 'https://airandspace.si.edu/e']
+        tools.fetch_cache = {url: 'Readable source material. ' * 20 for url in pages}
+        tools.leads = list(pages)
+        return tools, pages
+
+    @staticmethod
+    def fetch(*urls):
+        return {'tool_calls': [{'id': str(i), 'type': 'function', 'function': {
+            'name': 'fetch_url', 'arguments': json.dumps({'url': url})}} for i, url in enumerate(urls)]}
+
+    def test_early_answer_is_sent_back_until_the_floor_is_met(self):
+        tools, pages = self.tools()
+        qwen = Mock()
+        qwen.complete.side_effect = [self.fetch(*pages[:2]), {'content': f'Thin answer [a]({pages[0]})'},
+                                     self.fetch(*pages[2:]), {'content': f'Fuller answer [a]({pages[0]})'}]
+        answer = run_agent('Explain the crisis.', qwen, tools, min_sources=5, min_domains=3)
+        self.assertTrue(answer.startswith('Fuller answer'))
+        nudge = next(m['content'] for m in qwen.complete.call_args_list[-1].args[0]
+                     if m['role'] == 'user' and m['content'].startswith('Not enough evidence'))
+        self.assertIn('at least 5 usable fetched sources from at least 3 different sites; you have 2 from 2', nudge)
+        self.assertIn('https://www.britannica.com/c', nudge)                     # unread leads are offered
+        self.assertIsNone(tools.shortfall(5, 3))
+
+    def test_floor_gives_way_when_budget_or_nudges_run_out(self):
+        tools, pages = self.tools()
+        tools.fetches_used = tools.max_fetches                                   # budget spent
+        qwen = Mock()
+        qwen.complete.side_effect = [self.fetch(*pages[:2]), {'content': f'Answer [a]({pages[0]})'}]
+        self.assertTrue(run_agent('Explain.', qwen, tools, min_sources=5, min_domains=3).startswith('Answer'))
+        tools, pages = self.tools()
+        qwen = Mock()
+        qwen.complete.side_effect = [self.fetch(pages[0])] + [{'content': f'Answer [a]({pages[0]})'}] * 4
+        self.assertTrue(run_agent('Explain.', qwen, tools, min_sources=5, min_domains=3, max_floor_nudges=3).startswith('Answer'))
+        self.assertEqual(qwen.complete.call_count, 5)                            # one fetch, three nudges, then accepted

@@ -20,6 +20,7 @@ from .planning import evidence_context
 from .narrators import select_reference
 
 LONG_MIN_SECONDS, LONG_MAX_SECONDS = 300, 1800
+FILM_RESEARCH_BUDGET = {'max_searches': 6, 'max_fetches': 16, 'min_sources': 5, 'min_domains': 3}
 
 
 def year_bounds(subject, start=None, end=None):
@@ -582,9 +583,10 @@ def create_long(args):
                 sources = {'results': [{'url': s['url'], 'title': s.get('title'), 'raw_content': '\n\n'.join(s['excerpts'])}
                                       for s in prepared['sources']]}
             else:
-                # Film research is the shared digest for every chapter: give it a wider budget than chapter gaps.
+                # Film research is the shared digest for every chapter: give it a wider budget than chapter gaps, and
+                # a code-owned floor so the agent cannot call two sources sufficient for a long film.
                 sources = research(config, store, args.subject,
-                                   budget=config.get('film_research_budget', {'max_searches': 6, 'max_fetches': 16}),
+                                   budget=config.get('film_research_budget', FILM_RESEARCH_BUDGET),
                                    **({'subject_guidance': guidance} if guidance is not None else {}))
             write(store.root / 'sources.json', sources)
             write(store.root / 'orientation-sources.json', sources)
@@ -633,7 +635,9 @@ def create_long(args):
             if errors:
                 raise ValueError('Parent plan is invalid: ' + '; '.join(errors))
             write(plan_path, plan)
+            open_findings = len(plan['film'].get('plan_findings') or []) + sum(len(c.get('plan_findings') or []) for c in plan['chapters'])
             event('planning', 'succeeded', chapters=len(plan['chapters']),
+                  **({'accepted_with_findings': open_findings} if open_findings else {}),
                   planned_advisory_seconds=sum(c['advisory_seconds'] for c in plan['chapters']),
                   chapter_outline=[{'id': c['id'], 'title': c['title'], 'advisory_seconds': c['advisory_seconds'], 'production_kind': production_kind(c)} for c in plan['chapters']])
             if args.until == 'plan':

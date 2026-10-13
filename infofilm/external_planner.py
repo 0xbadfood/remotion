@@ -145,6 +145,8 @@ def settings_errors(settings):
         errors.append('Invalid review_min_score')
     if type(settings.get('beat_sheet', False)) is not bool:
         errors.append('beat_sheet must be boolean')
+    if type(settings.get('accept_with_findings', True)) is not bool:
+        errors.append('accept_with_findings must be boolean')
     factor = settings.get('narration_rate_factor', 1.0)
     if not finite_number(factor) or not 0.7 <= factor <= 1.1:
         errors.append('narration_rate_factor must be 0.7-1.1')
@@ -535,6 +537,8 @@ REVIEW_TASK = (
  'Flag substantive omitted coverage, reversed causal sequence, misleading boundaries, unsupported dates or claims; '
  'do not reject a plan merely because chapter dates do not form an exact continuous partition. '
  'The orientation brief is limited: missing evidence belongs in research_gaps, not invented facts. '
+ 'A need for more or different sources than the brief supplies (other perspectives, scholarship, primary documents) '
+ 'is a research gap that chapter research fills: report it as minor, never major or blocker. '
  'Check entry contexts, chapter boundaries, transitions, distinct topic ownership and final resolution of the central question. '
  'Earlier context or later consequences can support a handoff without becoming another chapter. '
  'Required anchors and source cautions are authoritative. Optional phrasing and stylistic preferences are advisory, not blockers. '
@@ -579,6 +583,149 @@ def keep_unflagged_chapters(previous, candidate, flagged):
                                       for c in previous['chapters']]}
 
 
+# Parent-plan repair units (pipeline-findings-todo.md, run and rescue rules): every film field, top-level list and
+# chapter field is one unit, named film.<key>, coverage | assembly | research_gaps, or chapters[Cxx].<key>.
+TOP_UNITS = ('coverage', 'assembly', 'research_gaps')
+# Wording a later stage re-checks against fuller chapter research: open findings here may be carried, not block.
+NARRATIVE_UNITS = {'title', 'scope', 'objective', 'entry_context', 'exit_handoff', 'exclude', 'mood', 'music',
+                   'visual_direction', 'section_card', 'research_queries', 'central_question', 'narrative_arc',
+                   'structure_rationale', 'shared_visual_style', 'continuity_rules'}
+GAP_UNITS = re.compile(r'^(?:coverage|research_gaps|film\.coverage|chapters\[C\d{2}\]\.research_queries)$')
+NEEDS_SOURCES = re.compile(r'beyond the (?:supplied|provided|listed|orientation)|(?:additional|more|further|other|new) '
+                           r'(?:primary |scholarly |independent )*(?:sources|research|evidence)|no such sources|'
+                           r'perspectives?\b.*\b(?:not (?:yet )?(?:grounded|sourced|supplied|listed)|missing)', re.I | re.S)
+
+
+def plan_units(plan):
+    """{unit path: value} for the parent plan."""
+    units = {}
+    if isinstance(plan.get('film'), dict):
+        units.update({f'film.{k}': v for k, v in plan['film'].items()})
+    units.update({k: plan.get(k) for k in TOP_UNITS if k in plan})
+    for chapter in plan.get('chapters') or []:
+        if isinstance(chapter, dict):
+            units.update({f'chapters[{chapter.get("id")}].{k}': v for k, v in chapter.items() if k != 'id'})
+    return units
+
+
+def issue_units(plan, issue):
+    """Unit paths a finding's field names ("chapters[C04].scope.description; film.coverage", "C02.exit_handoff",
+    "chapters[3]"). A chapter named without a field means all of its fields; an unknown pointer names nothing."""
+    units = plan_units(plan)
+    ids = [c.get('id') for c in plan.get('chapters') or [] if isinstance(c, dict)]
+    found = []
+    for part in re.split(r'[;,]\s*|\s+and\s+', str(issue.get('field', ''))):
+        part = part.strip()
+        match = re.search(r'(?:chapters\[([^\]]+)\]|\b(C\d{2})\b)(?:\.([A-Za-z_]+))?', part)
+        if match:
+            value = match.group(1) or match.group(2)
+            chapter = value if value in ids else (ids[int(value)] if value.isdigit() and int(value) < len(ids) else None)
+            if chapter is None:
+                continue
+            path = f'chapters[{chapter}].{match.group(3)}'
+            paths = [path] if path in units else [u for u in units if u.startswith(f'chapters[{chapter}].')]
+        else:
+            key = re.match(r'(?:film\.)?([A-Za-z_]+)', part)
+            key = key.group(1) if key else ''
+            paths = [f'film.{key}'] if f'film.{key}' in units else ([key] if key in TOP_UNITS else [])
+        found += [p for p in paths if p not in found]
+    return found
+
+
+def unit_chapter(path):
+    match = re.match(r'chapters\[(C\d{2})\]\.', path)
+    return match.group(1) if match else None
+
+
+def keep_unflagged_units(previous, candidate, scope):
+    """Targeted repair enforced by code: the previous plan with only the units in scope taken from the candidate
+    (chapters matched by id). research_gaps is always the candidate's, since qualifying a claim may add a gap."""
+    result = copy.deepcopy(previous)
+    after = {c.get('id'): c for c in candidate.get('chapters') or [] if isinstance(c, dict)}
+    for path in scope:
+        chapter = unit_chapter(path)
+        if chapter:
+            key = path.split('].', 1)[1]
+            target = next((c for c in result.get('chapters', []) if isinstance(c, dict) and c.get('id') == chapter), None)
+            if target is not None and key in after.get(chapter, {}):
+                target[key] = copy.deepcopy(after[chapter][key])
+        elif path.startswith('film.'):
+            key = path[5:]
+            if isinstance(candidate.get('film'), dict) and key in candidate['film'] and isinstance(result.get('film'), dict):
+                result['film'][key] = copy.deepcopy(candidate['film'][key])
+        elif path in candidate:
+            result[path] = copy.deepcopy(candidate[path])
+    if isinstance(candidate.get('research_gaps'), list):
+        result['research_gaps'] = copy.deepcopy(candidate['research_gaps'])
+    return result
+
+
+def screen_findings(candidate, previous, review, raised):
+    """Code between reviewer and planner, on each review after the first:
+    - a need for more sources than the orientation brief has is a research gap for chapter research: code records it
+      in research_gaps and it stops blocking;
+    - a blocking finding about units that did not change since the previous review, and that no earlier round asked
+      the planner to fix, is advisory (the review may not move the target on text it already accepted)."""
+    issues = review.get('issues') if isinstance(review.get('issues'), list) else []
+    before = plan_units(previous) if previous is not None else None
+    after = plan_units(candidate)
+    chapters = [c.get('id') for c in candidate.get('chapters') or [] if isinstance(c, dict)]
+    for issue in issues:
+        if not isinstance(issue, dict) or issue.get('severity') not in {'major', 'blocker'}:
+            continue
+        units = issue_units(candidate, issue)
+        words = f"{issue.get('problem', '')} {issue.get('correction', '')}"
+        if units and all(GAP_UNITS.match(u) for u in units) and NEEDS_SOURCES.search(words):
+            named = [unit_chapter(u) for u in units if unit_chapter(u)]
+            gap = {'question': str(issue.get('correction') or issue.get('problem'))[:600],
+                   'chapter_id': named[0] if named else chapters[-1]}
+            if isinstance(candidate.get('research_gaps'), list) and gap['question'] not in [
+                    g.get('question') for g in candidate['research_gaps'] if isinstance(g, dict)]:
+                candidate['research_gaps'].append(gap)
+            issue.update(severity='minor', downgraded='needs sources beyond the orientation brief; recorded as a research gap')
+        elif (before is not None and units and all(u in before and before[u] == after.get(u) for u in units)
+              and not set(units) & raised):
+            issue.update(severity='minor', downgraded='unchanged since the previous review, which did not ask for this fix')
+    if review.get('pass') is not True and issues and not any(
+            isinstance(i, dict) and i.get('severity') in {'major', 'blocker'} for i in issues):
+        review['pass'] = True
+    return review
+
+
+def carry_findings(plan, issues):
+    """Accepted with open findings: each lands on the chapter (or film) it names as plan_findings, which chapter
+    research, the beat sheet and the script must honour."""
+    plan = copy.deepcopy(plan)
+    carried = 0
+    for issue in issues:
+        note = {k: issue.get(k) for k in ('field', 'problem', 'correction')}
+        chapters = sorted({unit_chapter(u) for u in issue_units(plan, issue) if unit_chapter(u)})
+        targets = [c for c in plan['chapters'] if c.get('id') in chapters] or [plan['film']]
+        for target in targets:
+            target.setdefault('plan_findings', []).append(note)
+        carried += 1
+    return plan, carried
+
+
+def acceptable_with_findings(candidate, errors, review, settings):
+    """Best-effort exit after the last round: no code errors, score at the minimum, no blocker, and every open major
+    finding is wording in a narrative field (handoff, title, objective, card ...) that later stages re-check."""
+    score = review_score(review, settings)
+    issues = review.get('issues') if isinstance(review.get('issues'), list) else None
+    if errors or score is None or score < settings['review_min_score'] or issues is None:
+        return False
+    for issue in issues:
+        if not isinstance(issue, dict) or issue.get('severity') not in {'minor', 'major', 'blocker'}:
+            return False
+        if issue['severity'] == 'blocker':
+            return False
+        if issue['severity'] == 'major':
+            units = issue_units(candidate, issue)
+            if not units or any(u.rsplit('.', 1)[-1] not in NARRATIVE_UNITS for u in units):
+                return False
+    return True
+
+
 def plan_film(config, store, request, brief, settings, *, models=None, compare=True, seed_plan=None, seed_feedback=None, subject_handoff=None):
     errors = settings_errors(settings)
     if errors:
@@ -613,7 +760,7 @@ def plan_film(config, store, request, brief, settings, *, models=None, compare=T
     models = models or Models(config, store)
     policy_sha = digest({'draft_task': DRAFT_TASK, 'review_task': REVIEW_TASK, 'contract': CONTRACT,
                          'animation_routing': ANIMATION_ROUTING_TASK, 'animation_brief': ANIMATION_BRIEF,
-                         'validation': 'subject-autonomous-animation-routing-v9-priority-alias'})
+                         'validation': 'subject-autonomous-animation-routing-v10-field-units'})
     signature = digest({'request': request, 'brief': brief, 'settings': settings, 'planner': config['planner_url'], 'reviewer': config['reviewer_url'], 'policy_sha': policy_sha,
                         'seed_plan': seed_plan, 'seed_feedback': seed_feedback})
     if subject_handoff is not None:
@@ -632,7 +779,7 @@ def plan_film(config, store, request, brief, settings, *, models=None, compare=T
         write(store.root / 'baseline-feedback.json', seed_feedback)
     started = time.monotonic()
     history, previous, feedback, selected = [], seed_plan, seed_feedback, None
-    prior_findings = []
+    prior_findings, raised, rounds, carried = [], set(), [], 0
     for attempt in range(settings['max_attempts']):
         context = {'request': request, 'orientation_brief': brief, 'contract': CONTRACT,
                    'available_moods': sorted(set(MOODS) - {'auto'})}
@@ -649,11 +796,14 @@ def plan_film(config, store, request, brief, settings, *, models=None, compare=T
             context.pop('contract')
         if previous is not None:
             context.update(previous_plan=previous, repair_feedback=feedback)
-            if (feedback or {}).get('repair_scope', {}).get('chapters'):
-                draft_task += (' TARGETED REPAIR: change only the chapters and fields in repair_feedback.repair_scope and '
-                               'copy every other chapter and field unchanged from previous_plan. Fix a finding by removing or '
-                               'qualifying unsupported precision (e.g. a null year bound, "date not supplied"); never add facts, '
-                               'reasons or details that the orientation brief does not contain.')
+            if (feedback or {}).get('repair_scope', {}).get('units'):
+                draft_task += (' TARGETED REPAIR: change only the fields listed in repair_feedback.repair_scope.units '
+                               '(film.<key>, chapters[Cxx].<key>, coverage, research_gaps); code copies every other field from '
+                               'previous_plan. Fix every major finding; fix the minor ones too where that needs no new facts. '
+                               'Fix a finding by removing or qualifying unsupported precision (e.g. a null year bound, '
+                               '"date not supplied"); never add facts, reasons or details that the orientation brief does not '
+                               'contain. A field listed in repair_feedback.unchanged_last_round came back unchanged last '
+                               'time: it must change now.')
         raw = bounded_call(models, 'planner', f'chapter-plan-{signature[:8]}-{attempt}', draft_task, context, settings, settings['draft_max_tokens'])
         write(store.root / f'raw-candidate-{attempt}.json', raw)
         candidate, enrichment = enrich_plan(raw, brief)
@@ -664,8 +814,11 @@ def plan_film(config, store, request, brief, settings, *, models=None, compare=T
                     enrichment.append({'field': 'film.' + key, 'before': candidate['film'].get(key), 'after': request[key],
                                        'reason': 'Requested value restored by code'})
                     candidate['film'][key] = request[key]
+        unchanged = []
         if previous is not None and (feedback or {}).get('repair_scope'):
-            candidate = keep_unflagged_chapters(previous, candidate, feedback['repair_scope']['chapters'])
+            candidate = keep_unflagged_units(previous, candidate, feedback['repair_scope']['units'])
+            before, after = plan_units(previous), plan_units(candidate)
+            unchanged = [u for u in feedback['repair_scope']['units'] if before.get(u) == after.get(u)]
         write(store.root / f'structural-enrichment-{attempt}.json', enrichment)
         write(store.root / f'candidate-{attempt}.json', candidate)
         errors = plan_errors(candidate, request, brief, settings)
@@ -678,6 +831,9 @@ def plan_film(config, store, request, brief, settings, *, models=None, compare=T
              **({'editorial_findings_to_verify': seed_feedback} if seed_feedback else {}),
              **({'prior_findings': prior_findings} if prior_findings else {})}, settings, settings['review_max_tokens'])
         scope = (feedback or {}).get('repair_scope') if previous is not None else None
+        if previous is not None and attempt and isinstance(review.get('issues'), list):
+            review = screen_findings(candidate, previous, review, raised)
+            write(store.root / f'candidate-{attempt}.json', candidate)
         if scope and isinstance(review.get('issues'), list):
             # Chapters locked in a targeted round were already reviewed: a new finding about them alone is advisory.
             locked = {c.get('id') for c in candidate.get('chapters', [])} - set(scope['chapters'])
@@ -693,6 +849,7 @@ def plan_film(config, store, request, brief, settings, *, models=None, compare=T
         accepted = not errors and passing_review(review, settings)
         history.append({'attempt': attempt + 1, 'code_errors': errors, 'review_score': score,
                         'accepted': accepted, 'plan_sha256': digest(candidate)})
+        rounds.append((candidate, errors, review))
         store.event('external-planner', 'accepted' if accepted else 'needs_repair', history[-1])
         if accepted:
             selected = candidate
@@ -701,14 +858,38 @@ def plan_film(config, store, request, brief, settings, *, models=None, compare=T
         previous = candidate
         blocking = [i for i in review.get('issues') or [] if isinstance(i, dict) and i.get('severity') in {'major', 'blocker'}]
         prior_findings = [{k: i.get(k) for k in ('severity', 'field', 'problem')} for i in blocking]
-        # Code sits between reviewer and planner: structured blocking findings only, never the raw review.
+        targets = [issue_units(candidate, i) for i in blocking]
+        flagged = [u for units in targets for u in units]
+        chapters = {unit_chapter(u) for u in flagged if unit_chapter(u)}
+        # Minor findings on the same chapters or fields travel with the repair, so they cannot come back as majors.
+        minors = [i for i in review.get('issues') or [] if isinstance(i, dict) and i.get('severity') == 'minor'
+                  and not i.get('downgraded') and (lambda units: units and all(u in flagged or unit_chapter(u) in chapters
+                                                                               for u in units))(issue_units(candidate, i))]
+        # Code sits between reviewer and planner: structured findings only, never the raw review.
         feedback = {'code_errors': errors,
-                    'findings': [{k: i.get(k) for k in ('field', 'severity', 'problem', 'correction')} for i in blocking],
+                    'findings': [{k: i.get(k) for k in ('field', 'severity', 'problem', 'correction')} for i in blocking + minors],
                     'repair_instruction': 'Address concrete defects while preserving useful correct material; do not chase cosmetic changes or runtime matching.'}
-        flagged = flagged_chapters(candidate, blocking)
-        if flagged and not errors:
-            # Targeted repair: only the chapters the review names change; code restores the rest.
-            feedback['repair_scope'] = {'chapters': flagged, 'fields': [i.get('field') for i in blocking]}
+        if blocking and all(targets) and not errors:
+            # Targeted repair: only the fields the review names change; code restores the rest.
+            scope_units = list(dict.fromkeys(flagged + [u for i in minors for u in issue_units(candidate, i)]))
+            feedback['repair_scope'] = {'units': scope_units, 'chapters': sorted({unit_chapter(u) for u in scope_units if unit_chapter(u)}),
+                                        'fields': [i.get('field') for i in blocking + minors]}
+            raised |= set(scope_units)
+            repeated = [u for u in unchanged if u in scope_units]
+            if repeated:
+                feedback['unchanged_last_round'] = repeated
+    if selected is None and settings.get('accept_with_findings', True):
+        # Way out of a reviewer/planner stalemate: the best round whose open findings are only narrative wording.
+        usable = [(review_score(r, settings), n, c, r) for n, (c, e, r) in enumerate(rounds)
+                  if acceptable_with_findings(c, e, r, settings)]
+        if usable:
+            score, number, candidate, review = max(usable, key=lambda row: (row[0], row[1]))
+            open_issues = [i for i in review['issues'] if i.get('severity') == 'major']
+            selected, carried = carry_findings(candidate, open_issues)
+            history[number]['accepted_with_findings'] = carried
+            write(store.root / 'chapter-plan.json', selected)
+            store.event('external-planner', 'accepted_with_findings',
+                        {'attempt': number + 1, 'review_score': score, 'open_findings': carried})
     comparison = None
     if selected is not None and compare:
         initial = seed_plan if seed_plan is not None else read(store.root / 'candidate-0.json')
@@ -729,7 +910,8 @@ def plan_film(config, store, request, brief, settings, *, models=None, compare=T
         calls.append({'role': meta['role'], 'model': meta['model'], 'url': meta['url'],
                       'latency_seconds': raw.get('measured_latency_seconds'), 'usage': raw.get('usage', {})})
     evaluated = selected or previous
-    report = {'status': 'accepted_sketch' if selected else 'needs_review', 'production_started': False,
+    report = {'status': ('accepted_with_findings' if carried else 'accepted_sketch') if selected else 'needs_review',
+              'production_started': False, 'open_findings': carried,
               'signature': signature, 'attempts': history,
               'initial_metrics': metrics(seed_plan if seed_plan is not None else read(store.root / 'candidate-0.json'), request, brief, settings),
               'selected_metrics': metrics(evaluated, request, brief, settings),

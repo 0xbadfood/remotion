@@ -91,7 +91,8 @@ def make_evidence(models, extraction, subject="How the Indian monsoon works", au
     if chapter_context:
         task += (" This is one chapter of a longer film. Research its owned questions, scope and objective thoroughly. "
                  "Earlier/later chapter context may be a short reminder or handoff; do not retell their material. "
-                 "Resolve the assigned research gaps and retain uncertainty where sources cannot establish a claim.")
+                 "Resolve the assigned research gaps and retain uncertainty where sources cannot establish a claim. "
+                 "chapter_context.chapter.plan_findings and chapter_context.film.plan_findings are parent-plan review findings left open when the plan was accepted (e.g. an unsupported claim in a handoff): they override the outline wording. Check each against the sources: record a supported version as a fact, or the gap as an uncertainty.")
     return models.loop("evidence-audit" if audit_notes else "evidence", task, context, validate, experimental=experimental,
                        units=EVIDENCE_UNITS)
 
@@ -166,7 +167,8 @@ def make_script(models, evidence, duration, rate=135, experimental=True, suffix=
                  "A handoff ending leads into the next chapter's question, without an overall summary or sign-off. "
                  "Only film_conclusion answers the film-wide central question and closes the narrative. "
                  "Advance the owned topics; respect exclusions and avoid repeating previous chapters. "
-                 "The outline gives research intentions, not additional factual evidence; use verified chapter facts for narration.")
+                 "The outline gives research intentions, not additional factual evidence; use verified chapter facts for narration. "
+                 "chapter_context.chapter.plan_findings and chapter_context.film.plan_findings are parent-plan review findings left open when the plan was accepted (e.g. an unsupported claim in a handoff): they override the outline wording. Follow each correction; never narrate what a finding calls unsupported.")
         if evidence["chapter_context"].get("continuity_notes"):
             task += (" chapter_context.continuity_notes lists problems a continuity review found between the previous chapter's "
                      "accepted script and this chapter: resolve each one (chronology, scope, duplicated exposition, handoff) "

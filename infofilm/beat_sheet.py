@@ -30,6 +30,8 @@ TASK = (
     "word_budget per chapter is fixed by code from the narrator's measured speaking rate: allocate words to beats so "
     "that each chapter's beats sum to its budget; choose fewer, fuller beats rather than cramming. "
     "people lists the named real people a scene in that chapter should show (names exactly as the facts give them). "
+    "A chapter's plan_findings are open review findings on its direction: follow their corrections over the handoff "
+    "and entry wording, and never plan a beat on a claim they call unsupported. "
     "Return {chapters:[{id, opening:string, closing:string, people:[string]}], "
     "beats:[{chapter:chapter id, intent:string, fact_ids:[that chapter's fact ids], words:integer, reminder:boolean}]} "
     "with chapters in the given order and beats grouped by chapter in narration order."
@@ -50,6 +52,9 @@ def chapter_inputs(plan, records, rate):
                      "opening_role": chapter.get("opening_role"), "ending_role": chapter.get("ending_role"),
                      "entry_context": chapter.get("entry_context"), "exit_handoff": chapter.get("exit_handoff"),
                      "exclude": chapter.get("exclude"),
+                     # Open parent-plan review findings (plan accepted with findings): corrections to the direction.
+                     **({"plan_findings": (plan["film"].get("plan_findings") or []) + (chapter.get("plan_findings") or [])}
+                        if plan["film"].get("plan_findings") or chapter.get("plan_findings") else {}),
                      "word_budget": max(40, round(chapter.get("advisory_seconds", 120) * rate / 60)),
                      "facts": [{"id": f["id"], "claim": f["claim"]} for f in evidence.get("facts", [])],
                      "uncertainties": evidence.get("uncertainties", [])})

@@ -9,7 +9,7 @@ from .core import Store, digest, read, write
 from .llm import Models, llm_slot
 from .llm_settings import api_key, endpoint
 from .research_digest import MODEL_MESSAGE_LIMIT, choose_passages, digest_errors, source_summary_prompt
-from .research_harness import ResearchTools, QwenClient, run_agent, TOOLS, canonical_url, HarnessError
+from .research_harness import ResearchTools, QwenClient, run_agent, TOOLS, canonical_url, HarnessError, site
 
 
 def main():
@@ -109,6 +109,7 @@ def main():
                     "context_bound": self.last_context_report,
                     "response_attempts": self.last_response_reports})
 
+    budget=request.get("budget",{})
     tools=ArchiveTools(TavilyClient(api_key=os.environ.get("TAVILY_API_KEY")),
         Path(request["kbagent_root"])/"obscura",max_searches=request.get("budget",{}).get("max_searches",3),
         max_fetches=request.get("budget",{}).get("max_fetches",8),
@@ -157,7 +158,8 @@ def main():
     answer=run_agent("Research an evergreen, general-audience explanation of "+request["subject"]+
         ". Prefer primary sources and substantive institutional scholarship. Explain the main mechanism or chronology, important qualifications and practical significance. "
         "Keep distinct events and disputed interpretations separate. Avoid forecasts and dated statistics."+guidance+resumed,
-        model,tools,max_steps=20,verbose=True)
+        model,tools,max_steps=30,verbose=True,
+        min_sources=budget.get("min_sources",0),min_domains=budget.get("min_domains",0))
     if not tools.fetched_urls:
         raise RuntimeError("Research produced no usable fetched source documents")
     # Supply the next planner with the same concise, traceable first-pass briefs.
@@ -184,6 +186,8 @@ def main():
     write(directory/"result.json",{"subject":request["subject"],"searches":tools.searches_used,
         "fetches":tools.fetches_used,"fetched_urls":sorted(tools.fetched_urls),"model_calls":model.count,
         "skipped_sources": list(tools.source_errors.values()),
+        "source_floor": {"min_sources": budget.get("min_sources",0), "min_domains": budget.get("min_domains",0),
+                         "domains": sorted({site(u) for u in tools.fetched_urls})},
         "source_digests": len(results), "context_limit_bytes": MODEL_MESSAGE_LIMIT,
         "citation_validation":"Upstream harness requires at least one fetched URL citation; downstream evidence checks fact-level references."})
 

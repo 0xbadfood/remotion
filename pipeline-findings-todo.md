@@ -121,6 +121,28 @@ rescue chapters; the film ran 46% long.
   loses parallel writing and chapter-sized repair); keeping solo chapters with a wider gate (still patches after
   the fact, cannot manage length).
 
+## Cuban Missile Crisis (20-min long film, 2026-10-13): stopped at the parent plan, restarted fresh
+
+- [x] Research fetched 2 of 16 allowed sources (13 facts for 20 minutes; Manhattan had 5 and 20): the agent decides
+  when evidence is "sufficient" and nothing in code set a floor. Film research now has a code-owned floor
+  (`min_sources` 5 from `min_domains` 3): an early answer is sent back with the shortfall and unread leads, up to 3
+  times, while budget remains. `result.json` and the research event record `source_floor`.
+- [x] Parent plan: 3 rounds, 84.1 / 85.3 / 81.2, and each review blocked on something new. Round 1's minor "RFK the only
+  channel" was never sent to the planner (majors only), so round 2 promoted it to major. Round 3 blocked on C04's title,
+  unchanged since round 1, plus "needs Soviet sources beyond the excerpts". The parent plan never got the repair-unit
+  rules. Now:
+  - every film field, top-level list and chapter field is a unit (`film.<key>`, `chapters[Cxx].<key>`, `coverage`,
+    `research_gaps`); code merges only the flagged units back;
+  - minor findings on the chapters being repaired travel with the repair;
+  - a field returned unchanged is called out (`unchanged_last_round`);
+  - a new blocking finding on text that did not change, and that no round asked to fix, becomes advisory;
+  - a finding that needs sources beyond the brief becomes a `research_gaps` entry (code and review prompt);
+  - **exit gate** (`accept_with_findings`, default true): after the last round, the best round with no code errors, score
+    at or above the minimum, no blocker, and only narrative-field majors is accepted. Its open findings land on the
+    chapter as `plan_findings`, which chapter research, the beat sheet and the script must honour. The planning
+    event shows `accepted_with_findings`.
+  - Replayed on the real Cuba rounds: round 2 would have been accepted, carrying one C04 handoff finding.
+
 ## Manhattan Project redo (first run after the build, 2026-10-13)
 
 - [x] Beat sheet budget error named only the chapter frame (C06), so beat changes were discarded six times: aggregate

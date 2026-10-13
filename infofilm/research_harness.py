@@ -111,6 +111,7 @@ class ResearchTools:
     source_archive: Path | None = None
     source_errors: dict[str, dict[str, Any]] = field(default_factory=dict)
     fallback: Any = None  # second Tavily client (TAVILY_FALLBACK), used once the primary fails, e.g. out of credits
+    leads: list[str] = field(default_factory=list)  # search result URLs, in order, for the source floor
 
     def search(self, query: str) -> dict[str, Any]:
         query = query.strip()
@@ -138,6 +139,8 @@ class ResearchTools:
 
         results = []
         for item in response.get("results", []):
+            if item.get("url") and item["url"] not in self.leads:
+                self.leads.append(item["url"])
             results.append(
                 {
                     "title": item.get("title", ""),
@@ -224,6 +227,29 @@ class ResearchTools:
                 raise HarnessError("Source summarizer is required before fetched content reaches the model")
             self.digest_cache[normalized] = self.source_summarizer(normalized, content)
         return self.digest_cache[normalized]
+
+    def shortfall(self, min_sources: int, min_domains: int) -> str | None:
+        """Code-owned source floor: why the evidence is still too thin, or None once it is met or cannot be met."""
+        domains = sorted({site(url) for url in self.fetched_urls})
+        if len(self.fetched_urls) >= min_sources and len(domains) >= min_domains:
+            return None
+        if self.fetches_used >= self.max_fetches:
+            return None
+        def read_already(url):
+            try:
+                normalized = canonical_url(url)
+            except ValueError:
+                return True
+            return normalized in self.fetched_urls or normalized in self.source_errors
+        unread = [url for url in self.leads if not read_already(url)][:12]
+        if not unread and self.searches_used >= self.max_searches:
+            return None
+        return (f"Not enough evidence yet: code requires at least {min_sources} usable fetched sources from at least "
+                f"{min_domains} different sites; you have {len(self.fetched_urls)} from {len(domains)} "
+                f"({', '.join(domains) or 'none'}). Keep researching before you answer: fetch more primary or scholarly "
+                "sources, preferring sites you have not used and other perspectives on the subject"
+                + (" (search again for them if needed)." if self.searches_used < self.max_searches else ".")
+                + (" Unread leads: " + "; ".join(unread) if unread else ""))
 
     def execute(self, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         if name == "web_search":
@@ -320,7 +346,13 @@ def cited_fetched_urls(answer: str, fetched_urls: set[str]) -> set[str]:
     return cited
 
 
-def run_agent(question: str, qwen: QwenClient, research: ResearchTools, max_steps: int = 60, verbose: bool = False) -> str:
+def site(url: str) -> str:
+    host = urlsplit(url).netloc.lower().split("@")[-1].split(":")[0]
+    return host.removeprefix("www.")
+
+
+def run_agent(question: str, qwen: QwenClient, research: ResearchTools, max_steps: int = 60, verbose: bool = False,
+              min_sources: int = 0, min_domains: int = 0, max_floor_nudges: int = 3) -> str:
     messages: list[dict[str, Any]] = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": question},
@@ -339,6 +371,14 @@ def run_agent(question: str, qwen: QwenClient, research: ResearchTools, max_step
         tool_calls = message.get("tool_calls") or []
         if not tool_calls:
             answer = (message.get("content") or "").strip()
+            gap = research.shortfall(min_sources, min_domains) if max_floor_nudges > 0 else None
+            if gap and step < max_steps:
+                # The agent may not decide alone that thin evidence is sufficient.
+                max_floor_nudges -= 1
+                messages.append({"role": "user", "content": gap})
+                if verbose:
+                    print(f"[{step}] source floor: {gap[:160]}", file=sys.stderr)
+                continue
             break
 
         for call in tool_calls:

@@ -23,5 +23,6 @@
   },
   "beat_sheet": true,
   "script_length_tolerance": 0.25,
-  "narration_rate_factor": 0.92
+  "narration_rate_factor": 0.92,
+  "accept_with_findings": true
 }
