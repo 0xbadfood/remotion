@@ -90,10 +90,14 @@ def image_prompt_ladder(contexts, style):
             while words and word_count(" ".join(words)) > 8:
                 words.pop()
             return {**value, "text": " ".join(words), "reason": "Code fallback: the narration heading."} if words else None
+        # The asset's own short style phrase, never the film's full style text, which may mention labels
+        # ("identified as illustration") that the raster-text check rightly rejects.
+        look = RASTER_LABEL.sub("", str(value.get("visual_style") or "painterly, muted palette"))
+        look = re.sub(r"\b(?:label\w*|caption\w*|text|typography|words?)\b", "", look, flags=re.I).strip(" ,.;")
         return {**value, "people_in_frame": [], "setting": "Abstract backdrop",
                 "visual_message": "An abstract backdrop; the banner and narration carry the point.",
                 "prompt": ("Abstract editorial backdrop: soft layered fields of light, paper texture and muted colour, gentle "
-                           "depth, no people, no objects, no machines, no buildings, no landscape, no text. Style: " + str(style)),
+                           "depth, no people, no objects, no machines, no buildings, no landscape. Look: " + (look or "painterly")),
                 "acceptance": ["No people, machines, places or text", "Matches the shared visual style"]}
     return ladder
 
@@ -484,7 +488,9 @@ def make_image_prompts(models, library, films, evidence, orientations, experimen
                  "This is a historical documentary, so show the real people involved where the sources place them "
                  "(meetings, briefings, public appearances, documented places); empty rooms and distant anonymous "
                  "figures in every scene take the realism out of the film. Keep violence, wounds and death indirect, "
-                 "but do not leave the people out.")
+                 "but do not leave the people out. This applies to public and historical figures: a private individual "
+                 "whose story is told as an example (a victim, a widow, a villager) is never shown as a named likeness; "
+                 "show the place, an unnamed figure from behind or at a distance, or an object from the account instead.")
         if required_people and not message_recovery:
             task += (" required_people must each be visibly depicted, listed in people_in_frame, in at least one asset "
                      "of this chapter; pick the asset whose narration and facts best support showing them.")

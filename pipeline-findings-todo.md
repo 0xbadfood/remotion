@@ -178,6 +178,13 @@ rescue chapters; the film ran 46% long.
   abbreviations and symbols (km -> kilometres). The voice and aligner get the spoken form, the audit gets it except
   for capitalised tokens, and captions keep the written words. Live on tiger C03: "N T C A Phase Four". Names are not
   respelled (the arbiter still handles name variants); a pronunciation lexicon for names could come later.
+- Scene plans on the tiger run: the ladder fired for the first time (C05 A015, widow Shobita's account: four rounds of
+  contradictory findings, then rung 2, then rung 3; accepted after screening at 76). C07 was accepted after screening
+  at 79; C04 and C08 evidence after screening at 76 and 80. No scene-plan failure.
+- [x] Rung 3 failed the raster-text check: it embedded the film style ("reconstructed scenes are identified as
+  illustration"). It now uses the asset's own short style phrase with label words stripped.
+- [x] Image task "show the real people involved" now applies to public and historical figures only: a private
+  individual in an example story is never a named likeness (the place, an unnamed figure or an object instead).
 
 ## Dandi March (20-min long film, 2026-10-13)
 

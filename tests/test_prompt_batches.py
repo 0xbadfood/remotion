@@ -260,7 +260,10 @@ class ImagePromptLadderTests(unittest.TestCase):
         banner = {"scene_key": "170:S12", "text": "Rural gatherings grew", "reason": "x"}
         self.assertEqual(ladder(2, "A010", asset), ABSTRACT_VISUAL)
         self.assertEqual(ladder(2, "170:S12", banner), NEUTRAL_BANNER)
+        asset["visual_style"] = "Painterly; reconstructed scenes are identified as illustration, no text"
         built = ladder(3, "A010", asset)
+        from infofilm.planning import RASTER_LABEL
+        self.assertIsNone(RASTER_LABEL.search(built["prompt"]))            # tiger C05: rung 3 failed this check
         self.assertEqual((built["people_in_frame"], built["fact_ids"]), ([], ["F03"]))
         self.assertIn("no people", built["prompt"])
         label = ladder(3, "170:S12", banner)
