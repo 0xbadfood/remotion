@@ -45,7 +45,7 @@ def person_errors(people):
                 errors.append(f'Visible person needs a bounded {key}')
         if person.get('reference_kind') not in {'photograph', 'historical_portrait'}:
             errors.append('reference_kind must be photograph or historical_portrait')
-        if 'birth_year' in person and (type(person['birth_year']) is not int or not -3000 <= person['birth_year'] <= 2030):
+        if person.get('birth_year') is not None and (type(person['birth_year']) is not int or not -3000 <= person['birth_year'] <= 2030):
             errors.append('birth_year must be an integer year (negative for BCE)')
         name = str(person.get('name', '')).casefold().strip()
         if name in names:

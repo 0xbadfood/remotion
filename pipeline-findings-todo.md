@@ -164,6 +164,12 @@ rescue chapters; the film ran 46% long.
 - [ ] Source quality: the floor counts sources and sites, not reputation; a pet magazine got in, and there was no
   primary census report. Consider a reputation preference (government, UNESCO, journals, universities first) in the
   research prompt or code ranking. Local Wikipedia (roadmap 3) would also seed better sources.
+- Stopped at 15:48 on OpenRouter 402 (credits; topped up, resumed). [ ] A billing error should stop the whole job at
+  once with a plain message (build with the Anthropic connection).
+- [x] Cast deadlock, 9 rounds: the reviewer demanded quoted researchers and a private widow ("principal people must be
+  seen"), code demanded integer birth years nobody knows, the planner dropped them, and so on. Non-fatal (the film
+  went on castless). Fix: the cast task leaves out private individuals used as examples and experts quoted only as
+  sources (a named private person's likeness is never generated); birth_year may be null when unknown.
 
 ## Dandi March (20-min long film, 2026-10-13)
 

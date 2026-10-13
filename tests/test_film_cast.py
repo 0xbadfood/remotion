@@ -25,6 +25,13 @@ class FilmCastTests(unittest.TestCase):
         self.assertTrue(any('birth_year' in e for e in errors)); self.assertTrue(any('chapter ids' in e for e in errors))
         self.assertTrue(cast_errors({'people': [self.person('Ludwig Beck')] * 3}, CORPUS, {'C01'}, 2))
 
+    def test_unknown_birth_year_is_null_not_a_deadlock(self):
+        # Tiger film: the planner added living researchers, code demanded a birth year nobody knows, the planner
+        # dropped them, the reviewer demanded them back (9 rounds).
+        self.assertEqual(cast_errors({'people': [self.person('Ludwig Beck', birth_year=None)]}, CORPUS, {'C01'}, 12), [])
+        from infofilm.film_cast import TASK
+        self.assertIn('private individuals whose stories serve as examples', TASK)
+
     def test_show_in_names_chapters_where_the_person_is_seen(self):
         self.assertTrue(any('show_in' in e for e in cast_errors({'people': [self.person('Ludwig Beck', show_in=[])]}, CORPUS, {'C01'}, 12)))
         self.assertTrue(any('show_in' in e for e in cast_errors({'people': [self.person('Ludwig Beck', show_in=['C02'])]}, CORPUS, {'C01', 'C02'}, 12)))

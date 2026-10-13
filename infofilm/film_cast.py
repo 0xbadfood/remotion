@@ -14,8 +14,11 @@ TASK = (
     "List the real, named public or historical people this film will visibly show in its illustrations, using the "
     "chapter scripts and verified chapter facts below. Include a person only when the narration or facts name them and "
     "a scene would plausibly depict them; leave out people merely mentioned in passing, groups and unnamed people. "
+    "Also leave out private individuals whose stories serve as examples (a victim, a witness, a villager) and experts or "
+    "researchers who are only quoted as sources: they are not cast unless the story is about them, and a named "
+    "private person's likeness is never generated. A film with no such people has an empty cast. "
     "Use each person's full canonical name exactly as the facts give it (never a guessed first name). birth_year is an "
-    "integer (negative for BCE; best known estimate). reference_kind is photograph when authentic photographs exist, "
+    "integer (negative for BCE; best known estimate), or null when no reliable year is known. reference_kind is photograph when authentic photographs exist, "
     "historical_portrait for figures before photography. appearance_context gives the life period, age and role in "
     "this film, from the facts only; do not invent injuries, clothing or physical details. "
     "This is a historical documentary: the principal people of the story must be seen, not only named. show_in lists "
@@ -63,8 +66,9 @@ def cast_errors(value, corpus, chapter_ids, maximum, fact_refs=None):
         if name.casefold() in seen:
             errors.append(f"{label} {name!r}: is listed twice")
         seen.add(name.casefold())
-        if type(person.get("birth_year")) is not int or not -3000 <= person["birth_year"] <= 2030:
-            errors.append(f"{label} {name!r}: birth_year must be an integer year")
+        if person.get("birth_year") is not None and (type(person.get("birth_year")) is not int
+                                                      or not -3000 <= person["birth_year"] <= 2030):
+            errors.append(f"{label} {name!r}: birth_year must be an integer year, or null when unknown")
         if person.get("reference_kind") not in {"photograph", "historical_portrait"}:
             errors.append(f"{label} {name!r}: reference_kind must be photograph or historical_portrait")
         if not isinstance(person.get("appearance_context"), str) or not 5 <= len(person["appearance_context"]) <= 240:
