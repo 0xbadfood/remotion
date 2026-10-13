@@ -428,7 +428,7 @@ async function refreshYouTube() {
   } catch { button.textContent = 'YouTube'; }
 }
 $('youtube-connect').addEventListener('click', async () => {
-  try { const {url} = await api('/api/youtube/connect', {method: 'POST'}); window.location.href = url; }
+  try { const {url} = await api('/api/youtube/connect', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}'}); window.location.href = url; }
   catch (error) { alert(error.message); }
 });
 {
