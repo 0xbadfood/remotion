@@ -5,6 +5,29 @@ images amdserver image factory, music local ACE-Step; voice and images reached t
 127.0.0.1:18092). Record findings here first; fix them after the analysis is complete. Related, older notes:
 `performance-todo.md` (scheduling design), `todo-next.md`.
 
+## Long-term roadmap (user order, 2026-10-13)
+
+1. **Animations.** Motion for stills, layered on the image checkpoint, so it also works on films already produced,
+   and optional per film (user, 2026-10-12). Ladder, cheapest first, as in "Low priority: livelier visuals" below:
+   - renderer only: a focus point per beat, transitions and a mood look;
+   - 2.5D depth parallax and animated route maps;
+   - image-to-video for a few hero shots per chapter.
+2. **Famous people database.** About 1000 people cover roughly 80% of a history film's cast. Details are under the
+   Dandi March cast item:
+   - the list: Wikidata humans ranked by sitelinks or pageviews;
+   - the portraits: Commons public domain or CC only, several per person, tagged by era;
+   - the names: aliases as name variants.
+
+   Live search stays for the long tail.
+3. **Local Wikipedia with a suitable index.** An offline dump (e.g. Kiwix ZIM or the XML dump) with a full-text and
+   entity index, as the research starting point:
+   - seed facts, dates, people and outbound sources before any web search;
+   - fewer web searches and fetches;
+   - faster, steadier research;
+   - a shared backbone for the cast database's people and aliases.
+
+   Web search then goes to primary and scholarly sources the dump points to.
+
 ## Run and rescue rules (user decision 2026-10-13: 2-3 clean runs; the user fires the runs)
 
 Duration is a target, not a limit: dense subjects take the time they need (Manhattan Project ran 17:56 for 15:00
