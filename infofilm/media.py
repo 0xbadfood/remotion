@@ -230,17 +230,18 @@ def align_audio(config, store, audio, script, name, *, spoken_points=None):
     legacy = store.root / "alignment" / legacy_identity[:20]
     # Saved provider wording belongs to the saved recording. In particular,
     # do not force old cardinal-year speech through a new split-year transcript.
+    from .speech import apply as speech_apply
     year_styles = {}
     for point in script["points"]:
-        source = point["narration"]
+        source = speech_apply(point["narration"], point.get("speech"))
         recorded = (spoken_points or {}).get(point["id"])
         current = mfa_numeric_text(source)
         prior = mfa_numeric_text(source, natural_years=False)
-        if recorded is not None and recorded not in {source, current, prior}:
+        if recorded is not None and recorded not in {source, current, prior, point["narration"]}:
             raise ValueError("Saved synthesis wording does not match its source point")
         year_styles[point["id"]] = recorded is None or recorded == current
-    expanded = "\n\n".join(mfa_numeric_text(p["narration"], natural_years=year_styles[p["id"]])
-                           for p in script["points"])
+    expanded = "\n\n".join(mfa_numeric_text(speech_apply(p["narration"], p.get("speech")),
+                                             natural_years=year_styles[p["id"]]) for p in script["points"])
     expanded = "".join(c for c in unicodedata.normalize("NFKD", expanded) if not unicodedata.combining(c))
     spoken_text = re.sub(r"[ \t]+", " ", expanded).strip()
     alignment_policy = ("natural-years-v3" if any(year_styles[p["id"]] and
@@ -327,6 +328,7 @@ def align_audio(config, store, audio, script, name, *, spoken_points=None):
 
             def source_tokens(value, point, offset):
                 if candidate["text"] != lexicon_text:
+                    value = speech_apply(value, point.get("speech"))
                     value = mfa_numeric_text(value, context=point["narration"], offset=offset,
                                              natural_years=year_styles[point["id"]])
                 value = "".join(c for c in unicodedata.normalize("NFKD", value) if not unicodedata.combining(c))

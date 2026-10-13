@@ -123,16 +123,21 @@ def prepare_audio(config, store, models, evidence, duration, rate, experimental,
         if current_config.get("tts_engine") == "omnivoice":
             return render_omnivoice(current_config, store, script["points"], label)
         return render_vibevoice(current_config, store, script["points"], label)
+    from .speech import apply as speech_apply, lexicon as speech_lexicon
+    entries = (speech_lexicon(config, store, script["points"])
+               if config.get("speech_conditioning", True) and config.get("tts_engine") != "omnivoice" else {})
+    audited = {**script, "points": [{**p, "narration": speech_apply(p["narration"], entries, audit=True)}
+                                    for p in script["points"]]}
     for attempt in range(2):
         audio, info = render(config, f"narration-{duration}-{attempt}")
-        audit = audit_audio(config, store, audio, script_text(script), points=script["points"])
+        audit = audit_audio(config, store, audio, script_text(audited), points=audited["points"])
         if audit["status"] != "passed":
             store.event(f"narration-{duration}", "audit_failed", {"audit": audit})
             if attempt == 1:
                 raise RuntimeError("Narration did not pass bounded ASR review")
             # Preserve the failed take and render the same text as a new provider job.
             audio, info = render({**config, "audio_variant": attempt+1}, f"narration-{duration}-repair-{attempt}")
-            audit = audit_audio(config, store, audio, script_text(script), points=script["points"])
+            audit = audit_audio(config, store, audio, script_text(audited), points=audited["points"])
             if audit["status"] != "passed":
                 raise RuntimeError("Narration repair still needs review; both takes and audits are retained")
         actual = info["duration_seconds"]

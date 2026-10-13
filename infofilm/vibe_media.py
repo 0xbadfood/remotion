@@ -16,6 +16,7 @@ from .core import Store, digest, gpu_lease, read, write, shares_gpu
 from .media import AlignmentError, align_audio, audio_info, audit_audio, mfa_numeric_text, request, wait_job
 from .planning import script_text, word_count
 from .gpu_release import release_vibevoice
+from .speech import apply as speech_apply, with_speech
 
 
 @contextmanager
@@ -80,13 +81,13 @@ def _batch(config, store, root, tasks, reference, attempt, index, name):
                 data={"speaker_id": "infofilm_" + digest(reference.read_bytes())[:16]},
                 files={"file": (reference.name, handle, "audio/wav")})
         body = {"job_id": job_id, "lang_key": config["language"], "cfg_scale": 1.3,
-            "items": [{"script": "Speaker 1: " + mfa_numeric_text(p["narration"]),
+            "items": [{"script": "Speaker 1: " + mfa_numeric_text(speech_apply(p["narration"], p.get("speech"))),
                        "voice_samples": [staged["voice_ref"]],
                        "output_name": p["id"] + ".wav", "chunk_index": index*40+i}
                       for i, p in enumerate(tasks)]}
         record = {"state": "submission_started", "job_id": job_id, "body": body,
                   "points": [{"point_id": p["id"], "text_sha256": digest(p["narration"]),
-                              "spoken_text": mfa_numeric_text(p["narration"])} for p in tasks],
+                              "spoken_text": mfa_numeric_text(speech_apply(p["narration"], p.get("speech")))} for p in tasks],
                   "synthesis_text_policy": "contextual-spoken-years-v2"}
         write(record_path, record)
         response = request(config, "tts", "POST", "/render-batch", json=body)
@@ -146,7 +147,8 @@ def _check_clip(config, project, point, clip, name):
         earlier = [read(p) for p in sorted(clip.parent.parent.glob("take-*/audit.json"), key=lambda p: int(p.parent.name.split("-")[1]))
                    if p.parent.name != take and p.parent.name.split("-")[1].isdigit()
                    and int(p.parent.name.split("-")[1]) < int(take.split("-")[1])] if take.startswith("take-") else []
-        audit = audit_audio(config, store, clip, point["narration"], earlier_audits=earlier)
+        audit = audit_audio(config, store, clip, speech_apply(point["narration"], point.get("speech"), audit=True),
+                            earlier_audits=earlier)
         if audit["status"] != "passed":
             return {"audit": audit}
         try:
@@ -199,6 +201,8 @@ def render_vibevoice(config, store, points, name):
     if not points or len({p["id"] for p in points}) != len(points) or any(
             not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", p["id"]) or not p["narration"].strip() for p in points):
         raise ValueError("VibeVoice needs unique safe point IDs and nonempty narration")
+    # Pre-voice conditioning: how hard tokens are said (Phase IV -> Four, NTCA -> N T C A); see speech.py.
+    points = with_speech(config, store, points) if config.get("speech_conditioning", True) else points
     reference = Path(config["reference_audio"]).expanduser().resolve()
     identity = digest({"points": points, "reference_sha256": digest(reference.read_bytes()),
                        "url": config["tts_url"], "language": config["language"], "cfg_scale": 1.3,

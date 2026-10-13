@@ -172,6 +172,12 @@ rescue chapters; the film ran 46% long.
   sources (a named private person's likeness is never generated); birth_year may be null when unknown.
 - [x] C03 narration P06 failed 3 takes on "NTCA Phase IV" spoken as "four": the arbiter accepted (number format),
   but code's number check did not know Roman numerals and overruled it. `same_number` now reads Roman numerals.
+- [x] **Pre-voice conditioning** (user design): `speech.py` builds a per-chapter lexicon {written token: spoken} before
+  VibeVoice renders. Code rules come first: Roman numerals after a counter or a regnal name, and letter acronyms. One
+  LLM call (about $0.0005 per chapter) corrects the acronym guesses (DISHA -> Disha, CITES as a word) and adds
+  abbreviations and symbols (km -> kilometres). The voice and aligner get the spoken form, the audit gets it except
+  for capitalised tokens, and captions keep the written words. Live on tiger C03: "N T C A Phase Four". Names are not
+  respelled (the arbiter still handles name variants); a pronunciation lexicon for names could come later.
 
 ## Dandi March (20-min long film, 2026-10-13)
 
