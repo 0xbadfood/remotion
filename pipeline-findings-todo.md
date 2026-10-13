@@ -25,8 +25,8 @@ When something breaks:
 6. **Audio:** a repeated identical Whisper failure goes to the arbiter (the reviewer). A real misread is re-voiced.
 7. **Record every failure** in this file under the run's section, fixed or not.
 
-A run is **clean** when it finishes with no resume and no code fix. Target: 2-3 clean runs in a row
-(Cuban Missile Crisis next).
+A run is **clean** when it finishes with no resume and no code fix. **Production ready = 5 consecutive clean runs**
+(user, 2026-10-13). Production accepts no planning round below score 82.
 
 ## Production: premium arbiter (user design, 2026-10-13; not built)
 
@@ -147,7 +147,9 @@ rescue chapters; the film ran 46% long.
   `screen_unchanged` (blocking findings may only name changed or asked-about units), `coverage_screen` (a batch
   finding demanding a required person is advisory; code's whole-chapter coverage repair owns omissions), and
   `review_decision`: a round passes clean at 82, or at 75 or more when code screened away every blocking finding
-  (development stand-in for the production premium arbiter).
+  (development stand-in for the production premium arbiter). Floor lowered to 65 for development (user): this
+  failure is known and recorded, and runs should keep going to surface others. **Production accepts nothing below
+  82.**
 
 ## Cuban Missile Crisis (20-min long film, 2026-10-13): stopped at the parent plan, restarted fresh
 

@@ -75,7 +75,9 @@ class ModelOutputError(ValueError):
     """A saved response failed the output contract; safe to retry within a budget."""
 
 
-PASS_SCORE, SCREENED_FLOOR = 82, 75
+# Development floor for screened rounds, kept low on purpose so runs keep going and surface other failures (user,
+# 2026-10-13). Production accepts nothing below PASS_SCORE.
+PASS_SCORE, SCREENED_FLOOR = 82, 65
 
 
 def review_decision(review, errors, experimental, config=None):
@@ -84,7 +86,7 @@ def review_decision(review, errors, experimental, config=None):
     batch demanding a person code adds later, and the reviewer's score, which still counts those findings, is at
     least SCREENED_FLOOR), "unreviewed" (non-experimental mode, code checks pass), or why it was rejected.
 
-    Development stand-in: in production this decision moves to the premium arbiter path (an Opus-class model that
+    Development stand-in: production never accepts below PASS_SCORE; this decision moves to the premium arbiter path (an Opus-class model that
     writes the stuck unit itself from unit-level context, with only code checks after it; pipeline-findings-todo.md,
     "Production: premium arbiter"). Until then a fixed score floor decides when screened findings are enough."""
     config = config or {}

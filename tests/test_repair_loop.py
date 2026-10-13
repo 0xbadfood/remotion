@@ -164,7 +164,7 @@ class ReviewDecisionTests(unittest.TestCase):
         screened = {"pass": False, "score": 78, "issues": [{"severity": "minor", "downgraded": "unchanged since ..."}]}
         self.assertEqual(review_decision(clean, [], True), (True, "clean"))
         self.assertEqual(review_decision(screened, [], True), (True, "screened"))
-        self.assertEqual(review_decision({**screened, "score": 72}, [], True), (False, "score_below_floor"))
+        self.assertEqual(review_decision({**screened, "score": 62}, [], True), (False, "score_below_floor"))
         self.assertEqual(review_decision({"pass": False, "score": 78, "issues": []}, [], True), (False, "review_failed"))
         self.assertEqual(review_decision({**screened, "issues": [{"severity": "major"}]}, [], True), (False, "blocking_findings"))
         self.assertEqual(review_decision(clean, ["P01: too long"], True), (False, "code_errors"))
