@@ -14,6 +14,7 @@ import time
 import uuid
 from pathlib import Path
 
+from .youtube import state as youtube_state
 from .core import ROOT, configuration, digest, read, write
 
 STAGES = [("research", "Research"), ("evidence", "Evidence & points"),
@@ -497,7 +498,8 @@ class Queue:
                     poster = f"{prefix}-{row['requested_seconds']}s-{row['orientation']}/poster.png"
                     result["outputs"].append({k:row[k] for k in ["requested_seconds", "actual_seconds", "point_count", "orientation", "media_qa_passed", "layout_passed"]} |
                         {"visual_metrics": row.get("visual_metrics"), "music_engine": row.get("music_engine", "none")} |
-                        {"video_url": f"/media/{job_id}/review/{name}", "poster_url": f"/media/{job_id}/review/{poster}"})
+                        {"video_url": f"/media/{job_id}/review/{name}", "poster_url": f"/media/{job_id}/review/{poster}"} |
+                        {"youtube": youtube_state(portable / name)})
             if job.get("run_id"):
                 log = project / "interface-runs" / job["run_id"] / "worker.log"
                 if log.exists():

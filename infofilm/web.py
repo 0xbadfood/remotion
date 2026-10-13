@@ -80,6 +80,12 @@ class LLMDetect(BaseModel):
     api_key: str | None = Field(default=None, max_length=500)
 
 
+class YouTubeUpload(BaseModel):
+    orientation: Literal["landscape", "portrait"]
+    requested_seconds: int
+    privacy: Literal["unlisted", "private"] = "unlisted"
+
+
 class ResumeRequest(BaseModel):
     image_review: bool | None = Field(default=None, strict=True)
 
@@ -551,6 +557,25 @@ def create_app(config_path=ROOT / "config.json", directory=ROOT / "artifacts/int
             return queue.public(job_id, details=True)
         except KeyError:
             raise HTTPException(404, 'Run not found')
+        except ValueError as exc:
+            raise HTTPException(409, str(exc))
+
+    @app.post("/api/jobs/{job_id}/youtube", status_code=202)
+    def youtube_upload(job_id: str, body: YouTubeUpload):
+        from .youtube import start
+        try:
+            job = queue.get(job_id)
+        except KeyError:
+            raise HTTPException(404, "Run not found")
+        project = Path(job["project"])
+        manifest = ROOT / "output" / project.name / "manifest.json"
+        rows = read(manifest)["outputs"] if job["status"] == "succeeded" and manifest.is_file() else []
+        row = next((r for r in rows if r["orientation"] == body.orientation and r["requested_seconds"] == body.requested_seconds), None)
+        if row is None:
+            raise HTTPException(409, "Only a finished film can be uploaded")
+        try:
+            return start(queue.root, project, job["subject"], ROOT / "output" / project.name / Path(row["portable_video"]).name,
+                         body.privacy)
         except ValueError as exc:
             raise HTTPException(409, str(exc))
 

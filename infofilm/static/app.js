@@ -94,9 +94,32 @@ function renderOutputs(job) {
     const info = el('div', undefined, 'video-info');
     info.append(el('h3', o.orientation === 'portrait' ? 'Portrait · 9:16' : 'Landscape · 16:9'),
       el('p', `${o.actual_seconds.toFixed(1)} seconds · ${o.point_count} points${o.visual_metrics ? ` · ${o.visual_metrics.visual_beats} shots · ${o.visual_metrics.distinct_images} images` : ''} · ${o.requested_seconds}s advisory`),
-      link('Download MP4 ↓', o.video_url, true), el('p', '✓ Media and sampled layout checks passed', 'checks'));
+      link('Download MP4 ↓', o.video_url, true), el('p', '✓ Media and sampled layout checks passed', 'checks'), youtubeControl(job, o));
     card.append(frame, playbackError, info); return card;
   }));
+}
+function youtubeControl(job, o) {
+  // Test channel upload: unlisted, so the film can be watched from anywhere with the link.
+  const box = el('p', undefined, 'youtube');
+  const y = o.youtube;
+  if (y && y.status === 'complete') {
+    const a = link(`Watch on YouTube ↗ (${y.privacy_status})`, y.youtube_url); a.target = '_blank'; a.rel = 'noopener'; box.append(a);
+  } else if (y && y.status === 'uploading') {
+    box.textContent = `YouTube: ${y.message} (${Math.round((y.progress || 0) * 100)}%)`;
+  } else {
+    const button = el('button', y && y.status === 'failed' ? 'Retry YouTube upload' : 'Upload to YouTube (unlisted)', 'secondary'); button.type = 'button';
+    button.addEventListener('click', async () => {
+      button.disabled = true;
+      try {
+        await api(`/api/jobs/${job.id}/youtube`, {method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({orientation: o.orientation, requested_seconds: o.requested_seconds, privacy: 'unlisted'})});
+        await refreshSelected();
+      } catch (error) { box.append(el('span', ` ${error.message}`, 'error')); button.disabled = false; }
+    });
+    box.append(button);
+    if (y && y.status === 'failed') box.append(el('span', ` Last attempt failed: ${y.error || ''}`, 'error'));
+  }
+  return box;
 }
 function renderNarrations(job) {
   const signature = JSON.stringify([job.id, job.narrations]);
