@@ -129,6 +129,31 @@ def pointer_errors(review, candidate, spec=None):
     return errors
 
 
+def screen_unchanged(review, previous, candidate, raised, spec=None):
+    """The review may not move the target (Cuba parent plan, Dandi C07 image prompts): a blocking finding may only name
+    units that changed since the previous review or that an earlier round asked the planner to fix. Other units are
+    dropped from its pointer; a finding left with none becomes minor. Stage-level findings are untouched."""
+    if previous is None or not isinstance((review or {}).get("issues"), list):
+        return review
+    before, after = units(previous, spec), units(candidate, spec)
+    for issue in review["issues"]:
+        if not isinstance(issue, dict) or issue.get("severity") not in {"blocker", "major"}:
+            continue
+        ids = resolve(issue.get("field"), candidate, spec)
+        if not ids:
+            continue
+        live = [i for i in ids if i in raised or i not in before or i not in after
+                or unit_value(previous, i, spec) != unit_value(candidate, i, spec)]
+        if not live:
+            issue.update(severity="minor", downgraded="unchanged since the previous review, which did not ask for this fix")
+        elif len(live) < len(ids):
+            issue.update(field=", ".join(live), narrowed_from=issue.get("field"))
+    if review.get("pass") is not True and not any(isinstance(i, dict) and i.get("severity") in {"blocker", "major"}
+                                                  for i in review["issues"]):
+        review["pass"] = isinstance(review.get("score"), (int, float)) and review["score"] >= 82
+    return review
+
+
 def error_units(error, candidate, spec=None):
     """Validator errors name their unit before the first ': ' (e.g. 'S21: diagram labels/details are too long')."""
     head = str(error).split(": ", 1)[0] if ": " in str(error) else ""

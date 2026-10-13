@@ -237,3 +237,15 @@ class OutputContractTests(unittest.TestCase):
             self.assertEqual(models.call.call_count,2)
             store.db.close()
 
+
+
+class CoverageScreenTests(unittest.TestCase):
+    def test_batch_review_cannot_demand_a_required_person_but_can_flag_a_wrong_depiction(self):
+        from infofilm.planning import coverage_screen
+        screen = coverage_screen(["Ghaffar Khan", "Mahatma Gandhi"])
+        review = {"issues": [
+            {"severity": "major", "field": "A010.people_in_frame", "problem": "The batch omits Ghaffar Khan, although he is listed as required."},
+            {"severity": "major", "field": "A010.prompt", "problem": "Ghaffar Khan is shown among protesters after his arrest."},
+            {"severity": "major", "field": "A011.prompt", "problem": "The banner area is missing."}]}
+        screened = screen(review, {})
+        self.assertEqual([i["severity"] for i in screened["issues"]], ["minor", "major", "major"])

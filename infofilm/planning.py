@@ -64,6 +64,27 @@ RASTER_LABEL = re.compile(r"\b(?:labell?ed|marked|captioned|identified|titled)\s
 IMAGE_PROMPT_UNITS = {"lists": {"assets": "id", "banners": "scene_key"}, "anchors": {"banners": ["scene_key"]}}
 
 
+OMISSION = re.compile(r"\b(?:omit\w*|missing|absent|leaves? out|left out|does not (?:show|depict|include)|"
+                      r"not (?:shown|depicted|included)|required|must (?:show|depict|appear))\b", re.I)
+
+
+def coverage_screen(required_people):
+    """Cast coverage is code's job in batch mode: the whole chapter is checked after the last batch and omissions are
+    repaired then. A review finding asking a batch to add a required person is advisory (Dandi C07: the reviewer
+    removed Ghaffar Khan in round 1, demanded him back in round 5 and removed him again in round 6)."""
+    names = [str(n).casefold() for n in required_people or [] if str(n).strip()]
+
+    def screen(review, candidate):
+        for issue in (review or {}).get("issues") or []:
+            if not isinstance(issue, dict) or issue.get("severity") not in {"blocker", "major"}:
+                continue
+            text = f"{issue.get('problem', '')} {issue.get('correction', '')}"
+            if OMISSION.search(text) and any(n in text.casefold() or n.split()[-1] in text.casefold() for n in names):
+                issue.update(severity="minor", downgraded="cast coverage is checked by code for the whole chapter")
+        return review
+    return screen
+
+
 def image_prompt_units(contexts):
     """IMAGE_PROMPT_UNITS plus each asset's banners: a review pointing at 'A017.banner' repairs the banner of A017's
     scene, which is its own unit (Cuba C04 stalled six rounds repairing the asset while the banner never changed)."""
@@ -539,7 +560,8 @@ def make_image_prompts(models, library, films, evidence, orientations, experimen
                 "whole chapter after the last batch and repairs any omission, so a person missing here is not an issue."
                 if person_references and film_cast and required_people else ""), packet,
                 validator(batch, batch_contexts, fact_ids), experimental=experimental,
-                units=image_prompt_units(batch_contexts))
+                units=image_prompt_units(batch_contexts),
+                screen=coverage_screen(required_people) if person_references and film_cast and required_people else None)
             result["assets"].extend(partial["assets"])
             result["banners"].extend(partial["banners"])
             if hasattr(models, "store"):

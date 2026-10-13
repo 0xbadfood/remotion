@@ -232,9 +232,10 @@ class Models:
                 self.store.event(name, "format_retry", {"attempt": index + 1, "max_attempts": 2, "error": str(exc)})
 
     def loop(self, stage, task, context, validator, *, experimental=True, metrics=None, units=None, seed=None,
-             max_tokens=7000):
+             max_tokens=7000, screen=None):
         """Planner/reviewer trial with targeted repair: `units` declares the stage's smallest repairable units
-        (see repair_units); code maps findings to units, asks for only the flagged units and merges them by id."""
+        (see repair_units); code maps findings to units, asks for only the flagged units and merges them by id.
+        `screen(review, candidate)` lets the stage drop findings about what code owns (e.g. cast coverage)."""
         from . import repair_units as ru
         root = self.store.root / "planning" / stage
         identity = digest({"task": task, "context": context, "experimental": experimental,
@@ -273,6 +274,7 @@ class Models:
             self.store.event(stage, "seeded_repair", {"units": sorted(flagged), "stage_findings": len(stage_findings)})
         mechanical, mechanical_cap = 0, self.config.get("validation_rounds", 3)
         unchanged = []                                  # flagged units the planner returned unchanged last round
+        reviewed, raised = None, set()                  # last reviewed candidate; units ever sent to the planner
         tokens = max_tokens                             # raised when a draft hits the output limit (escalation)
         attempt = -1
         while attempt + 1 < rounds:
@@ -354,6 +356,10 @@ class Models:
                             review = {**review, "issues": fixed["issues"], "pointer_repair": bad_pointers}
                     except Exception as exc:
                         self.store.event(stage, "pointer_repair_failed", {"attempt": attempt + 1, "error": str(exc)[:300]})
+                if screen is not None:
+                    review = screen(review, current)
+                review = ru.screen_unchanged(review, reviewed, current, raised, units)
+                reviewed = current
                 write(directory / f"review-{attempt}.json", review)
             history.append({"attempt": attempt, "candidate_hash": digest(current), "errors": errors, "review": review})
             passing = not errors and (not experimental or (review is not None and review.get("pass") is True and
@@ -387,6 +393,7 @@ class Models:
                 write(root / "current.json", {"input_hash": identity, "selected": str(selected), "evaluation": str(directory / "evaluation.json")})
                 return current
             flagged, stage_findings = ru.flag(current, errors, review, units)
+            raised |= set(flagged)
             if errors and review is None and mechanical < mechanical_cap:
                 # A round lost only to code checks (no review) does not use up the review budget.
                 mechanical += 1; rounds += 1

@@ -129,3 +129,30 @@ class LinkedPointerTests(unittest.TestCase):
         self.assertIn("A banner is its own unit: point at its id (160:S18, 160:S19)", ru.pointer_guide(candidate, spec))
         # Without links the old behaviour stands.
         self.assertEqual(ru.resolve("A017.banner", candidate, {"lists": {"assets": "id", "banners": "scene_key"}}), ["A017"])
+
+
+class ScreenUnchangedTests(unittest.TestCase):
+    """Dandi C07 image prompts: each round blocked on units nobody had changed or asked about."""
+
+    def test_blocking_findings_may_only_name_changed_or_asked_units(self):
+        from infofilm import repair_units as ru
+        spec = {"lists": {"assets": "id"}}
+        before = {"assets": [{"id": "A010", "prompt": "Khan in crowd"}, {"id": "A011", "prompt": "Bazaar"},
+                             {"id": "A012", "prompt": "Rural field"}]}
+        after = {"assets": [{"id": "A010", "prompt": "Crowd only"}, {"id": "A011", "prompt": "Bazaar"},
+                            {"id": "A012", "prompt": "Rural field"}]}
+        review = {"pass": False, "score": 84, "issues": [
+            {"severity": "major", "field": "A010,A011,A012.prompt", "problem": "No banner area"},
+            {"severity": "major", "field": "A012.setting", "problem": "Rural not in evidence"},
+            {"severity": "major", "field": "stage", "problem": "Arc"}]}
+        screened = ru.screen_unchanged(review, before, after, raised=set(), spec=spec)
+        self.assertEqual(screened["issues"][0]["field"], "A010")                     # narrowed to the changed unit
+        self.assertEqual(screened["issues"][1]["severity"], "minor")                 # unchanged, never asked
+        self.assertEqual(screened["issues"][2]["severity"], "major")                 # stage level untouched
+        asked = ru.screen_unchanged({"issues": [{"severity": "major", "field": "A012", "problem": "Still rural"}]},
+                                    before, after, raised={"A012"}, spec=spec)
+        self.assertEqual(asked["issues"][0]["severity"], "major")                    # asked and not fixed: still blocks
+        self.assertIs(ru.screen_unchanged(review, None, after, set(), spec), review)  # first review: nothing to compare
+        lone = ru.screen_unchanged({"pass": False, "score": 85, "issues": [
+            {"severity": "major", "field": "A011", "problem": "x"}]}, before, after, set(), spec)
+        self.assertTrue(lone["pass"])                                                # nothing left blocking, score >= 82
