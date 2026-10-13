@@ -150,6 +150,11 @@ rescue chapters; the film ran 46% long.
   (development stand-in for the production premium arbiter). Floor lowered to 65 for development (user): this
   failure is known and recorded, and runs should keep going to surface others. **Production accepts nothing below
   82.**
+- [x] Downward ladder for a unit that keeps failing (user design, development only): strike 2 simplify (existing),
+  strike 3 rung 2 (image prompts: an abstract explanatory visual, no people, no specific machines or scenes; banners:
+  a neutral label from the narration heading), strike 4 rung 3, built by code (an abstract backdrop in the shared
+  style, or the narration heading as the banner), which review cannot block. **Production removes the ladder:** a
+  paid film must show complex subjects, so the premium arbiter and the premium renderer take over.
 
 ## Cuban Missile Crisis (20-min long film, 2026-10-13): stopped at the parent plan, restarted fresh
 

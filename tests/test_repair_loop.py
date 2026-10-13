@@ -170,3 +170,32 @@ class ReviewDecisionTests(unittest.TestCase):
         self.assertEqual(review_decision(clean, ["P01: too long"], True), (False, "code_errors"))
         self.assertEqual(review_decision(None, [], False), (True, "unreviewed"))
         self.assertEqual(review_decision(screened, [], True, {"screened_score_floor": 80}), (False, "score_below_floor"))
+
+
+class LadderTests(unittest.TestCase):
+    """A unit that keeps failing steps down: simplify (strike 2), stage rung 2 (strike 3), code-owned rung 3 (strike 4)."""
+
+    def test_unit_steps_down_to_a_code_owned_fallback(self):
+        folder = tempfile.TemporaryDirectory(); self.addCleanup(folder.cleanup)
+        store = Store(folder.name); self.addCleanup(store.db.close)
+        models = Models({"planner_url": "p", "reviewer_url": "r", "max_repairs": 2}, store)
+        units = {"lists": {"assets": "id"}}
+        def asset(prompt): return {"assets": [{"id": "A01", "prompt": prompt}, {"id": "A02", "prompt": "Sea."}]}
+        def partial(prompt): return {"units": {"assets": [{"id": "A01", "prompt": prompt}]}}
+        fail = lambda: {"pass": False, "score": 76, "issues": [{"field": "A01", "severity": "major", "problem": "Khan placement"}]}
+        ladder_calls = []
+        def ladder(rung, ident, value):
+            ladder_calls.append((rung, ident))
+            return "ABSTRACT VISUAL PLEASE" if rung == 2 else {**value, "prompt": "Abstract backdrop."}
+        models.call = Mock(side_effect=[asset("Khan in crowd"), fail(), partial("Khan alone"), fail(),
+                                        partial("Simpler Khan"), fail(), partial("Abstract-ish"), fail(),
+                                        {"pass": False, "score": 70, "issues": [{"field": "A01", "severity": "major", "problem": "Too plain"}]},
+                                        {"preferred": "A", "reasons": [], "regressions": []}])
+        result = models.loop("scene-image-prompts-batch-001", "Task", {}, lambda x: [], units=units, ladder=ladder)
+        self.assertEqual(result["assets"][0]["prompt"], "Abstract backdrop.")          # rung 3, built by code
+        self.assertEqual(result["assets"][1]["prompt"], "Sea.")
+        prompts = [c.args[2] for c in models.call.call_args_list]
+        self.assertIn("SIMPLIFY THESE UNITS", prompts[4])                                # strike 2
+        self.assertIn("ABSTRACT VISUAL PLEASE", prompts[6])                              # strike 3: rung 2
+        self.assertEqual(sum("-draft-" in c.args[1] for c in models.call.call_args_list), 4)  # rung 3 needs no draft
+        self.assertEqual(ladder_calls, [(2, "A01"), (3, "A01")])

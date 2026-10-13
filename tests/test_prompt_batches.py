@@ -249,3 +249,20 @@ class CoverageScreenTests(unittest.TestCase):
             {"severity": "major", "field": "A011.prompt", "problem": "The banner area is missing."}]}
         screened = screen(review, {})
         self.assertEqual([i["severity"] for i in screened["issues"]], ["minor", "major", "major"])
+
+
+class ImagePromptLadderTests(unittest.TestCase):
+    def test_rungs_for_assets_and_banners(self):
+        from infofilm.planning import image_prompt_ladder, ABSTRACT_VISUAL, NEUTRAL_BANNER, word_count
+        ladder = image_prompt_ladder({"A010": [{"scene_key": "170:S12", "heading": "Peshawar protests after the arrest of Abdul Ghaffar Khan in April"}]},
+                                     "Painterly, muted")
+        asset = {"id": "A010", "prompt": "Khan in crowd", "people_in_frame": [{"name": "Ghaffar Khan"}], "fact_ids": ["F03"]}
+        banner = {"scene_key": "170:S12", "text": "Rural gatherings grew", "reason": "x"}
+        self.assertEqual(ladder(2, "A010", asset), ABSTRACT_VISUAL)
+        self.assertEqual(ladder(2, "170:S12", banner), NEUTRAL_BANNER)
+        built = ladder(3, "A010", asset)
+        self.assertEqual((built["people_in_frame"], built["fact_ids"]), ([], ["F03"]))
+        self.assertIn("no people", built["prompt"])
+        label = ladder(3, "170:S12", banner)
+        self.assertTrue(label["text"].startswith("Peshawar protests"))
+        self.assertLessEqual(word_count(label["text"]), 8)

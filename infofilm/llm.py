@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import copy
 import contextlib
 import fcntl
 import json
@@ -265,10 +266,14 @@ class Models:
                 self.store.event(name, "format_retry", {"attempt": index + 1, "max_attempts": 2, "error": str(exc)})
 
     def loop(self, stage, task, context, validator, *, experimental=True, metrics=None, units=None, seed=None,
-             max_tokens=7000, screen=None):
+             max_tokens=7000, screen=None, ladder=None):
         """Planner/reviewer trial with targeted repair: `units` declares the stage's smallest repairable units
         (see repair_units); code maps findings to units, asks for only the flagged units and merges them by id.
-        `screen(review, candidate)` lets the stage drop findings about what code owns (e.g. cast coverage)."""
+        `screen(review, candidate)` lets the stage drop findings about what code owns (e.g. cast coverage).
+        `ladder(rung, unit_id, value)` is the stage's downward ladder for a unit that keeps failing: strike 2 simplify
+        (generic), strike 3 rung 2 (returns an instruction, e.g. an abstract visual), strike 4 rung 3 (returns a
+        code-built replacement that review cannot block). Development only: production replaces the ladder with the
+        premium arbiter and renderer, since a paid film must show complex subjects."""
         from . import repair_units as ru
         root = self.store.root / "planning" / stage
         identity = digest({"task": task, "context": context, "experimental": experimental,
@@ -308,13 +313,17 @@ class Models:
         mechanical, mechanical_cap = 0, self.config.get("validation_rounds", 3)
         unchanged = []                                  # flagged units the planner returned unchanged last round
         reviewed, raised = None, set()                  # last reviewed candidate; units ever sent to the planner
+        abstract, owned, pending = {}, set(), None      # ladder rung 2 instructions; rung 3 code-owned units
         tokens = max_tokens                             # raised when a draft hits the output limit (escalation)
         attempt = -1
         while attempt + 1 < rounds:
             attempt += 1
             try:
-                current = self.call("planner", f"{stage}-draft-{identity[:8]}-{attempt}", prompt + feedback,
-                                    max_tokens=tokens, escalate=False)
+                if pending is not None:     # rung 3 replaced every flagged unit: validate and review without a draft
+                    current, pending, prior = pending, None, None
+                else:
+                    current = self.call("planner", f"{stage}-draft-{identity[:8]}-{attempt}", prompt + feedback,
+                                        max_tokens=tokens, escalate=False)
             except ModelOutputError as exc:
                 errors = [str(exc)]
                 history.append({"attempt": attempt, "candidate_hash": None, "errors": errors, "review": None})
@@ -391,6 +400,10 @@ class Models:
                         self.store.event(stage, "pointer_repair_failed", {"attempt": attempt + 1, "error": str(exc)[:300]})
                 if screen is not None:
                     review = screen(review, current)
+                for issue in review.get("issues") or [] if owned else []:
+                    ids = ru.resolve(issue.get("field"), current, units) if isinstance(issue, dict) else []
+                    if ids and set(ids) <= owned and issue.get("severity") in {"blocker", "major"}:
+                        issue.update(severity="minor", downgraded="code-owned fallback (ladder rung 3)")
                 review = ru.screen_unchanged(review, reviewed, current, raised, units)
                 reviewed = current
                 write(directory / f"review-{attempt}.json", review)
@@ -440,12 +453,36 @@ class Models:
                     rounds += self.config.get("simplify_rounds", 2)
                 simplify |= hard
                 self.store.event(stage, "simplify", {"attempt": attempt + 1, "items": sorted(hard), "max_attempts": rounds})
+            if ladder is not None:
+                known = ru.units(current, units)
+                for item in [u for u in flagged if strikes[u] >= SIMPLIFY_AFTER + 2 and u not in owned and u in known]:
+                    built = ladder(3, item, ru.unit_value(current, item, units))
+                    if isinstance(built, dict):
+                        kind, key, index = known[item]
+                        current = copy.deepcopy(current)
+                        current[key][index] = built
+                        owned.add(item); flagged.pop(item)
+                        if len(owned) == 1:
+                            rounds += 1
+                        self.store.event(stage, "ladder", {"attempt": attempt + 1, "unit": item, "rung": 3})
+                for item in [u for u in flagged if strikes[u] >= SIMPLIFY_AFTER + 1 and u not in abstract and u in known]:
+                    instruction = ladder(2, item, ru.unit_value(current, item, units))
+                    if instruction:
+                        abstract[item] = instruction
+                        if len(abstract) == 1:
+                            rounds += 1
+                        self.store.event(stage, "ladder", {"attempt": attempt + 1, "unit": item, "rung": 2})
+                if owned and not flagged and not stage_findings:
+                    write(directory / f"candidate-{attempt}-ladder.json", current)
+                    pending = current
+                    continue
             prior_findings = [{k: x.get(k) for k in ("field", "severity", "problem")}
                               for x in (review or {}).get("issues", []) if x.get("severity") in {"blocker", "major"}]
             if flagged and not stage_findings:
                 prior = current                                   # targeted: only the flagged units come back
                 repeat = [u for u in unchanged if u in flagged]
-                feedback = ru.repair_request(current, flagged, units, simplify, extra=(
+                feedback = ru.repair_request(current, flagged, units, simplify,
+                                             abstract={u: i for u, i in abstract.items() if u in flagged}, extra=(
                     "\nUNCHANGED: your last replacement for " + ", ".join(repeat) + " was identical to the failing "
                     "version and still fails the same check. Change it so the finding no longer applies; code's own "
                     "count or rule in the finding is authoritative." if repeat else ""))

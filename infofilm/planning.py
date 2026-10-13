@@ -64,6 +64,40 @@ RASTER_LABEL = re.compile(r"\b(?:labell?ed|marked|captioned|identified|titled)\s
 IMAGE_PROMPT_UNITS = {"lists": {"assets": "id", "banners": "scene_key"}, "anchors": {"banners": ["scene_key"]}}
 
 
+ABSTRACT_VISUAL = ("Replace this image with an abstract explanatory visual: no people, no specific machines, vehicles, "
+                   "buildings or identifiable places or scenes. Convey the idea symbolically through light, shapes, "
+                   "textures and colour in the shared visual style; people_in_frame must be empty. Keep the id, "
+                   "fact_ids and purpose.")
+NEUTRAL_BANNER = ("Replace this banner with a short neutral label taken from the narration heading: no dates, numbers or "
+                  "names unless the narration states them exactly; at most 8 words.")
+
+
+def image_prompt_ladder(contexts, style):
+    """Downward ladder for an image-prompt unit that keeps failing review (development only; production uses the
+    premium arbiter and renderer). Rung 2: an abstract visual (assets) or a neutral heading label (banners). Rung 3,
+    owned by code: an abstract backdrop in the shared style, or the narration heading itself as the banner."""
+    headings = {row["scene_key"]: str(row.get("heading") or "").strip() for rows in (contexts or {}).values()
+                for row in rows if isinstance(row, dict) and row.get("scene_key")}
+
+    def ladder(rung, ident, value):
+        if not isinstance(value, dict):
+            return None
+        banner = "scene_key" in value and "text" in value
+        if rung == 2:
+            return NEUTRAL_BANNER if banner else ABSTRACT_VISUAL
+        if banner:
+            words = headings.get(value["scene_key"], "").split()
+            while words and word_count(" ".join(words)) > 8:
+                words.pop()
+            return {**value, "text": " ".join(words), "reason": "Code fallback: the narration heading."} if words else None
+        return {**value, "people_in_frame": [], "setting": "Abstract backdrop",
+                "visual_message": "An abstract backdrop; the banner and narration carry the point.",
+                "prompt": ("Abstract editorial backdrop: soft layered fields of light, paper texture and muted colour, gentle "
+                           "depth, no people, no objects, no machines, no buildings, no landscape, no text. Style: " + str(style)),
+                "acceptance": ["No people, machines, places or text", "Matches the shared visual style"]}
+    return ladder
+
+
 OMISSION = re.compile(r"\b(?:omit\w*|missing|absent|leaves? out|left out|does not (?:show|depict|include)|"
                       r"not (?:shown|depicted|included)|required|must (?:show|depict|appear))\b", re.I)
 
@@ -528,7 +562,7 @@ def make_image_prompts(models, library, films, evidence, orientations, experimen
     if not message_recovery:
         result = models.loop("scene-image-prompts", task, base,
                              validator(used, contexts, {f["id"] for f in evidence["facts"]}), experimental=experimental,
-                             units=image_prompt_units(contexts))
+                             units=image_prompt_units(contexts), ladder=image_prompt_ladder(contexts, library["style"]))
     else:
         if type(batch_size) is not int or not 1 <= batch_size <= 8:
             raise ValueError("Image prompt batch_size must be between 1 and 8")
@@ -561,7 +595,8 @@ def make_image_prompts(models, library, films, evidence, orientations, experimen
                 if person_references and film_cast and required_people else ""), packet,
                 validator(batch, batch_contexts, fact_ids), experimental=experimental,
                 units=image_prompt_units(batch_contexts),
-                screen=coverage_screen(required_people) if person_references and film_cast and required_people else None)
+                screen=coverage_screen(required_people) if person_references and film_cast and required_people else None,
+                ladder=image_prompt_ladder(batch_contexts, library["style"]))
             result["assets"].extend(partial["assets"])
             result["banners"].extend(partial["banners"])
             if hasattr(models, "store"):

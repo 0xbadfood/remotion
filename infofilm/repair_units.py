@@ -270,15 +270,20 @@ def pointer_guide(candidate, spec=None):
                       f"not at the item it belongs to." for name, links in spec["links"].items() if links))
 
 
-def repair_request(prior, flagged, spec=None, simplify=(), extra=""):
+def repair_request(prior, flagged, spec=None, simplify=(), extra="", abstract=None):
     """Planner feedback for a targeted repair: prior candidate read-only, flagged units with their findings, and a
     partial response holding only those units."""
     spec = normalized(spec)
     known = units(prior, spec)
     lists = sorted({known[u][1] for u in flagged if u in known and known[u][0] != "field"})
     fields = [u for u in flagged if u in known and known[u][0] == "field"]
-    targeted = {u: {"current": unit_value(prior, u, spec), "findings": f} for u, f in flagged.items() if u in known and u not in simplify}
-    hard = {u: {"current": unit_value(prior, u, spec), "findings": f} for u, f in flagged.items() if u in known and u in simplify}
+    abstract = abstract or {}
+    targeted = {u: {"current": unit_value(prior, u, spec), "findings": f} for u, f in flagged.items()
+                if u in known and u not in simplify and u not in abstract}
+    hard = {u: {"current": unit_value(prior, u, spec), "findings": f} for u, f in flagged.items()
+            if u in known and u in simplify and u not in abstract}
+    rung2 = {u: {"current": unit_value(prior, u, spec), "findings": f, "instruction": abstract[u]}
+             for u, f in flagged.items() if u in known and u in abstract}
     shape = []
     if lists:
         shape.append('"units": {' + ", ".join(f'"{key}": [complete replacement items with their unchanged ids]' for key in lists) + "}")
@@ -299,4 +304,7 @@ def repair_request(prior, flagged, spec=None, simplify=(), extra=""):
                  json.dumps(hard, ensure_ascii=False) +
                  "\nRewrite each as a simpler, safer version with the same id and anchors. Use only facts stated in the "
                  "evidence and drop contested or unsupported specifics instead of guessing a replacement.")
+    if rung2:
+        text += ("\nREPLACE THESE UNITS (they still failed after simplification; follow each unit's instruction exactly, "
+                 "keeping its id and anchors): " + json.dumps(rung2, ensure_ascii=False))
     return text + extra
