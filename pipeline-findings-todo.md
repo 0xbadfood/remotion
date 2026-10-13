@@ -5,6 +5,29 @@ images amdserver image factory, music local ACE-Step; voice and images reached t
 127.0.0.1:18092). Record findings here first; fix them after the analysis is complete. Related, older notes:
 `performance-todo.md` (scheduling design), `todo-next.md`.
 
+## Run and rescue rules (user decision 2026-10-13: 2-3 clean runs; the user fires the runs)
+
+Duration is a target, not a limit: dense subjects take the time they need (Manhattan Project ran 17:56 for 15:00
+and the user found it balanced). Do not trim treatment to hit the clock.
+
+When something breaks:
+1. **Let the run finish.** A long film keeps processing the other chapters; the job ends with
+   `Long film is incomplete; chapters needing attention: Cxx`. Do not cancel to fix one chapter.
+2. **Read the failure first.** Real content problem, or a checker/rule bug? (Manhattan: the C04 banner was a word-count
+   bug; C06 was conflicting rules.) Fix the cause in code, with a test, never by loosening a check blindly.
+3. **Only code and prompt fixes between run and resume.** Settings that feed the long-film identity (duration,
+   planner settings in `external-planner.json`) are fingerprinted, and changing them breaks resume. Change them for
+   the next film, or move `longform-project.json` aside knowingly (the plan gets redone).
+4. **Restart `remotion-video.service`** so the worker loads the fix, then **Resume saved run** in the portal.
+   Research, evidence, beat sheet, cast and finished chapters are reused, and images resume from the chapter snapshots.
+5. **Images never stop a film.** After 4 local takes the best-scoring take is used and tagged for review. Premium rescue
+   is per-run opt-in (off by default).
+6. **Audio:** a repeated identical Whisper failure goes to the arbiter (the reviewer). A real misread is re-voiced.
+7. **Record every failure** in this file under the run's section, fixed or not.
+
+A run is **clean** when it finishes with no resume and no code fix. Target: 2-3 clean runs in a row
+(Cuban Missile Crisis next).
+
 ## BUILD NEXT, in this order (user decision 2026-10-13, after the Manhattan Project run)
 
 Rules every planning stage must follow (from the audit of all 12 production planning stages, 2026-10-13):
