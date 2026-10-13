@@ -125,9 +125,9 @@ class OutputContractTests(unittest.TestCase):
             client=Mock();client.post.return_value=response
             with patch('infofilm.llm.httpx.Client') as constructor:
                 constructor.return_value.__enter__.return_value=client
-                with self.assertRaisesRegex(ModelOutputError,'7000-token'):
+                with self.assertRaisesRegex(ModelOutputError,'9100-token'):      # retried once with 30% more room
                     models.call('planner','test','Prompt')
-            self.assertEqual(len(list((Path(directory)/'requests').glob('*.response.json'))),1)
+            self.assertEqual(len(list((Path(directory)/'requests').glob('*.response.json'))),2)
             self.assertFalse(list((Path(directory)/'requests').glob('*.result.json')))
             store.db.close()
 

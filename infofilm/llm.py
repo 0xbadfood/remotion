@@ -80,7 +80,22 @@ class Models:
         self.config, self.store = config, store
         self.identities = {}
 
-    def call(self, role, name, prompt, *, image_path=None, reference_image_paths=None, max_tokens=7000):
+    def call(self, role, name, prompt, *, image_path=None, reference_image_paths=None, max_tokens=7000, escalate=True):
+        """One model call. A response cut off at the output limit is retried once with 30% more room (user rule,
+        2026-10-13): retrying at the same cap tends to fail again. Repair-loop drafts pass escalate=False because the
+        loop raises their cap itself (x1.6 up to max_output_tokens)."""
+        try:
+            return self._call_once(role, name, prompt, image_path=image_path, reference_image_paths=reference_image_paths,
+                                   max_tokens=max_tokens)
+        except ModelOutputError as exc:
+            if not escalate or "output limit" not in str(exc):
+                raise
+            larger = round(max_tokens * 1.3)
+            self.store.event(name, "output_escalated", {"max_tokens": max_tokens, "next_max_tokens": larger})
+            return self._call_once(role, name + "-escalated", prompt, image_path=image_path,
+                                   reference_image_paths=reference_image_paths, max_tokens=larger)
+
+    def _call_once(self, role, name, prompt, *, image_path=None, reference_image_paths=None, max_tokens=7000):
         root = self.store.root / "requests"
         references = list(reference_image_paths or [])
         signature = digest({"url": self.config[role + "_url"], "prompt": prompt,
@@ -264,7 +279,7 @@ class Models:
             attempt += 1
             try:
                 current = self.call("planner", f"{stage}-draft-{identity[:8]}-{attempt}", prompt + feedback,
-                                    max_tokens=tokens)
+                                    max_tokens=tokens, escalate=False)
             except ModelOutputError as exc:
                 errors = [str(exc)]
                 history.append({"attempt": attempt, "candidate_hash": None, "errors": errors, "review": None})

@@ -130,3 +130,26 @@ class OutputLimitEscalationTests(unittest.TestCase):
         self.assertEqual(result["points"][0]["narration"], "One.")
         caps = [c.kwargs.get("max_tokens") for c in models.call.call_args_list[:3]]
         self.assertEqual(caps, [7000, 11200, 12000])                          # x1.6, then the 12k ceiling
+
+
+class CallEscalationTests(unittest.TestCase):
+    """Calls outside the repair loop (creative brief, orientation, reviews, arbiter) failed or retried at the same cap."""
+
+    def test_output_limit_retries_once_with_30_percent_more_room(self):
+        from infofilm.llm import ModelOutputError
+        folder = tempfile.TemporaryDirectory(); self.addCleanup(folder.cleanup)
+        store = Store(folder.name); self.addCleanup(store.db.close)
+        models = Models({"planner_url": "p", "reviewer_url": "r"}, store)
+        limit = ModelOutputError("LLM response reached its 7000-token output limit; raw response preserved")
+        models._call_once = Mock(side_effect=[limit, {"ok": True}])
+        self.assertEqual(models.call("planner", "creative-brief", "Task", max_tokens=7000), {"ok": True})
+        self.assertEqual([c.kwargs["max_tokens"] for c in models._call_once.call_args_list], [7000, 9100])
+        self.assertTrue(models._call_once.call_args_list[1].args[1].endswith("-escalated"))
+        models._call_once = Mock(side_effect=[limit, limit])                   # a second cut-off stands
+        with self.assertRaises(ModelOutputError):
+            models.call("planner", "x", "Task", max_tokens=7000)
+        for kwargs, error in (({}, ModelOutputError("LLM returned invalid JSON")), ({"escalate": False}, limit)):
+            models._call_once = Mock(side_effect=[error])
+            with self.assertRaises(ModelOutputError):
+                models.call("planner", "y", "Task", **kwargs)
+            self.assertEqual(models._call_once.call_count, 1)                  # bad JSON / loop drafts: not here

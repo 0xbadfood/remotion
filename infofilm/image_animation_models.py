@@ -407,8 +407,9 @@ class ImageAnimationModels:
                 raise ModelOutputError("Cached local response must contain one JSON object; response preserved")
             return value
         try:
+            # This router owns a fixed, terminal output budget per activity; no hidden escalation.
             return local.call(role, name, prompt, image_path=image_path,
-                              reference_image_paths=references, max_tokens=budget)
+                              reference_image_paths=references, max_tokens=budget, escalate=False)
         finally:
             # The shared adapter writes directly to disk; scrub its artifacts even when
             # parsing failed before the outer route could inspect the returned value.
@@ -502,7 +503,7 @@ class ActivityModels(Models):
                        "image_animation_activity": activity}
         self.identities = {}
 
-    def call(self, role, name, prompt, *, image_path=None, reference_image_paths=None, max_tokens=7000):
+    def call(self, role, name, prompt, *, image_path=None, reference_image_paths=None, max_tokens=7000, escalate=True):  # escalate: fixed budgets here
         if role not in {"planner", "reviewer"}:
             raise ValueError("Image animation model roles must be planner or reviewer")
         activity = self.activity if role == "planner" else "review"
