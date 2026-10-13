@@ -136,12 +136,18 @@ rescue chapters; the film ran 46% long.
 
 ## Dandi March (20-min long film, 2026-10-13)
 
+Result: 19:31 for 20:00 (-2%), 8 chapters, 1 h 49 min with two fix-and-resume stops. C07 passed clean at 88 on
+resume. YouTube upload from the portal works (Cuba uploaded).
+
 - [x] Beat sheet (8 chapters) hit the 7000-token output cap twice; retries kept the same cap. Loop drafts now raise
   the cap x1.6 up to 12000, and the beat sheet starts at about 1000 tokens per chapter. Every other model call retries
   a cut-off once with 30% more room (user rule). Resume passed.
 - Audio: 4 arbiter rulings in 8 chapters (2 accept name variants such as Sabarmati and Dandi; 2 retry real misreads:
   "Philip Miller" for Webb Miller, 322 for 320 injured). 3 cross-checks passed without the arbiter.
-- [ ] Cast: only 4 of 9 people got photo references (Gandhi, Naidu and Azad are well photographed). Investigate.
+- [ ] Cast: only 4 of 9 people got photo references (Gandhi, Naidu and Azad are well photographed), and cast took 13
+  minutes (Cuba: 17). **Plan (user, later): an offline database of famous people**: vetted, license-checked
+  portrait references plus name variants, built ahead of time, so the pipeline looks well-known people up instantly
+  and searches online only for the long tail. Should fix coverage and cut the cast stage's time.
 - [x] C07 image prompts batch 2: 6 rounds at score 78, each blocking on units nobody changed, and the reviewer
   removed Ghaffar Khan, demanded him back, then removed him again. Fixes in the shared repair loop:
   `screen_unchanged` (blocking findings may only name changed or asked-about units), `coverage_screen` (a batch
