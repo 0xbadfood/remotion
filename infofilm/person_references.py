@@ -54,8 +54,17 @@ def person_errors(people):
     return errors
 
 
-# Reliable photographs are rare for people born before this year; they are drawn from the evidence without a reference.
+# Before photography a likeness comes from a documented portrait (painting, engraving, miniature, bust, coin).
 PHOTO_ERA_BIRTH_YEAR = 1850
+
+
+def planned_kind(person):
+    """The person with the depiction kind the reference search uses: historical_portrait for anyone born before
+    PHOTO_ERA_BIRTH_YEAR, whatever the image plan asked. Applied before keys are computed, so the plan, the worker and
+    the identity check all see the same person."""
+    if isinstance(person.get('birth_year'), int) and person['birth_year'] < PHOTO_ERA_BIRTH_YEAR:
+        return {**person, 'reference_kind': 'historical_portrait'}
+    return person
 
 
 def person_key(person):
@@ -231,7 +240,10 @@ def prepare_person_references(config, store, library):
         errors = person_errors(asset.get('people_in_frame'))
         if errors:
             raise ValueError(f"{asset['id']} person plan: {'; '.join(errors)}")
-        for person in asset['people_in_frame']:
+    library = {**library, 'assets': [{**a, 'people_in_frame': [planned_kind(p) for p in a['people_in_frame']]}
+                                     if a.get('people_in_frame') else a for a in library['assets']]}
+    for asset in library['assets']:
+        for person in asset.get('people_in_frame') or []:
             unique[person_key(person)] = person
     # Chapters share immutable source portraits; cards still contain only their cast.
     cache_root = (store.root.parent.parent if (store.root / 'chapter-context.json').exists() else store.root) / 'person-references'

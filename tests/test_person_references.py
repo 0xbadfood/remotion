@@ -102,6 +102,24 @@ class PersonReferenceTests(unittest.TestCase):
             self.assertEqual(prepare_person_references(config, self.store, library), result)
             run.assert_not_called()
 
+    def test_pre_photography_person_planned_as_photograph_passes_the_identity_check(self):
+        # Turk run C05/C06/C09: the worker searched Babbage (born 1791) as a portrait, and the returned person no
+        # longer matched the planned one, failing the chapter.
+        from infofilm.person_references import planned_kind
+        config = {'person_references': {'enabled': True}, 'planner_url': 'http://planner', 'reviewer_url': 'http://reviewer'}
+        babbage = {'name': 'Charles Babbage', 'appearance_context': 'Mathematician, 1819', 'reference_kind': 'photograph',
+                   'birth_year': 1791}
+        library = {'assets': [{'id': 'A001', 'people_in_frame': [babbage]}]}
+        def worker(command, **kwargs):
+            request = read(command[-1])
+            write(Path(request['directory'])/'result.json', {'people': {
+                key: {'status': 'unavailable', 'person': planned_kind(person), 'reason': 'none found'}
+                for key, person in request['people'].items()}})
+        with patch('infofilm.person_references.subprocess.run', side_effect=worker):
+            result = prepare_person_references(config, self.store, library)
+        self.assertEqual(result['assets'][0]['people_in_frame'][0]['reference_kind'], 'historical_portrait')
+        self.assertEqual(result['assets'][0]['person_reference_status']['referenced'], 0)
+
     def test_sourcing_budget_and_plan_schema_stop_before_network(self):
         self.assertFalse(reference_settings({})['enabled'])
         self.assertFalse(person_errors([]))

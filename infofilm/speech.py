@@ -3,8 +3,8 @@
 Before VibeVoice renders a chapter, code and one LLM call decide how each hard token should be said: "Phase IV" ->
 "Phase Four", "NTCA" -> "N T C A", "St." -> "Saint". The result is a lexicon {written token: spoken words}:
 - the voice and the aligner receive the spoken form;
-- the ASR audit compares against it where the recognizer would write it that way (numerals, symbols, abbreviations),
-  and against the written token for capitalised words (acronyms, names), which Whisper writes joined;
+- the ASR audit compares against it where the recognizer would write it that way (symbols, abbreviations), and
+  against the written token for capitalised words (acronyms, names, Roman numerals), which Whisper writes as written;
 - captions and banners keep the written text.
 
 Code rules come first and win (Roman numerals after a counter or a regnal name); the LLM covers what rules cannot
@@ -115,7 +115,8 @@ def lexicon(config, store, points):
 
 def apply(text, entries, *, audit=False):
     """Text with each lexicon token replaced by its spoken form. audit=True keeps capitalised tokens (acronyms,
-    names) as written, because the recognizer writes them that way; lowercase abbreviations (km) use the spoken form."""
+    names, Roman numerals: Whisper writes "Joseph II") as written, because the recognizer writes them that way, and the
+    number check accepts "Phase 4" for "Phase IV"; lowercase abbreviations (km) use the spoken form."""
     if not entries:
         return text
 
@@ -125,7 +126,7 @@ def apply(text, entries, *, audit=False):
             spoken = entries.get(written)
             if spoken is None:
                 continue
-            if audit and re.fullmatch(r"[A-Z][A-Za-z]*", written) and not roman_value(written):
+            if audit and re.fullmatch(r"[A-Z][A-Za-z]*", written):
                 return token
             start = token.find(written)
             return token[:start] + spoken + token[start + len(written):]

@@ -29,9 +29,10 @@ def same_failure(audit, earlier):
     the same way (a likely false positive), not the voice misspeaking twice."""
     if not audit.get("transcript_text") or not earlier.get("transcript_text") or not audit.get("expected_text"):
         return False
-    strip = lambda diffs: [(d["expected"], d["observed"], d["operation"]) for d in diffs]
-    current = strip(script_differences(audit))
-    return bool(current) and current == strip(script_differences(earlier))
+    # Shared departures, not identical lists: names of foreign words vary take to take (kempelin/campellan) while
+    # the real cause (Joseph II written for "the second") repeats. The arbiter still reviews every difference.
+    strip = lambda diffs: {(d["expected"], d["observed"], d["operation"]) for d in diffs}
+    return bool(strip(script_differences(audit)) & strip(script_differences(earlier)))
 
 
 def audit_with_escalation(config, store, audio, text, points=None, earlier_audits=None):
@@ -114,12 +115,21 @@ def roman_value(text):
     return total
 
 
+ORDINAL_CARDINAL = {"first": "one", "second": "two", "third": "three", "fourth": "four", "fifth": "five",
+                    "sixth": "six", "seventh": "seven", "eighth": "eight", "ninth": "nine", "tenth": "ten",
+                    "eleventh": "eleven", "twelfth": "twelve", "thirteenth": "thirteen", "fourteenth": "fourteen",
+                    "fifteenth": "fifteen", "sixteenth": "sixteen", "seventeenth": "seventeen",
+                    "eighteenth": "eighteen", "nineteenth": "nineteen", "twentieth": "twenty"}
+
+
 def same_number(difference):
     """Code check for a number written differently by ASR: both sides spell the same characters once numbers are words
     ('p nine' vs 'P9', 'u two hundred thirty five' vs 'U235', 'Phase IV' vs 'four'). A changed value never passes."""
     def compact(value):
+        value = re.sub(r"^the\s+", "", str(value).strip(), flags=re.I)     # regnal reading: "the second" = "II"
         roman = roman_value(value)
-        return re.sub(r"[^a-z]", "", canonical_numeric_text(str(roman) if roman else value).lower())
+        words = canonical_numeric_text(str(roman) if roman else value).lower().split()
+        return re.sub(r"[^a-z]", "", "".join(ORDINAL_CARDINAL.get(w, w) for w in words))
     return bool(compact(difference["expected"])) and compact(difference["expected"]) == compact(difference["observed"])
 
 
@@ -271,7 +281,11 @@ def score_english_transcript(*, expected_text, transcript_text,
     expected = result["expected_text"].split()
     actual = result["transcript_text"].split()
     for tag, i, j, k, l in SequenceMatcher(None, expected, actual, autojunk=False).get_opcodes():
-        if tag != "equal" and _NUMBER_WORDS.intersection(expected[i:j] + actual[k:l]):
+        # A word split ('firsthand' / 'first hand') or the same value written another way ('the second' / 'ii')
+        # is not a changed quantity.
+        if (tag != "equal" and _NUMBER_WORDS.intersection(expected[i:j] + actual[k:l])
+                and "".join(expected[i:j]) != "".join(actual[k:l])
+                and not same_number({"expected": " ".join(expected[i:j]), "observed": " ".join(actual[k:l])})):
             if "numeric_mismatch" not in result["reasons"]:
                 result["reasons"].append("numeric_mismatch")
         # A whole omitted passage must not disappear inside the overall WER

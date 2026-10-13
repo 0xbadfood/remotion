@@ -18,7 +18,7 @@ class SpeechTests(unittest.TestCase):
         lx = {"NTCA": "N T C A", "IV": "Four", "St.": "Saint", "%": "percent", "km": "kilometres", "DISHA": "Disha"}
         text = "(NTCA) Phase IV, St. Martin's 40 % within 5 km of DISHA."
         self.assertEqual(apply(text, lx), "(N T C A) Phase Four, Saint Martin's 40 percent within 5 kilometres of Disha.")
-        self.assertEqual(apply(text, lx, audit=True), "(NTCA) Phase Four, Saint Martin's 40 percent within 5 kilometres of DISHA.")
+        self.assertEqual(apply(text, lx, audit=True), "(NTCA) Phase IV, Saint Martin's 40 percent within 5 kilometres of DISHA.")
 
     def test_llm_entries_are_validated_and_cannot_override_numerals(self):
         text = "NTCA Phase IV and UNESCO sites, St. Mary's."

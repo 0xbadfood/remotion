@@ -444,3 +444,30 @@ class RomanNumeralNumberTests(unittest.TestCase):
         self.assertTrue(same_number({"expected": "IV", "observed": "4"}))
         self.assertFalse(same_number({"expected": "iv", "observed": "five"}))   # a changed value never passes
         self.assertEqual((roman_value("XIV"), roman_value("iiii"), roman_value("tiger")), (14, None, None))
+
+
+class TurkNumberCheckTests(unittest.TestCase):
+    """Turk film: 'firsthand' heard as 'first hand' (C01, C07) and 'Joseph II' for 'the second' (C03 P06, three takes)
+    failed the number check; the arbiter never ran because name misspellings differed between takes."""
+
+    def score(self, expected, actual):
+        from infofilm.audio_audit import score_english_transcript
+        return score_english_transcript(expected_text=expected, transcript_text=actual,
+                                        audio_duration_seconds=5, speech_span_seconds=5)
+
+    def test_word_split_and_same_value_are_not_number_changes(self):
+        from infofilm.audio_audit import same_number
+        self.assertNotIn("numeric_mismatch", self.score("he saw it firsthand that day", "he saw it first hand that day")["reasons"])
+        self.assertNotIn("numeric_mismatch", self.score("emperor Joseph II ordered it", "emperor Joseph the Second ordered it")["reasons"])
+        self.assertIn("numeric_mismatch", self.score("emperor Joseph II ordered it", "emperor Joseph the Third ordered it")["reasons"])
+        self.assertTrue(same_number({"expected": "the second", "observed": "ii"}))
+        self.assertFalse(same_number({"expected": "the second", "observed": "iii"}))
+
+    def test_a_shared_difference_counts_as_a_repeated_failure(self):
+        from infofilm.audio_audit import same_failure
+        base = {"expected_text": "joseph the second met kempelen", "status": "failed"}
+        first = {**base, "transcript_text": "joseph ii met kempelin"}
+        second = {**base, "transcript_text": "joseph ii met campellan"}
+        other = {**base, "transcript_text": "joseph the second met kemp"}
+        self.assertTrue(same_failure(second, first))
+        self.assertFalse(same_failure(other, first))

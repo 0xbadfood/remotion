@@ -157,6 +157,22 @@ rescue chapters; the film ran 46% long.
   loses parallel writing and chapter-sized repair); keeping solo chapters with a wider gate (still patches after
   the fact, cannot manage length).
 
+## Mechanical Turk (20-min target, 2026-10-13): first exit-gate plan, 6 chapters failed on run 1
+
+- [x] Parent plan: rounds 83.4 / 85.2 / 81.25, accepted with findings (round 2); the C03 finding (split 1774 / 1783 /
+  1804) was carried to C03's evidence and script. First real use of the exit gate.
+- [x] C05, C06, C09: "Person reference identity or source status changed". The pre-1850 change rewrote
+  `reference_kind` inside the worker (Babbage, born 1791, planned as photograph), so the returned person no longer
+  matched the planned one. Fix: `person_references.planned_kind` is applied to the plan before keys are computed; the
+  worker applies the same function.
+- [x] C01, C07: whole-chapter audit `numeric_mismatch` on "firsthand"/"first hand" and "secondhand"/"second hand".
+  Fix: the number check ignores a word split and a same-value rewrite (`same_number`).
+- [x] C03 P06: "Joseph II" failed three takes. The audit form used the regnal reading ("the second") but Whisper writes
+  "II"; `same_number` did not read ordinals; the arbiter never ran because foreign-name misspellings differed
+  between takes. Fix: the audit keeps Roman numerals as written; `same_number` reads "the second" = II; a repeated
+  failure means a shared difference, not an identical list.
+- [ ] Sources were popular (BBC, History.com, Slate, Wikipedia, plus Poe's essay): source reputation preference.
+
 ## Pre-photography likeness (user question, 2026-10-13)
 
 - [x] People born before 1850 were marked "unavailable" and never searched, which also cut off the

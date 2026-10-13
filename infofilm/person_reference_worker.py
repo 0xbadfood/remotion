@@ -17,7 +17,7 @@ from PIL import Image, ImageOps
 
 from .core import Store, digest, read, write
 from .llm import Models, ModelOutputError
-from .person_references import PHOTO_ERA_BIRTH_YEAR, PROTOCOL, validate_reference
+from .person_references import PROTOCOL, planned_kind, validate_reference
 
 # Wikimedia refuses (HTTP 403) user agents without a contact URL or email: https://w.wiki/4wJS
 USER_AGENT = 'InfoFilm/1.0 (source-backed educational portrait references; ' + os.environ.get('WIKIMEDIA_CONTACT', 'no contact set') + ')'
@@ -297,10 +297,7 @@ def main():
             return ReferenceSearchClient()
         results = {}
         for position, (key, person) in enumerate(request['people'].items(), 1):
-            if isinstance(person.get('birth_year'), int) and person['birth_year'] < PHOTO_ERA_BIRTH_YEAR:
-                # Before photography the likeness comes from a documented portrait (painting, engraving, miniature,
-                # bust, coin), never a photograph; without one the person is still drawn from the evidence.
-                person = {**person, 'reference_kind': 'historical_portrait'}
+            person = planned_kind(person)     # normally already applied by prepare_person_references
             urls = {k: request['model_config'][k] for k in ('planner_url', 'reviewer_url') if k in request['model_config']}
             archive_id = digest({'protocol': PROTOCOL, 'person': person, 'settings': request['settings'],
                                  'models': urls})[:20]
