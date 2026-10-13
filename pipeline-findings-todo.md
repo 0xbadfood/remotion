@@ -173,6 +173,22 @@ rescue chapters; the film ran 46% long.
   failure means a shared difference, not an identical list.
 - [ ] Sources were popular (BBC, History.com, Slate, Wikipedia, plus Poe's essay): source reputation preference.
 
+## Listening audio arbiter: Whisper + Gemma 4 "two ears" (eval 2026-10-13)
+
+- [x] Gemma 4 12B (llama.cpp, `~/llm/rungemma.sh`, PORT=8001; Qwen service stopped, not disabled) hears audio.
+  Given the script it agrees with it (accepted 1781 -> 1791), so it is only ever asked for a blind transcript.
+- [x] Eval: `scripts/audio_arbiter_eval.py` (64 cases from saved takes: 14 Whisper failures, 10 text-arbiter accepts,
+  20 controls, 20 code-made fakes) and `scripts/audio_consensus_eval.py` (decision rule over saved transcripts).
+  The production Whisper scorer alone passes 13/20 fakes (one swapped name or inserted "not" stays inside WER).
+- [x] Two-ears rule: fail only where both transcripts depart from the same script word and heard the same thing,
+  after code removes formatting (joined words, possessive, same number) and sound-alike name spellings.
+  Result: fakes 0/19 accepted, controls 19/19, text-arbiter accepts 10/10, Whisper failures 11/14; the 3 rejected
+  are genuinely bad (Cuba P03 truncated after two words, Tiger P07 invented phrase, Tiger P04 "2020" for "2022").
+- [x] Gemma refused once ("Please provide the audio") in 64: detect and retry, else fall back.
+- [ ] Thresholds were tuned on these 64 cases: build a holdout (more number fakes, new runs) before trusting them.
+- [ ] Wire into the audit: Gemma transcript on every point (about 10 s) or only on Whisper failure; decide the
+  fallback when Gemma is unusable (text arbiter over all transcripts, user idea) and the llm-gemma4 service unit.
+
 ## Pre-photography likeness (user question, 2026-10-13)
 
 - [x] People born before 1850 were marked "unavailable" and never searched, which also cut off the
