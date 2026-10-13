@@ -13,7 +13,8 @@ from .person_references import bind_reference_params, reference_addendum
 PROTOCOL = 'infofilm.images-unreviewed.v1'
 
 
-def generate_unreviewed_images(config, store, library, *, on_progress=None):
+def unreviewed_provider(config):
+    """(provider id, provider config) for one image generated without review."""
     registry = config.get('image_provider_registry')
     provider_id = config.get('image_provider_id', 'qwen_local')
     current = config
@@ -24,6 +25,11 @@ def generate_unreviewed_images(config, store, library, *, on_progress=None):
             policy = registry['policies'][config.get('image_provider_policy', registry['default_policy'])]
             provider_id = policy['tiers'][0]['provider']
         current = provider_config(config, provider_id, registry['providers'][provider_id])
+    return provider_id, current
+
+
+def generate_unreviewed_images(config, store, library, *, on_progress=None):
+    provider_id, current = unreviewed_provider(config)
     total = len(library['assets'])
     output, pending = {}, []
     for position, asset in enumerate(library['assets'], 1):

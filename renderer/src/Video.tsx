@@ -1,7 +1,7 @@
 import React, {useEffect, useState} from 'react';
 import {AbsoluteFill, Img, Sequence, staticFile, useCurrentFrame, useVideoConfig, delayRender, continueRender, cancelRender, interpolate} from 'remotion';
 
-export type Scene = {id:string; point_id:string; from:number; duration:number; kind:'image'|'flow'|'compare'|'cycle'; src?:string;
+export type Scene = {id:string; point_id:string; from:number; duration:number; kind:'image'|'flow'|'compare'|'cycle'; src?:string; backdrop?:string;
   heading:string; summary:string; labels:string[]; details:string[]; banner?:string; needs_review?:boolean; review_tag?:string; copy_density?:'minimal'|'standard'; motion:'push'|'pull'|'drift'|'hold'; index:number; source_ids:string[]};
 export type FilmData = {title:string;subject:string;width:number;height:number;fps:number;durationInFrames:number;
   creativeBrief?:{resolved_mood:string;intensity:string;theme:{background:string;accent:string;text:string}};
@@ -55,6 +55,8 @@ const SceneView:React.FC<{scene:Scene;total:number;subject:string;brief?:FilmDat
     {scene.kind==='image' && <AbsoluteFill style={{background:minimal?'linear-gradient(180deg,rgba(0,0,0,.48) 0%,rgba(0,0,0,0) 24%,rgba(0,0,0,0) 52%,rgba(0,0,0,.8) 100%)':portrait?'linear-gradient(180deg,rgba(5,25,30,.16) 0%,rgba(5,25,30,.08) 38%,rgba(5,25,30,.94) 60%,rgba(5,25,30,1) 68%)':'linear-gradient(90deg,rgba(5,25,30,.97) 0%,rgba(5,25,30,.9) 25%,rgba(5,25,30,.56) 43%,rgba(5,25,30,.06) 73%)'}}/>}
     {scene.kind!=='image' && <>
       <AbsoluteFill style={{background:`radial-gradient(ellipse at 78% 38%,color-mix(in srgb, ${teal}, white 12%) 0%,${teal} 65%)`}}/>
+      {scene.backdrop && <Img src={staticFile(scene.backdrop)} style={{position:'absolute',width:'100%',height:'100%',objectFit:'cover',filter:'blur(5px) brightness(.42) saturate(.85)',transform:`scale(${1.06+0.04*p})`,transformOrigin:'50% 50%'}}/>}
+      {scene.backdrop && <AbsoluteFill style={{background:`radial-gradient(ellipse at 50% 50%,color-mix(in srgb, ${teal} 45%, transparent) 0%,color-mix(in srgb, ${teal} 80%, transparent) 75%)`}}/>}
       <Diagram scene={scene} progress={p}/>
     </>}
     {scene.kind==='image' && scene.banner && <div data-measure="context-banner" style={{position:'absolute',top:portrait?'10%':'14%',right:portrait?'8%':'6%',maxWidth:portrait?'84%':'45%',padding:'15px 23px',background:amber,color:'#082d34',borderRadius:6,fontSize:portrait?36:29,fontWeight:800,lineHeight:1.18,letterSpacing:1,textTransform:'uppercase',boxShadow:'0 4px 22px rgba(0,0,0,.16)'}}>{scene.banner}</div>}

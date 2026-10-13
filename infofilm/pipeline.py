@@ -350,6 +350,10 @@ def finish_visuals(args, config, store, models, evidence, sources, brief, films,
             value = images[asset_id]
             if digest(Path(value["file"]).read_bytes()) != value["sha256"]:
                 raise ValueError(f"Image manifest hash mismatch: {asset_id}")
+    if any(s.get("kind") != "image" for film in films for s in film["storyboard"]["scenes"]):
+        # Native-graphic scenes get the chapter's thematic backdrop instead of a flat gradient (advisory).
+        from .backdrop import chapter_backdrop
+        chapter_backdrop(config, store)
     stage("images", "succeeded", images=len(images), image_review=config.get('image_review', True))
     if args.until == "images":
         return

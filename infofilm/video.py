@@ -110,10 +110,13 @@ def point_captions(timing):
 
 
 def compile_timeline(config, store, script, timing, storyboard, images, evidence, sources, target, *, creative_brief=None, music=None):
+    from .backdrop import current as current_backdrop
     info = timing["audio_info"]
     fps = config["fps"]
     frames = math.ceil(info["sample_count"] * fps / info["sample_rate"])
+    backdrop = current_backdrop(store)
     identity = digest({"script": script, "timing": timing, "storyboard": storyboard, "images": images,
+                       **({"backdrop": backdrop["sha256"]} if backdrop else {}),
                        "size": [config["width"], config["height"]], "fps": fps, "caption_policy":"point-and-sentence-v2",
                        "creative_brief": creative_brief, "music": music,
                        "renderer_revision": {str(p.relative_to(ROOT / 'renderer')): digest(p.read_bytes())
@@ -161,6 +164,11 @@ def compile_timeline(config, store, script, timing, storyboard, images, evidence
                 raise ValueError("Image changed after selection")
             shutil.copyfile(asset["file"], target_path)
             value["src"] = str(target_path.relative_to(public))
+        elif backdrop:
+            target_path = media / (backdrop["sha256"][:20] + ".png")
+            if not target_path.exists():
+                shutil.copyfile(backdrop["file"], target_path)
+            value["backdrop"] = str(target_path.relative_to(public))
         scenes.append(value)
     captions = point_captions(timing)
     data = {"title": script["title"], "subject": script.get("subject", script["title"]), "width": config["width"], "height": config["height"],
@@ -187,10 +195,11 @@ def render(config, store, root, timeline):
         shutil.copytree(renderer / folder, snapshot / folder, dirs_exist_ok=True)
     data = read(timeline)["data"]
     for scene in data["scenes"]:
-        if scene.get("src"):
-            target = snapshot / "public" / scene["src"]
-            target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(renderer / "public" / scene["src"], target)
+        for key in ("src", "backdrop"):
+            if scene.get(key):
+                target = snapshot / "public" / scene[key]
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(renderer / "public" / scene[key], target)
     modules = snapshot / "node_modules"
     if not modules.exists():
         modules.symlink_to((renderer / "node_modules").resolve(), target_is_directory=True)

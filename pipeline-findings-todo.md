@@ -166,6 +166,12 @@ rescue chapters; the film ran 46% long.
   changed. Pointers `<id>.<another list>` now resolve to that list's units.
 - [ ] Underlying conflict: the evidence reviewer rejected the parent plan's own phrasing. Consider passing plan-wording
   findings back as plan_findings, or letting the evidence stage flag the objective wording.
+- [x] Native-graphic scenes (compare, flow, diagram cards; 12 of 137 shots on the tiger film) sat on a flat gradient.
+  **Chapter backdrop** (user design): one thematic image per chapter, prompt built by code from the lesson objective,
+  visual direction and shared style (written-element sentences stripped), generated once with no review, and shown
+  dimmed and blurred behind those scenes. Any failure leaves the gradient. Live test on jet C02: a compressor cutaway
+  with airflow, no text, about 45 s. Follow-up: ladder rung 3 could reuse the chapter backdrop.
+- Run stopped by the user to fix and restart fresh.
 
 ## Royal Bengal Tiger of the Sundarbans (20-min long film, 2026-10-13): no cast, nature subject
 
