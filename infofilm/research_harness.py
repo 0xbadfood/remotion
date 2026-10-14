@@ -371,7 +371,9 @@ def run_agent(question: str, qwen: QwenClient, research: ResearchTools, max_step
         tool_calls = message.get("tool_calls") or []
         if not tool_calls:
             answer = (message.get("content") or "").strip()
-            gap = research.shortfall(min_sources, min_domains) if max_floor_nudges > 0 else None
+            # Every answer needs at least one usable fetched source (Indus C05: five fetches failed, the agent answered
+            # from nothing with three fetches and many leads left, and the chapter failed).
+            gap = research.shortfall(max(min_sources, 1), max(min_domains, 1)) if max_floor_nudges > 0 else None
             if gap and step < max_steps:
                 # The agent may not decide alone that thin evidence is sufficient.
                 max_floor_nudges -= 1

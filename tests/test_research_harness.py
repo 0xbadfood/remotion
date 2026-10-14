@@ -252,3 +252,15 @@ class SourceFloorTests(unittest.TestCase):
         qwen.complete.side_effect = [self.fetch(pages[0])] + [{'content': f'Answer [a]({pages[0]})'}] * 4
         self.assertTrue(run_agent('Explain.', qwen, tools, min_sources=5, min_domains=3, max_floor_nudges=3).startswith('Answer'))
         self.assertEqual(qwen.complete.call_count, 5)                            # one fetch, three nudges, then accepted
+
+    def test_answer_from_no_usable_source_is_sent_back_even_without_a_floor(self):
+        # Indus C05: every fetch failed or had no claims; the agent answered from nothing with leads and budget left.
+        tools, pages = self.tools()
+        qwen = Mock()
+        qwen.complete.side_effect = [{'content': 'An answer from search snippets only.'}, self.fetch(pages[2]),
+                                     {'content': f'Sourced answer [c]({pages[2]})'}]
+        answer = run_agent('Explain clothing.', qwen, tools)                     # chapter research: no floor set
+        self.assertTrue(answer.startswith('Sourced answer'))
+        nudge = next(m['content'] for m in qwen.complete.call_args_list[-1].args[0]
+                     if m['role'] == 'user' and m['content'].startswith('Not enough evidence'))
+        self.assertIn('at least 1 usable fetched sources from at least 1 different sites; you have 0', nudge)

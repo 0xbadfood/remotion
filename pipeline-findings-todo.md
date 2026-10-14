@@ -173,6 +173,19 @@ rescue chapters; the film ran 46% long.
   failure means a shared difference, not an identical list.
 - [ ] Sources were popular (BBC, History.com, Slate, Wikipedia, plus Poe's essay): source reputation preference.
 
+## Indus Valley (15-min, 2026-10-14) and Great Stink power cut (2026-10-13)
+
+- [x] Great Stink: a UPS failure rebooted the Spark four times (23:44-00:03) and left 157 zero-byte files (152 JSON,
+  4 PNG, 1 WAV); the resume failed six chapters on empty JSON and changed image checkpoints. Fix: `core.write` /
+  `write_bytes` fsync before the rename; the queue sweeps zero-byte data files on every launch; an emptied image
+  take restarts that asset (`intact_checkpoint`). The run is parked; resume it later (user, 2026-10-14).
+- [x] Indus C05 ("What People Wore"): all five fetches failed or had no claims (harappa.com empty, Kenoyer PDF 403,
+  textileschool timeout); chapter research has no floor, so the agent's answer from nothing failed the chapter with
+  budget and leads left. Fix: every research answer needs at least one usable fetched source (nudged up to 3 times).
+- [ ] The beat sheet then ran with C05 lacking evidence and repeated "C05: needs at least two beats" for nine rounds:
+  it should stop at once when a chapter has no evidence (or leave that chapter for the resume).
+- [ ] Unrelated: mage-edit, ltx25-api, ltx-web user services crash-loop thousands of times on the Spark.
+
 ## Listening audio arbiter: Whisper + Gemma 4 "two ears" (eval 2026-10-13)
 
 - [x] Gemma 4 12B (llama.cpp, `~/llm/rungemma.sh`, PORT=8001; Qwen service stopped, not disabled) hears audio.
