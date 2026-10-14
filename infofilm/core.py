@@ -23,13 +23,47 @@ def read(path):
     return json.loads(Path(path).read_text())
 
 
-def write(path, value):
+def write_bytes(path, data):
+    """Durable replace: the bytes reach the disk before the rename, so a power cut leaves the old file or the new one,
+    never an empty one (the Great Stink run lost 157 files to zero bytes after a UPS failure, 2026-10-13)."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(path.suffix + ".tmp")
-    temporary.write_text(json.dumps(value, indent=2, ensure_ascii=False) + "\n")
+    temporary = path.with_name(path.name + ".tmp")
+    with open(temporary, "wb") as handle:
+        handle.write(data)
+        handle.flush()
+        os.fsync(handle.fileno())
     temporary.replace(path)
+    directory = os.open(path.parent, os.O_RDONLY)
+    try:
+        os.fsync(directory)
+    finally:
+        os.close(directory)
     return path
+
+
+def write(path, value):
+    return write_bytes(path, (json.dumps(value, indent=2, ensure_ascii=False) + "\n").encode())
+
+
+EMPTY_SWEEP = {".json", ".png", ".jpg", ".jpeg", ".webp", ".wav", ".mp3", ".mp4", ".txt", ".tmp"}
+
+
+def sweep_empty(root):
+    """Remove zero-byte data files under a run folder (left by a power cut before durable writes) so the steps that
+    own them run again on resume. The job database and its journal files are never touched."""
+    removed = []
+    for folder, _, files in os.walk(root):
+        for name in files:
+            path = Path(folder) / name
+            if path.suffix.lower() in EMPTY_SWEEP and not name.startswith("jobs.sqlite3"):
+                try:
+                    if path.stat().st_size == 0:
+                        path.unlink()
+                        removed.append(str(path))
+                except FileNotFoundError:
+                    pass
+    return removed
 
 
 class Store:

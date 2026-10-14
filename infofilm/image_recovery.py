@@ -16,7 +16,7 @@ from PIL import Image
 
 from . import media
 from .composition import asset_composition
-from .core import digest, gpu_lease, read, write
+from .core import digest, gpu_lease, read, write, write_bytes
 from .image_providers import IMAGE_REVIEW_REASONS, image_review_errors, provider_config, check_candidate
 from .image_studio import park_idle_gpu_services
 
@@ -306,15 +306,28 @@ def render_take(config, store, root, params, label):
             with httpx.Client(timeout=180) as client:
                 response = client.get(config["image_url"] + result["url"])
                 response.raise_for_status()
-                temporary = candidate.with_suffix(".tmp.png")
-                temporary.write_bytes(response.content)
-                temporary.replace(candidate)
+                write_bytes(candidate, response.content)
             write(root / "provider-result-0.json", result)
     check_candidate(candidate, store, label)
     with Image.open(candidate) as image:
         if image.size != (int(params['width']), int(params['height'])):
             raise ValueError(f"Provider returned {image.size}, expected requested preview/final dimensions")
     return candidate
+
+
+def intact_checkpoint(state, root, store, case):
+    """The saved message loop, or a fresh one when a saved take's image is missing or changed (a power cut emptied it):
+    the asset starts again instead of stopping the chapter, since images never stop a film."""
+    for take in state["takes"] + ([state["pending_review"]] if state.get("pending_review") else []):
+        path = Path(take["candidate"])
+        if not path.is_file() or digest(path.read_bytes()) != take["sha256"]:
+            store.event(case.get("asset_id", "image"), "checkpoint_reset", {"reason": "saved candidate missing or changed",
+                                                                           "candidate": str(path)})
+            if (root / "takes").exists():     # old provider records must not be reused for the new takes
+                (root / "takes").rename(root / f"takes-reset-{time.time_ns()}")
+            return {"visual_message": state["visual_message"], "current_scene": case["message_annotation"]["initial_scene"],
+                    "takes": [], "status": "running", "repairs": []}
+    return state
 
 
 def run_message_loop(config, store, root, case, models, settings, progress):
@@ -325,9 +338,7 @@ def run_message_loop(config, store, root, case, models, settings, progress):
         "takes": [], "status": "running", "repairs": []}
     if state["visual_message"] != message:
         raise ValueError("Checkpoint message changed")
-    for take in state["takes"] + ([state['pending_review']] if state.get('pending_review') else []):
-        if digest(Path(take["candidate"]).read_bytes()) != take["sha256"]:
-            raise ValueError("Saved candidate missing or changed")
+    state = intact_checkpoint(state, root, store, case)
     if state["status"] != "running":
         return state
     write(state_path, state)

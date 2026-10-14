@@ -16,7 +16,7 @@ import uuid
 from pathlib import Path
 
 from .youtube import state as youtube_state
-from .core import ROOT, configuration, digest, read, write
+from .core import ROOT, configuration, digest, read, sweep_empty, write
 
 STAGES = [("research", "Research"), ("evidence", "Evidence & points"),
           ("creative", "Mood & direction"),
@@ -371,6 +371,9 @@ class Queue:
         project = Path(job["project"])
         result = project / "interface-runs" / run_id / "result.json"
         result.parent.mkdir(parents=True, exist_ok=True)
+        swept = sweep_empty(project) if project.is_dir() else []
+        if swept:     # a power cut left empty files: their steps run again
+            write(result.parent / "swept-empty-files.json", swept)
         request_path = write(result.parent / "request.json", job["request"])
         # Save launch intent before spawning. On a rare server crash between
         # spawn and PID recording, discover the exact command on restart.
