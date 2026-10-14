@@ -182,6 +182,13 @@ rescue chapters; the film ran 46% long.
 - [x] Indus C05 ("What People Wore"): all five fetches failed or had no claims (harappa.com empty, Kenoyer PDF 403,
   textileschool timeout); chapter research has no floor, so the agent's answer from nothing failed the chapter with
   budget and leads left. Fix: every research answer needs at least one usable fetched source (nudged up to 3 times).
+- [x] Indus C04 P05: alignment failed three takes on "before 3300 BCE" ('3300' vs 'three'). The transcript is built
+  from the lexicon-applied text ("3300 B C E": cardinal) but the caption check decided years from the written text
+  ("3300 BCE": year). Fix: the caption check uses the lexicon-applied narration as its year context.
+- [ ] Later: read "3300 B C E" as a year ("thirty-three hundred") by teaching year_text the spelled-out era letters;
+  not done mid-run because it changes the saved wording of recorded points.
+- [ ] Two takes of the same C04 point passed Whisper with "Copper was abandoned" for "abundant": the two-ears check
+  would catch this (see the listening arbiter section).
 - [ ] The beat sheet then ran with C05 lacking evidence and repeated "C05: needs at least two beats" for nine rounds:
   it should stop at once when a chapter has no evidence (or leave that chapter for the resume).
 - [ ] Unrelated: mage-edit, ltx25-api, ltx-web user services crash-loop thousands of times on the Spark.

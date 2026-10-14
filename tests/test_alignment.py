@@ -87,6 +87,18 @@ class AlignmentRecoveryTests(unittest.TestCase):
             self.assertEqual(len(result["words"][2]["mfa_word_ids"]), 6)
             store.db.close()
 
+    def test_era_letters_spelled_by_the_speech_lexicon_keep_one_year_reading(self):
+        # Indus C04 P05: the transcript read "3300 B C E" as a cardinal, the caption check read "3300 BCE" as a year.
+        with tempfile.TemporaryDirectory() as directory:
+            store, audio, script, module, _ = self.setup_run(directory)
+            source = "Finds from before 3300 BCE to about 1700 BCE."
+            script["points"][0].update(narration=source, speech={"BCE": "B C E"})
+            with patch("infofilm.media._mfa_adapter", return_value=(module, Path("adapter.py"))):
+                result = align_audio({}, store, audio, script, "alignment")
+            self.assertIn("three thousand, three hundred B C E", result["provenance"]["orthographic_input"])
+            self.assertEqual([w["word"] for w in result["words"]], source.split())
+            store.db.close()
+
     def test_saved_cardinal_year_recording_keeps_its_provider_wording(self):
         with tempfile.TemporaryDirectory() as directory:
             store, audio, script, module, _ = self.setup_run(directory)

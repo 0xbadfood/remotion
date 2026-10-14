@@ -328,8 +328,12 @@ def align_audio(config, store, audio, script, name, *, spoken_points=None):
 
             def source_tokens(value, point, offset):
                 if candidate["text"] != lexicon_text:
+                    # Decide years from the same text the transcript was built from: the lexicon-applied narration
+                    # (Indus C04: "3300 BCE" read as a year here, "3300 B C E" as a cardinal in the transcript).
+                    spoken = speech_apply(point["narration"], point.get("speech"))
+                    offset = len(speech_apply(point["narration"][:offset], point.get("speech")))
                     value = speech_apply(value, point.get("speech"))
-                    value = mfa_numeric_text(value, context=point["narration"], offset=offset,
+                    value = mfa_numeric_text(value, context=spoken, offset=offset,
                                              natural_years=year_styles[point["id"]])
                 value = "".join(c for c in unicodedata.normalize("NFKD", value) if not unicodedata.combining(c))
                 return module.tokenize(value)
