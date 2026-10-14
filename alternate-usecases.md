@@ -36,3 +36,49 @@ than social media.
   what to watch next).
 - Research tuned for recency (date-filtered search, wire services first) and how source dates are checked.
 - Versioning: how an updated bulletin replaces or links to the earlier one.
+
+## NCERT humanities films (Classes 8-12)
+
+User idea, 2026-10-14. Not built. The maths and science lessons are built from a chapter **digest**
+(`~/manim/kb_research/DIGEST_FORMAT.md`: what the book contains, what it teaches, gaps, checked additions). History,
+geography, political science, economics and sociology fit the infofilm stream better than the lesson stream: they
+are narrative, with people, places, dates, maps and causes, which is what infofilm already does.
+
+### The rules
+
+- **Rooted in the book.** The book chapter, not open research, is the film's subject and its main source. The plan
+  follows the book's sections and its framing.
+- **Coverage.** Every section and key idea of the chapter (or of the chosen topic) is in the film. As in the digest,
+  code lists the book's numbered things (sections, key terms, dates, maps, source boxes) and checks that each is
+  covered, rather than leaving it to the model.
+- **Fill gaps only where the book is visibly incomplete**: a term used but not explained, a missing date or place,
+  a jump in a cause-and-effect chain, a map the text assumes. Each addition is marked as an addition, cited, and
+  kept within the class level.
+- **Never contradict the book.** If an outside source disagrees with the book, the claim is left out, not
+  "corrected". A review step checks every narrated claim against the digest: from the book, a marked addition that
+  agrees with it, or rejected.
+
+### How infofilm changes
+
+- **Research becomes the digest.** The research phase is replaced or bounded by the chapter digest. Claims are
+  tied to book pages and quotes instead of web sources; web research only serves marked gaps.
+- **The digest needs humanities block types**: event (date, place, actors, cause, effect), person, place or map,
+  primary-source box (NCERT history quotes many sources), timeline, table or data, case study, key term, and
+  exercise. `scivid/curriculum.py` indexes science and maths only; the social science books need adding.
+- **Editions.** NCERT is replacing books with new editions (Class 8 among the first). The digest records the
+  edition, and a film is tied to it.
+- **Maps are central** to geography and history. Native map graphics (regions, routes, rivers, borders of the
+  period) are needed; generated images of maps are not reliable enough.
+- **Images and people.** Historical figures use the portrait reference flow. Modern political figures and recent
+  events follow the current-events image rules (no realistic invented scenes of real people).
+- **Neutral tone.** History and politics topics can be contested. The book's framing is the line; the film does not
+  add opinions or alternative narratives.
+- **Length.** Duration comes from the chapter's coverage (a target, not a limit). One film per chapter, or per
+  section for long chapters.
+
+### Open questions (to discuss)
+
+- One film per chapter or per section, and whether a short recap format is also wanted for revision.
+- Language: English first; Hindi narration later?
+- Tying in the book's exercises (an end card, or a quiz from the digest's exercise blocks).
+- Board-exam focus for Classes 10 and 12 (emphasis on what the exam asks).
