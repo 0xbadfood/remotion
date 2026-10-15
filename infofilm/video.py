@@ -181,7 +181,7 @@ def compile_timeline(config, store, script, timing, storyboard, images, evidence
     identity = digest({"script": script, "timing": timing, "storyboard": storyboard, "images": images,
                        **({"backdrop": backdrop["sha256"]} if backdrop else {}),
                        **({"depth": {k: v["sha256"] for k, v in sorted(depth.items())}} if depth else {}),
-                       "size": [config["width"], config["height"]], "fps": fps, "caption_policy":"point-and-sentence-v2", "reveal_policy": "spoken-words-v1", "transition_seconds": config.get("transition_seconds", .5),
+                       "size": [config["width"], config["height"]], "fps": fps, "caption_policy":"point-and-sentence-v2", "reveal_policy": "spoken-words-v1", "transition_seconds": config.get("transition_seconds", .5), "depth_strength": config.get("depth_strength", 1),
                        "creative_brief": creative_brief, "music": music,
                        "renderer_revision": {str(p.relative_to(ROOT / 'renderer')): digest(p.read_bytes())
                            for folder in ['src','public/fonts'] for p in sorted((ROOT / 'renderer' / folder).glob('*')) if p.is_file()}})
@@ -242,7 +242,7 @@ def compile_timeline(config, store, script, timing, storyboard, images, evidence
         scenes.append(value)
     captions = point_captions(timing)
     data = {"title": script["title"], "subject": script.get("subject", script["title"]), "width": config["width"], "height": config["height"],
-            "fps": fps, "durationInFrames": frames, "transitionFrames": round(config.get("transition_seconds", .5) * fps), "scenes": scenes, "captions": captions,
+            "fps": fps, "durationInFrames": frames, "transitionFrames": round(config.get("transition_seconds", .5) * fps), "depthStrength": config.get("depth_strength", 1), "scenes": scenes, "captions": captions,
             "creativeBrief": creative_brief,
             "sources": [{"id": f"S{i+1}", "url": r["url"], "title": r.get("title") or r["url"]} for i, r in enumerate(sources["results"])]}
     timeline = write(root / "timeline.json", {"data": data})

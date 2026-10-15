@@ -4,7 +4,7 @@ import {DepthImage} from './DepthImage';
 
 export type Scene = {id:string; point_id:string; from:number; duration:number; kind:'image'|'flow'|'compare'|'cycle'; src?:string; depth?:string; backdrop?:string;
   heading:string; summary:string; labels:string[]; details:string[]; banner?:string; needs_review?:boolean; review_tag?:string; copy_density?:'minimal'|'standard'; motion:'push'|'pull'|'drift'|'hold'; index:number; source_ids:string[]; reveals?:number[]};
-export type FilmData = {title:string;subject:string;width:number;height:number;fps:number;durationInFrames:number;transitionFrames?:number;
+export type FilmData = {title:string;subject:string;width:number;height:number;fps:number;durationInFrames:number;transitionFrames?:number;depthStrength?:number;
   creativeBrief?:{resolved_mood:string;intensity:string;theme:{background:string;accent:string;text:string}};
   scenes:Scene[]; captions:{start:number;end:number;text:string}[];sources:{id:string;url:string;title:string}[]};
 
@@ -40,7 +40,7 @@ const Diagram:React.FC<{scene:Scene;progress:number;frame:number}> = ({scene,pro
   </div>;
 };
 
-const SceneView:React.FC<{scene:Scene;lead:number;brief?:FilmData['creativeBrief']}> = ({scene,lead,brief}) => {
+const SceneView:React.FC<{scene:Scene;lead:number;brief?:FilmData['creativeBrief'];depthStrength:number}> = ({scene,lead,brief,depthStrength}) => {
   // The sequence starts `lead` frames early so this scene fades in over the previous one; `frame` counts from the cut.
   const raw=useCurrentFrame();
   const frame=raw-lead;
@@ -67,8 +67,8 @@ const SceneView:React.FC<{scene:Scene;lead:number;brief?:FilmData['creativeBrief
     {scene.kind==='image' && scene.src && (scene.depth && !portrait
       // Landscape scenes with a depth map get the 2.5D camera: parallax follows the pan, near layers grow on a push.
       ? <DepthImage src={scene.src} depth={scene.depth} width={width} height={height} focus={focus}
-          shift={[x/width*.45, y/height*.45]}
-          grow={(scene.motion==='pull'?1-ease:scene.motion==='hold'?.35*ease:scene.motion==='drift'?0:ease)*strength*.9}
+          shift={[x/width*.45*depthStrength, y/height*.45*depthStrength]}
+          grow={(scene.motion==='pull'?1-ease:scene.motion==='hold'?.35*ease:scene.motion==='drift'?0:ease)*strength*.9*depthStrength}
           style={{position:'absolute',top:0,width:'100%',height:'100%',transform:`translate(${x}px,${y}px) scale(${zoom})`,transformOrigin:`${focus.x}% ${focus.y}%`}}/>
       : <Img src={staticFile(scene.src)} style={{position:'absolute',top:portrait&&minimal?'8%':0,width:'100%',height:portrait?'63%':'100%',objectFit:portrait&&minimal?'contain':'cover',objectPosition:portrait&&!minimal?'72% 50%':'50% 50%',transform:`translate(${x}px,${y}px) scale(${zoom})`,transformOrigin:`${focus.x}% ${focus.y}%`}}/>)}
     {scene.kind==='image' && <AbsoluteFill style={{background:minimal?'linear-gradient(180deg,rgba(0,0,0,.48) 0%,rgba(0,0,0,0) 24%,rgba(0,0,0,0) 52%,rgba(0,0,0,.8) 100%)':portrait?'linear-gradient(180deg,rgba(5,25,30,.16) 0%,rgba(5,25,30,.08) 38%,rgba(5,25,30,.94) 60%,rgba(5,25,30,1) 68%)':'linear-gradient(90deg,rgba(5,25,30,.97) 0%,rgba(5,25,30,.9) 25%,rgba(5,25,30,.56) 43%,rgba(5,25,30,.06) 73%)'}}/>}
@@ -141,7 +141,7 @@ export const InfoFilm:React.FC<{data:FilmData}> = ({data}) => {
       const prev=data.scenes[i-1];
       const lead=prev?Math.max(0,Math.min(data.transitionFrames??0,Math.floor(prev.duration/3),Math.floor(scene.duration/3))):0;
       return <Sequence key={scene.id} from={scene.from-lead} durationInFrames={scene.duration+lead} premountFor={20}>
-        <SceneView scene={scene} lead={lead} brief={data.creativeBrief}/>
+        <SceneView scene={scene} lead={lead} brief={data.creativeBrief} depthStrength={data.depthStrength??1}/>
       </Sequence>;
     })}
     <Chrome data={data}/>
