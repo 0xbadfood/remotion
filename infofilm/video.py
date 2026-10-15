@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -109,6 +110,66 @@ def point_captions(timing):
     return captions
 
 
+STOP_WORDS = {"the", "and", "for", "with", "from", "into", "that", "this", "was", "were", "are", "its", "their", "his",
+              "her", "they", "them", "who", "which", "what", "when", "where", "over", "under", "than", "then", "also",
+              "not", "but", "all", "any", "one", "two", "new", "more", "most", "very", "been", "has", "had", "have"}
+
+
+def _stems(text):
+    return {w[:6] for w in re.findall(r"[a-z0-9]+", str(text).casefold())
+            if (len(w) >= 3 or w.isdigit()) and w not in STOP_WORDS}
+
+
+def _same(a, b):
+    return a.startswith(b) or b.startswith(a)      # "tax" / "taxes", "refusi" / "refusa" do not match; "boycot" does
+
+
+def label_reveals(labels, details, words, start, end, fps):
+    """Frame offsets (from the scene start) at which each diagram card appears. The first card is there at the cut;
+    each later one appears when the narration first names it (a moment early), in card order, matching first on the
+    words only that card has ("11 March deadline" vs "12 March start"). Cards the narration never names (or names out
+    of order) are spread evenly between their neighbours. Everything is visible by 85% of the scene."""
+    n, length = len(labels), end - start
+    if not n:
+        return []
+    latest, lead, gap = max(0, int(length * .85)), round(.25 * fps), round(.4 * fps)
+    spoken = [(round(w["start"] * fps) - start, _stems(w["word"])) for w in words if start <= round(w["start"] * fps) < end]
+    cards = [_stems(label) or _stems(details[i] if i < len(details) else "") for i, label in enumerate(labels)]
+    found, previous = [0], 0
+    for i in range(1, n):
+        own = cards[i] - set().union(*(c for k, c in enumerate(cards) if k != i))
+        hit = None
+        for stems in (own, cards[i]):
+            hit = next((f for f, said in spoken if f > previous and any(_same(a, b) for a in said for b in stems)), None)
+            if hit is not None:
+                break
+        value = None if hit is None else min(latest, max(0, hit - lead))
+        found.append(value)
+        previous = value if value is not None else previous
+    i = 0
+    while i < n:                                   # fill each run of unnamed cards between its named neighbours
+        if found[i] is not None:
+            i += 1
+            continue
+        j = i
+        while j < n and found[j] is None:
+            j += 1
+        left = found[i - 1] if i else None
+        right = found[j] if j < n else latest
+        for k in range(i, j):
+            if left is None:                       # the scene opens on these cards: the first shows at once
+                found[k] = round(right * (k - i) / (j - i)) if j < n else round(latest * (k - i) / max(1, j - i - 1))
+            else:
+                found[k] = round(left + (right - left) * (k - i + 1) / (j - i + 1))
+        i = j
+    reveals, previous = [], None
+    for value in found:
+        value = value if previous is None else max(value, previous + gap)
+        reveals.append(min(latest, value))
+        previous = reveals[-1]
+    return reveals
+
+
 def compile_timeline(config, store, script, timing, storyboard, images, evidence, sources, target, *, creative_brief=None, music=None):
     from .backdrop import current as current_backdrop
     info = timing["audio_info"]
@@ -117,7 +178,7 @@ def compile_timeline(config, store, script, timing, storyboard, images, evidence
     backdrop = current_backdrop(store)
     identity = digest({"script": script, "timing": timing, "storyboard": storyboard, "images": images,
                        **({"backdrop": backdrop["sha256"]} if backdrop else {}),
-                       "size": [config["width"], config["height"]], "fps": fps, "caption_policy":"point-and-sentence-v2",
+                       "size": [config["width"], config["height"]], "fps": fps, "caption_policy":"point-and-sentence-v2", "reveal_policy": "spoken-words-v1", "transition_seconds": config.get("transition_seconds", .5),
                        "creative_brief": creative_brief, "music": music,
                        "renderer_revision": {str(p.relative_to(ROOT / 'renderer')): digest(p.read_bytes())
                            for folder in ['src','public/fonts'] for p in sorted((ROOT / 'renderer' / folder).glob('*')) if p.is_file()}})
@@ -153,6 +214,8 @@ def compile_timeline(config, store, script, timing, storyboard, images, evidence
             raise ValueError("Point intervals collapse at the chosen frame rate")
         value = {**scene, "id": f"scene-{i+1:02d}", "index": i, "from": start, "duration": end-start,
                  "source_ids": sorted({s for fact in point["fact_ids"] for s in fact_sources[fact]})}
+        if scene["kind"] != "image" and scene.get("labels"):
+            value["reveals"] = label_reveals(scene["labels"], scene.get("details") or [], timing["words"], start, end, fps)
         if scene["kind"] == "image":
             asset = images[scene["asset_id"]]
             if asset.get('needs_review'):
@@ -172,7 +235,7 @@ def compile_timeline(config, store, script, timing, storyboard, images, evidence
         scenes.append(value)
     captions = point_captions(timing)
     data = {"title": script["title"], "subject": script.get("subject", script["title"]), "width": config["width"], "height": config["height"],
-            "fps": fps, "durationInFrames": frames, "scenes": scenes, "captions": captions,
+            "fps": fps, "durationInFrames": frames, "transitionFrames": round(config.get("transition_seconds", .5) * fps), "scenes": scenes, "captions": captions,
             "creativeBrief": creative_brief,
             "sources": [{"id": f"S{i+1}", "url": r["url"], "title": r.get("title") or r["url"]} for i, r in enumerate(sources["results"])]}
     timeline = write(root / "timeline.json", {"data": data})
