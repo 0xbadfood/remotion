@@ -195,16 +195,18 @@ class ImageRecoveryTests(unittest.TestCase):
         config = {'image_url': 'http://f', 'image_provider_registry': registry}
         status = {'state': 'loaded', 'factory': {'dispatch': [{'gpu': 0}, {'gpu': 1}]}}
         with patch('infofilm.media.request', return_value=status) as request:
-            self.assertEqual(pool_size({**config, 'image_provider_id': 'qwen_local'}), 2)   # the factory's GPU workers
+            self.assertEqual(pool_size({**config, 'image_provider_id': 'qwen_local'}), 3)   # the factory's 2 GPU workers + 1 spare
+            spare0 = {**registry, 'pools': {**registry['pools'], 'qwen_local': {'size': 'auto', 'spare': 0}}}
+            self.assertEqual(pool_size({**config, 'image_provider_registry': spare0, 'image_provider_id': 'qwen_local'}), 2)
             self.assertEqual(request.call_args.args[1:4], ('image', 'GET', '/api/status'))
             self.assertEqual(pool_size({**config, 'image_provider_id': 'cloud'}), 3)        # a rate-limited service
             self.assertEqual(pool_size({**config, 'image_provider_id': 'other'}), 1)        # no pool: one at a time
             self.assertEqual(pool_size({**config, 'image_provider_id': 'qwen_local', 'image_pool_size': 5}), 5)
         with patch('infofilm.media.request', return_value={'state': 'loaded'}):
-            self.assertEqual(pool_size({**config, 'image_provider_id': 'qwen_local'}), 1)   # a server without a factory
+            self.assertEqual(pool_size({**config, 'image_provider_id': 'qwen_local'}), 2)   # a server without a factory: 1 + spare
         with patch('infofilm.media.request', side_effect=__import__('httpx').ConnectError('down')):
-            self.assertEqual(pool_size({**config, 'image_provider_id': 'qwen_local'}), 1)
-        for bad in ({'size': 0}, {'size': 'many'}, {'size': 2, 'max_in_flight': 0}):
+            self.assertEqual(pool_size({**config, 'image_provider_id': 'qwen_local'}), 2)
+        for bad in ({'size': 0}, {'size': 'many'}, {'size': 2, 'max_in_flight': 0}, {'size': 'auto', 'spare': -1}):
             with self.assertRaises(ValueError):
                 validate_pools({**registry, 'pools': {'cloud': bad}})
         with self.assertRaises(ValueError):

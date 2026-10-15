@@ -66,6 +66,9 @@ def validate_pools(registry):
         size = pool.get("size", 1)
         if size != "auto" and (type(size) is not int or not 1 <= size <= MAX_POOL):
             raise ValueError(f"Image pool {name}.size must be 1-{MAX_POOL} or \"auto\"")
+        spare = pool.get("spare", 1)
+        if type(spare) is not int or not 0 <= spare <= 8:
+            raise ValueError(f"Image pool {name}.spare must be 0-8")
         limit = pool.get("max_in_flight")
         if limit is not None and (type(limit) is not int or not 1 <= limit <= 4 * MAX_POOL):
             raise ValueError(f"Image pool {name}.max_in_flight must be a positive integer")
@@ -92,9 +95,15 @@ def reported_capacity(config):
 
 
 def pool_size(config):
-    """`image_pool_size` in the run's config overrides (experiments); otherwise the provider's pool; otherwise 1."""
-    size = config.get("image_pool_size") or _pool(config).get("size", 1)
-    return reported_capacity(config) if size == "auto" else int(size)
+    """`image_pool_size` in the run's config overrides (experiments); otherwise the provider's pool; otherwise 1.
+    "auto" is the provider's workers plus `spare` (default 1): a worker's GPU otherwise idles while its own image is
+    reviewed and repaired (Unification of Italy: two in flight 82% of the time, 1.6x instead of 2x), so one more task
+    keeps a job queued behind the GPUs. `max_in_flight` still bounds the jobs at the endpoint."""
+    pool = _pool(config)
+    size = config.get("image_pool_size") or pool.get("size", 1)
+    if size != "auto":
+        return int(size)
+    return min(MAX_POOL, reported_capacity(config) + pool.get("spare", 1))
 
 
 def image_pool(config):

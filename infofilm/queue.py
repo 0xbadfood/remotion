@@ -7,6 +7,7 @@ import json
 import shutil
 import os
 import re
+import signal
 import sqlite3
 import subprocess
 import sys
@@ -209,6 +210,36 @@ class Queue:
         with self.connection() as db:
             db.execute("DELETE FROM jobs WHERE id=?", (job_id,))
         return {"discarded": job_id, "removed": removed}
+
+    CANCELLED = "Cancelled at the user's request. Resume to carry on from the saved stages."
+
+    def cancel(self, job_id, *, grace_seconds=20):
+        """Stop a film the user started by mistake. A queued one never starts. A running one is marked first (so the
+        scheduler does not record it as a crash), then its worker's process group (it runs in its own session) gets
+        SIGTERM, and SIGKILL after `grace_seconds`. Either way it is left interrupted, so a resume reuses its saved
+        stages; provider jobs already submitted simply finish unused."""
+        job = self.get(job_id)
+        with self.connection() as db:
+            changed = db.execute("UPDATE jobs SET status='interrupted',error=?,pid=NULL,updated=? WHERE id=? AND status IN ('queued','running')",
+                                 (self.CANCELLED, time.time(), job_id)).rowcount
+        if not changed:
+            raise ValueError("Only a queued or running film can be cancelled")
+        if job["status"] == "running" and self._alive(job):
+            pid = job["pid"]
+            try:
+                os.killpg(pid, signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+            def finish():
+                deadline = time.monotonic() + grace_seconds
+                while time.monotonic() < deadline and self._alive(job):
+                    time.sleep(.5)
+                if self._alive(job):
+                    with contextlib.suppress(ProcessLookupError):
+                        os.killpg(pid, signal.SIGKILL)
+            threading.Thread(target=finish, name=f"cancel-{job_id[:8]}", daemon=True).start()
+        self.wake.set()
+        return self.get(job_id)
 
     def resume(self, job_id, *, image_review=None):
         if image_review is not None and type(image_review) is not bool:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import threading
 from pathlib import Path
 
 from .core import ROOT, Store, configuration, digest, read, write, resource_slot
@@ -352,7 +353,18 @@ def finish_visuals(args, config, store, models, evidence, sources, brief, films,
                     scene['reference_card_sha256'] = asset['reference_card']['sha256']
             scene["banner"] = scene.get("banner_override", banner_by_scene.get(f"{film['requested_seconds']}:{scene.get('id', scene['point_id'])}", ""))
         write(store.root / f"film-{film['requested_seconds']}" / "storyboard.json", film["storyboard"])
-    images = read(args.image_manifest) if args.image_manifest else generate_images(config, store, prompts, models)
+    backdrop = None
+    if any(s.get("kind") != "image" for film in films for s in film["storyboard"]["scenes"]):
+        # Native-graphic scenes get the chapter's thematic backdrop instead of a flat gradient (advisory). It renders
+        # alongside the scene images (one more job at the factory) rather than after them.
+        from .backdrop import chapter_backdrop
+        backdrop = threading.Thread(target=chapter_backdrop, args=(config, store), name="backdrop", daemon=True)
+        backdrop.start()
+    try:
+        images = read(args.image_manifest) if args.image_manifest else generate_images(config, store, prompts, models)
+    finally:
+        if backdrop:
+            backdrop.join()
     if args.image_manifest:
         needed = {a["id"] for a in prompts["assets"]}
         if not needed <= set(images):
@@ -361,10 +373,6 @@ def finish_visuals(args, config, store, models, evidence, sources, brief, films,
             value = images[asset_id]
             if digest(Path(value["file"]).read_bytes()) != value["sha256"]:
                 raise ValueError(f"Image manifest hash mismatch: {asset_id}")
-    if any(s.get("kind") != "image" for film in films for s in film["storyboard"]["scenes"]):
-        # Native-graphic scenes get the chapter's thematic backdrop instead of a flat gradient (advisory).
-        from .backdrop import chapter_backdrop
-        chapter_backdrop(config, store)
     stage("images", "succeeded", images=len(images), image_review=config.get('image_review', True))
     if args.until == "images":
         return

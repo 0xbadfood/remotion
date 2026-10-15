@@ -519,6 +519,16 @@ def create_app(config_path=ROOT / "config.json", directory=ROOT / "artifacts/int
         except KeyError:
             raise HTTPException(404, "Run not found")
 
+    @app.post("/api/jobs/{job_id}/cancel")
+    def cancel(job_id: str):
+        try:
+            queue.cancel(job_id)
+            return queue.public(job_id, details=True)
+        except KeyError:
+            raise HTTPException(404, "Run not found")
+        except ValueError as exc:
+            raise HTTPException(409, str(exc))
+
     @app.post("/api/jobs/{job_id}/resume")
     def resume(job_id: str, body: ResumeRequest | None = None):
         try:
