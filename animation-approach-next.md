@@ -230,3 +230,12 @@ Tool: `~/portrail` (LivePortrait motion from a driving clip -> LatentSync lip-sy
   (Lala Lajpat Rai died 17 Nov 1928, before Dandi 1930; Sarojini Naidu or Mahadev Desai fit); first person only for
   documented facts; an on-screen note that the narration is imagined in their voice.
 - First step when resumed: a 20 s Salt March intro from existing audio, a public-domain photo, 10 steps.
+
+## Built: 2.5D depth camera (2026-10-15)
+
+Depth Anything V2 Small (Apache-2.0) depth map per accepted image (`infofilm/depth.py`, ~0.05 s/image on the Spark,
+31 images in 3.4 s), softened (blur 0.4% of width) so sharp depth edges warp instead of tearing; WebGL shader in
+`renderer/src/DepthImage.tsx` (landscape scenes): parallax follows the pan (0.45x), near layers grow on a push.
+Render cost: 32 s vs 30 s for 47 s of film. On by default (`image_depth`); advisory. Retrofit of a finished film:
+resume from scenes (images, prompts, audio reused) and render again; Unification of Italy retrofitted, 31/31 scenes,
+layout 70/70. Portrait delivery still uses the flat camera.
