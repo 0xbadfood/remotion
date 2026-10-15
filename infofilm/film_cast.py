@@ -1,6 +1,8 @@
-"""Film cast for long films (phase A gate): the named people the film will show, found once from every chapter's
-accepted script and evidence, with portrait references researched once into the film-wide cache. Chapter image
-prompts then use these canonical names, so references are shared and invented names cannot slip in."""
+"""Film cast: the named people the film will show, found once from the accepted script(s) and evidence, with
+portrait references researched once into the film-wide cache. Image prompts then use these canonical names, so
+references are shared and invented names cannot slip in. Long films cast at the phase A gate (every chapter); a short
+film is cast as a film of one chapter (SHORT_CHAPTER) just before its image prompts (user, 2026-10-15: in the Salt
+March short, batches named Gandhi two ways and no one decided who must be seen)."""
 from __future__ import annotations
 
 import re
@@ -35,6 +37,9 @@ TASK = (
 
 # Repairable unit: one person, with an id code assigns (R01, R02, ...) so a repair can change the name safely.
 CAST_UNITS = {"lists": {"people": "id"}, "assign": {"people": "R"}, "operations": ["people"]}
+
+
+SHORT_CHAPTER = "F"
 
 
 def required_in_chapter(cast, chapter_id):
@@ -132,3 +137,38 @@ def research_cast(config, store, people):
         interpreter = Path(config.get("person_reference_python", sys.executable))
         subprocess.run([str(interpreter), "-u", "-m", "infofilm.person_reference_worker", str(request)], cwd=ROOT, check=True)
     return read(archive / "result.json")["people"]
+
+
+def curriculum_people(evidence):
+    """People a textbook concept names (its coverage points), as planned people for the cast."""
+    points = ((evidence.get("curriculum") or {}).get("record") or evidence.get("curriculum") or {}).get("coverage") or []
+    return [p["point"][len("Person: "):].split(" - ")[0].strip() for p in points
+            if isinstance(p, dict) and str(p.get("point", "")).startswith("Person: ")]
+
+
+def cast_short(config, store, models, film, evidence, *, experimental=True):
+    """The long films' cast step for a short film, treated as one chapter: every cast member has show_in [F], so each
+    is depicted at least once. Reuses a saved cast. Never blocks the film: on failure the prompts go uncast, as before."""
+    from .person_references import reference_settings
+    settings = reference_settings(config)
+    if not settings["enabled"]:
+        return None
+    path = store.root / "film-cast.json"
+    try:
+        store.event("cast", "running", {"scope": "short"})
+        if path.exists():
+            people = read(path)["people"]
+        else:
+            record = {"project": str(store.root), "duration": film["requested_seconds"],
+                      "chapter": {"id": SHORT_CHAPTER, "title": film["script"].get("subject") or "Film"}}
+            planned = curriculum_people(evidence)
+            people = make_cast(models, [record], settings["max_people"], experimental=experimental,
+                               planned_people={SHORT_CHAPTER: planned} if planned else None)
+            write(path, {"people": people})
+        references = research_cast(config, store, people) or {}
+        store.event("cast", "succeeded", {"people": [p["name"] for p in people],
+                    "referenced": sum(r.get("status") == "ready" for r in references.values())})
+        return people
+    except Exception as exc:                       # noqa: BLE001 - the cast improves images; it never stops a film
+        store.event("cast", "failed", {"error": f"{type(exc).__name__}: {exc}"[:300]})
+        return None

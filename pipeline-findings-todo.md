@@ -162,6 +162,17 @@ rescue chapters; the film ran 46% long.
 - **Failed once: OpenAI 520 (Cloudflare edge error) on an image-prompt review.** Planning, script, Indian-voice audio
   (in-8e8b90b37756) and audio review had all passed. 520-524 were not in `TRANSIENT_STATUS`, so one edge error ended
   the run. Fixed: 520-524 now wait and retry like other 5xx (test in `test_llm_settings.py`). Resumed (attempt 2).
+- **Real people in shorts (user, 2026-10-15).** Shorts had no cast: batches named Gandhi two ways ("Mohandas
+  Karamchand Gandhi" x4, "Mahatma Gandhi" x3; separate searches, one failed so A014 went unreferenced), and nothing
+  required anyone to be shown (Gandhi in 7 of 50 images). Fixed: `film_cast.cast_short` runs the long-film cast step
+  for a short as one chapter (F); everyone cast must be seen; curriculum Person points are planned people.
+  Trial on the Salt March script: Gandhi, Irwin, Abdul Ghaffar Khan, Bhagat Singh.
+- **Open: likeness of less famous people.** The A049 Gandhi-Irwin image used the right reference (Karsh 1944 portrait
+  of Irwin as Earl of Halifax) but the man does not look like him (hair, round face); the reference is also 13 years
+  older than the scene. Nothing checks likeness. Ideas: a face-similarity check of the generated face against the
+  reference (insightface is in ~/portrail's venv), prefer references near the scene's year. Also the cast keeps the
+  name as the facts give it ("Irwin", birth year null), a thin search key for a less famous person; consider an
+  identity field (formal name/title, encyclopedia page) used only for reference research.
 - History Studio "make again" on a failed film used to start a new job from scratch; it now resumes the saved run
   when the narrator is unchanged.
 
