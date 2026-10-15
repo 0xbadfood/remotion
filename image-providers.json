@@ -58,5 +58,17 @@
       "min_escalation_attempts": 2,
       "escalation_confidence": 0.8
     }
+  },
+  "pools": {
+    "qwen_local": {
+      "size": "auto",
+      "max_in_flight": 4
+    },
+    "flux_dev_local": {
+      "size": 1
+    },
+    "cloud_premium": {
+      "size": 1
+    }
   }
 }

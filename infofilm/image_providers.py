@@ -91,6 +91,8 @@ def validate_registry(registry):
                 raise ValueError(f"Invalid CFG for {name}")
             if type(provider.get("park_idle_services", False)) is not bool:
                 raise ValueError(f"Invalid parking flag for {name}")
+    from .image_pool import validate_pools
+    validate_pools(registry)
     for name, policy in policies.items():
         if not isinstance(policy, dict):
             raise ValueError(f"Policy {name} must be an object")

@@ -2,6 +2,8 @@ import contextlib
 import copy
 import json
 import tempfile
+import threading
+import time
 import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -9,6 +11,7 @@ from unittest.mock import Mock, patch
 from infofilm.core import Store, configuration, digest, read, write
 from infofilm.image_recovery import (RepairContractError, clean_repair, current_image_review,
     generate_message_images, negative_wording, repair_scene, repair_errors, review_errors, render_take)
+from infofilm.image_pool import ImageWorkerPool, pool_size, validate_pools
 from infofilm.resume import images_checkpoint, resume_images
 from infofilm.planning import script_text
 
@@ -41,13 +44,14 @@ class ImageRecoveryTests(unittest.TestCase):
                 'message_preserved': 'Period document handling conveys revenue administration.'}
 
     @contextlib.contextmanager
-    def engine(self, verdicts, replacements=()):
+    def engine(self, verdicts, replacements=(), workers=1):
         def generate(config, store, root, params, label):
             root.mkdir(parents=True, exist_ok=True)
             p = root / 'candidate-0.png'
             p.write_bytes(params['prompt'].encode())
             return p
         with patch('infofilm.image_recovery.provider_session', return_value=contextlib.nullcontext()) as session, \
+             patch('infofilm.image_recovery.image_pool', side_effect=lambda config: ImageWorkerPool(workers)), \
              patch('infofilm.image_recovery.render_take', side_effect=generate) as render, \
              patch('infofilm.image_recovery.current_image_review', side_effect=verdicts) as review, \
              patch('infofilm.image_recovery.repair_scene', side_effect=replacements) as repair:
@@ -135,6 +139,83 @@ class ImageRecoveryTests(unittest.TestCase):
                     self.assertEqual(report['unresolved'][0]['attempts'], 3)
             finally:
                 store.db.close()
+
+    def parallel_library(self, count):
+        library = copy.deepcopy(self.library)
+        library['assets'] = [{**self.asset, 'id': f'A{n:03d}'} for n in range(1, count + 1)]
+        return library
+
+    def test_film_renders_as_many_images_at_once_as_its_pool_allows(self):
+        library, lock, live, peak = self.parallel_library(5), threading.Lock(), [0], [0]
+        def generate(config, store, root, params, label):
+            with lock:
+                live[0] += 1; peak[0] = max(peak[0], live[0])
+            time.sleep(0.05)
+            with lock:
+                live[0] -= 1
+            root.mkdir(parents=True, exist_ok=True); p = root / 'candidate-0.png'; p.write_bytes(params['prompt'].encode())
+            return p
+        with tempfile.TemporaryDirectory() as d:
+            store = Store(d)
+            try:
+                with self.engine([], workers=2) as (_, render, review, _r):
+                    render.side_effect, review.side_effect = generate, lambda *a, **k: self.verdict()
+                    output = generate_message_images(self.config, store, library, Mock())
+                self.assertEqual(peak[0], 2)
+                self.assertEqual(sorted(output), [a['id'] for a in library['assets']])
+                self.assertEqual(sorted(read(Path(d) / 'image_manifest.json')), sorted(output))
+                progress = store.db.execute("SELECT COUNT(*) FROM events WHERE stage='images' AND state='progress'").fetchone()[0]
+                self.assertEqual(progress, 5)
+            finally:
+                store.db.close()
+
+    def test_a_failed_image_stops_new_ones_and_keeps_finished_ones(self):
+        library = self.parallel_library(4)
+        def generate(config, store, root, params, label):
+            if label.startswith('A001'):
+                raise RuntimeError('factory down')
+            time.sleep(0.05)
+            root.mkdir(parents=True, exist_ok=True); p = root / 'candidate-0.png'; p.write_bytes(params['prompt'].encode())
+            return p
+        with tempfile.TemporaryDirectory() as d:
+            store = Store(d)
+            try:
+                with self.engine([], workers=2) as (_, render, review, _r):
+                    render.side_effect, review.side_effect = generate, lambda *a, **k: self.verdict()
+                    with self.assertRaisesRegex(RuntimeError, 'factory down'):
+                        generate_message_images(self.config, store, library, Mock())
+                self.assertLess(render.call_count, 4)
+                self.assertIn('A002', read(Path(d) / 'image_manifest.json'))
+            finally:
+                store.db.close()
+
+    def test_pool_size_is_configured_per_provider_or_reported_by_it(self):
+        registry = {'providers': {'qwen_local': {'adapter': 'qwen_async'}, 'cloud': {'adapter': 'openrouter_image'}},
+                    'pools': {'qwen_local': {'size': 'auto', 'max_in_flight': 4}, 'cloud': {'size': 3}}}
+        config = {'image_url': 'http://f', 'image_provider_registry': registry}
+        status = {'state': 'loaded', 'factory': {'dispatch': [{'gpu': 0}, {'gpu': 1}]}}
+        with patch('infofilm.media.request', return_value=status) as request:
+            self.assertEqual(pool_size({**config, 'image_provider_id': 'qwen_local'}), 2)   # the factory's GPU workers
+            self.assertEqual(request.call_args.args[1:4], ('image', 'GET', '/api/status'))
+            self.assertEqual(pool_size({**config, 'image_provider_id': 'cloud'}), 3)        # a rate-limited service
+            self.assertEqual(pool_size({**config, 'image_provider_id': 'other'}), 1)        # no pool: one at a time
+            self.assertEqual(pool_size({**config, 'image_provider_id': 'qwen_local', 'image_pool_size': 5}), 5)
+        with patch('infofilm.media.request', return_value={'state': 'loaded'}):
+            self.assertEqual(pool_size({**config, 'image_provider_id': 'qwen_local'}), 1)   # a server without a factory
+        with patch('infofilm.media.request', side_effect=__import__('httpx').ConnectError('down')):
+            self.assertEqual(pool_size({**config, 'image_provider_id': 'qwen_local'}), 1)
+        for bad in ({'size': 0}, {'size': 'many'}, {'size': 2, 'max_in_flight': 0}):
+            with self.assertRaises(ValueError):
+                validate_pools({**registry, 'pools': {'cloud': bad}})
+        with self.assertRaises(ValueError):
+            validate_pools({**registry, 'pools': {'nobody': {'size': 1}}})
+        with self.assertRaises(ValueError):
+            ImageWorkerPool(0)
+
+    def test_pool_settings_do_not_change_image_identity(self):
+        registry = configuration()['image_provider_registry']
+        self.assertNotIn('size', json.dumps(registry['providers']))     # pools live beside the providers, not in them
+        self.assertIn('qwen_local', registry['pools'])
 
     def test_pending_repair_resume_reuses_rejected_candidate(self):
         with tempfile.TemporaryDirectory() as d:

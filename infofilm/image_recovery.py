@@ -18,6 +18,7 @@ from . import media
 from .composition import asset_composition
 from .core import digest, gpu_lease, read, write, write_bytes
 from .image_providers import IMAGE_REVIEW_REASONS, image_review_errors, provider_config, check_candidate
+from .image_pool import image_pool, in_flight
 from .image_studio import park_idle_gpu_services
 
 PROTOCOL = "infofilm.image-message-recovery.v1"
@@ -293,16 +294,17 @@ def render_take(config, store, root, params, label):
                 # unbilled, so submitting again is safe; billed cloud tiers never take this path.
                 store.event(label, "unconfirmed_submission_retried", {"provider_record": str(provider)})
                 provider.unlink()
-            if not provider.exists():
-                write(provider, {"state": "submission_started", "params": params})
-                from .person_references import submit_qwen_job
-                result = submit_qwen_job(config, params, media.request)
-                write(provider, {"state": "submitted", "params": params, "job_id": result["id"]})
-            job_id = read(provider).get("job_id")
-            if not job_id:
-                raise RuntimeError("Unknown Qwen submission outcome; reconcile before resubmitting")
-            from .image_jobs import wait_qwen_job
-            result = wait_qwen_job(config, store, provider, label, request_fn=media.request, wait_fn=media.wait_job)
+            with in_flight(config):
+                if not provider.exists():
+                    write(provider, {"state": "submission_started", "params": params})
+                    from .person_references import submit_qwen_job
+                    result = submit_qwen_job(config, params, media.request)
+                    write(provider, {"state": "submitted", "params": params, "job_id": result["id"]})
+                job_id = read(provider).get("job_id")
+                if not job_id:
+                    raise RuntimeError("Unknown Qwen submission outcome; reconcile before resubmitting")
+                from .image_jobs import wait_qwen_job
+                result = wait_qwen_job(config, store, provider, label, request_fn=media.request, wait_fn=media.wait_job)
             with httpx.Client(timeout=180) as client:
                 response = client.get(config["image_url"] + result["url"])
                 response.raise_for_status()
@@ -481,13 +483,19 @@ def generate_message_images(config, store, library, models, *, on_progress=None)
     # Acquire the standard lease only when standard work remains. Premium
     # recovery happens after this context exits, never under a nested GPU lock.
     session = provider_session(current, store) if pending else contextlib.nullcontext()
-    with session:
-        for position, case, root in pending:
+    pool = image_pool(current) if pending else None
+    lock = pool.lock if pool else None
+
+    def produce(position, case, root):
+        """One asset's message loop. Assets are independent (references are bound beforehand), so the image pool runs
+        several at once; the shared manifest, lists and progress are updated under the pool's lock."""
+        with lock:
             progress = {"position": position, "planned_images": total,
                         "completed_images": len(output)+len(unresolved), "accepted_images": len(output),
                         "blocked_images": len(unresolved), "remaining_images": total-len(output)-len(unresolved)}
-            try:
-                state = run_message_loop(current, store, root, case, models, settings, progress)
+        try:
+            state = run_message_loop(current, store, root, case, models, settings, progress)
+            with lock:
                 if state["status"] == "accepted":
                     value = {**state["selected"], "recovery_protocol": PROTOCOL}
                     write(root / "selected.json", value)
@@ -495,26 +503,36 @@ def generate_message_images(config, store, library, models, *, on_progress=None)
                     write(store.root / "image_manifest.json", output)
                 elif state["status"] == "backend_error":
                     raise RuntimeError(f"{case['asset_id']} needs backend diagnosis")
+                elif terminal['enabled']:
+                    rescue_pending.append((position, case, root))
                 else:
-                    if terminal['enabled']:
-                        rescue_pending.append((position, case, root))
-                    else:
-                        unresolved.append({"asset": case["asset_id"], "status": state["status"],
-                                           "attempts": len(state["takes"]), "checkpoint": str(root)})
-            except RepairContractError as exc:
-                # Keep the pending review/repair checkpoint resumable; continue other assets.
+                    unresolved.append({"asset": case["asset_id"], "status": state["status"],
+                                       "attempts": len(state["takes"]), "checkpoint": str(root)})
+        except RepairContractError as exc:
+            # Keep the pending review/repair checkpoint resumable; continue other assets.
+            with lock:
                 if terminal['enabled'] and (root / 'message-state.json').exists() and terminal_candidates(read(root / 'message-state.json')):
                     rescue_pending.append((position, case, root))
                 else:
                     unresolved.append({"asset": case["asset_id"], "status": "repair_blocked",
                                        "error": str(exc), "checkpoint": str(root)})
-                store.event(case["asset_id"], "repair_blocked", {**progress, "error": str(exc),
-                            "terminal_recovery_queued": any(c['asset_id'] == case['asset_id'] for _, c, _ in rescue_pending)})
+                queued = any(c['asset_id'] == case['asset_id'] for _, c, _ in rescue_pending)
+            store.event(case["asset_id"], "repair_blocked", {**progress, "error": str(exc),
+                        "terminal_recovery_queued": queued})
+        with lock:
             store.event("images", "progress", {**progress, "completed_images": len(output)+len(unresolved),
                         "accepted_images": len(output), "blocked_images": len(unresolved),
                         "remaining_images": total-len(output)-len(unresolved)})
             if on_progress:
                 on_progress()
+
+    with session:
+        if pending:
+            store.event("images", "pool", {"workers": min(pool.size, len(pending)), "pool_size": pool.size})
+            pool.run(pending, lambda job: produce(*job))
+    rescue_pending.sort(key=lambda job: job[0])
+    order = {case['asset_id']: position for position, case, _ in pending}
+    unresolved.sort(key=lambda row: order.get(row['asset'], 0))
     premium_session = contextlib.nullcontext()
     if rescue_pending and any(needs_generation(config, root, case, terminal) for _,case,root in rescue_pending):
         premium_config = provider_config(config, terminal['provider'], registry['providers'][terminal['provider']])
