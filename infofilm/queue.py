@@ -165,6 +165,9 @@ class Queue:
                         raise ValueError("This submission key was already used for different settings")
                     return self.get(previous["id"])
             write(project / "config-snapshot.json", config)
+            if request.get("curriculum"):          # a textbook concept film (History Studio): the book is the source
+                payload["curriculum"] = str(write(project / "curriculum.json", request["curriculum"]["record"]))
+                payload["sources"] = str(write(project / "curriculum-sources.json", request["curriculum"]["sources"]))
             write(project / "web-request.json", payload)
             db.execute("INSERT INTO jobs(id,subject,request,project,status,created,updated,idempotency_key) VALUES(?,?,?,?,?,?,?,?)",
                 (job_id, payload["subject"], json.dumps(payload), str(project), "queued", now, now, idempotency_key))

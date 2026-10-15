@@ -172,6 +172,7 @@ def create(args):
         return resume_music(args)
     config = configuration(args.config)
     chapter_context = read(args.chapter_context) if getattr(args, "chapter_context", None) else None
+    curriculum = read(args.curriculum) if getattr(args, "curriculum", None) else None
     if getattr(args, "image_provider_policy", None):
         config["image_provider_policy"] = args.image_provider_policy
         if not config.get("image_provider_registry") or args.image_provider_policy not in config["image_provider_registry"]["policies"]:
@@ -212,9 +213,12 @@ def create(args):
     evidence_path = store.root / "evidence-final.json"
     experimental = args.review_mode == "experimental"
     stage("evidence", "running")
-    evidence = read(evidence_path) if args.use_evidence and evidence_path.exists() else make_evidence(models, sources, args.subject, experimental=experimental, chapter_context=chapter_context)
+    evidence = read(evidence_path) if args.use_evidence and evidence_path.exists() else make_evidence(models, sources, args.subject, experimental=experimental, chapter_context=chapter_context,
+                                                                                                            **({"curriculum": curriculum} if curriculum else {}))
     if chapter_context:
         evidence["chapter_context"] = chapter_context
+    if curriculum:
+        evidence["curriculum"] = curriculum      # the script step covers every point (planning.make_script)
     write(store.root / "evidence-final.json", evidence)
     stage("evidence", "succeeded", facts=len(evidence["facts"]))
     if args.until == "evidence":

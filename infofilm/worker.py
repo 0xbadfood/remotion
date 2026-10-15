@@ -18,7 +18,7 @@ def run(request_path, result_path):
         value.setdefault("tts_engine", "vibevoice")
         value.setdefault("reference_transcript", None)
         args = SimpleNamespace(**value)
-        for field in ["project", "config", "sources", "reference_audio", "script_dir", "visual_plan_dir", "image_manifest", "chapter_context", "chapter_plan", "orientation_brief"]:
+        for field in ["project", "config", "sources", "curriculum", "reference_audio", "script_dir", "visual_plan_dir", "image_manifest", "chapter_context", "chapter_plan", "orientation_brief"]:
             setattr(args, field, Path(getattr(args, field)) if getattr(args, field, None) else None)
         create(args)
     except ProductionPaused as exc:

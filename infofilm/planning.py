@@ -30,6 +30,10 @@ def evidence_context(extraction, subject):
                 "passages": summary["passages"],
                 "policy": "Claims are a first-pass model digest. Excerpts map to the archived full page; verify contested meaning."})
             continue
+        if row.get("complete"):               # a supplied document read whole (a curriculum film's textbook text)
+            sources.append({"id": f"S{i}", "url": row["url"], "title": row.get("title") or row["url"],
+                            "passages": [{"offset_start": 0, "offset_end": len(text), "text": text}]})
+            continue
         # Archive complete documents; expose relevant, overlapping windows to models.
         intervals = []
         keywords = [w for w in re.findall(r"\w+", subject) if len(w) > 3]
@@ -131,8 +135,11 @@ def image_prompt_units(contexts):
     return {**IMAGE_PROMPT_UNITS, "links": {"banner": links}}
 
 
-def make_evidence(models, extraction, subject="How the Indian monsoon works", audit_notes=None, experimental=True, chapter_context=None):
+def make_evidence(models, extraction, subject="How the Indian monsoon works", audit_notes=None, experimental=True, chapter_context=None,
+                  curriculum=None):
     context = evidence_context(extraction, subject)
+    if curriculum:
+        context["curriculum"] = curriculum
     if audit_notes:
         context["source_audit"] = audit_notes
     if chapter_context:
@@ -141,10 +148,14 @@ def make_evidence(models, extraction, subject="How the Indian monsoon works", au
     def validate(value):
         errors = []
         facts = value.get("facts", [])
-        if not 8 <= len(facts) <= 20:
-            errors.append(f"Provide 8–20 distinct, useful facts: this draft has {len(facts)}" +
+        most = 30 if curriculum else 20
+        if not 8 <= len(facts) <= most:
+            errors.append(f"Provide 8–{most} distinct, useful facts: this draft has {len(facts)}" +
                           ("; merge overlapping facts or drop the least useful ones, keeping every fact the narration needs"
-                           if len(facts) > 20 else "; add verified facts from the sources"))
+                           if len(facts) > most else "; add verified facts from the sources"))
+        if curriculum:
+            from .curriculum import evidence_coverage_errors
+            errors += evidence_coverage_errors(value, curriculum)
         if len({f.get("id") for f in facts}) != len(facts):
             errors.append("Fact IDs must be unique")
         for fact in facts:
@@ -155,6 +166,11 @@ def make_evidence(models, extraction, subject="How the Indian monsoon works", au
             "Explain the core concepts, causal mechanisms or chronology, relevant context, significance and important qualifications supported by the sources. "
             "Distinguish tendencies from guarantees and local mechanisms from large-scale systems. Avoid dated statistics and absolute guarantees. "
             "Return {title, facts:[{id:'F01',claim,source_ids:['S1'],evidence_note:'paraphrased support and section'},...], uncertainties:[string], narrative_priorities:[string]}.")
+    if curriculum:
+        from .curriculum import evidence_task
+        task = task.replace("usable for short informational films", "usable for a short curriculum film").replace(
+            "evidence_note:'paraphrased support and section'}", "evidence_note:'paraphrased support and section',coverage:['K1']}")
+        task += evidence_task(curriculum)
     if chapter_context:
         task += (" This is one chapter of a longer film. Research its owned questions, scope and objective thoroughly. "
                  "Earlier/later chapter context may be a short reminder or handoff; do not retell their material. "
@@ -248,13 +264,18 @@ def make_script(models, evidence, duration, rate=135, experimental=True, suffix=
                  "sentence. Open as beat_sheet.opening says and close as beat_sheet.closing says. The narration must "
                  f"total about {sheet['word_budget']} words (code checks within {round(sheet.get('length_tolerance', .25) * 100)}%); "
                  "this budget replaces the advisory duration and word reference above.")
+    if evidence.get("curriculum"):
+        from .curriculum import script_task
+        task = task.replace("a general-audience informational video", "a curriculum video") + script_task(evidence["curriculum"])
     if correction:
         context["measured_duration_feedback"] = correction
     chapter = evidence.get("chapter_context") or {}
     repair = None
     if seed is not None and chapter.get("continuity_notes"):
         repair = (seed, continuity_findings(chapter["continuity_notes"], (chapter.get("chapter") or {}).get("id", "")))
-    return models.loop(f"script-{duration}{suffix}", task, context, lambda x: script_errors(x, evidence, budget), experimental=experimental,
+    from .curriculum import script_coverage_errors
+    return models.loop(f"script-{duration}{suffix}", task, context,
+                       lambda x: script_errors(x, evidence, budget) + script_coverage_errors(x, evidence), experimental=experimental,
                        units=SCRIPT_UNITS, seed=repair)
 
 
