@@ -157,6 +157,14 @@ rescue chapters; the film ran 46% long.
   loses parallel writing and chapter-sized repair); keeping solo chapters with a wider gate (still patches after
   the fact, cannot manage length).
 
+## History Studio first film (Salt March, 255 s short, curriculum mode, 2026-10-15)
+
+- **Failed once: OpenAI 520 (Cloudflare edge error) on an image-prompt review.** Planning, script, Indian-voice audio
+  (in-8e8b90b37756) and audio review had all passed. 520-524 were not in `TRANSIENT_STATUS`, so one edge error ended
+  the run. Fixed: 520-524 now wait and retry like other 5xx (test in `test_llm_settings.py`). Resumed (attempt 2).
+- History Studio "make again" on a failed film used to start a new job from scratch; it now resumes the saved run
+  when the narrator is unchanged.
+
 ## Mechanical Turk (20-min target, 2026-10-13): first exit-gate plan, 6 chapters failed on run 1
 
 - [x] Parent plan: rounds 83.4 / 85.2 / 81.25, accepted with findings (round 2); the C03 finding (split 1774 / 1783 /
