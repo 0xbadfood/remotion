@@ -215,3 +215,18 @@ simultaneously inventing another mechanism.
 
 The pilot established a convincing rendering method. The next task is to make
 the preparation that we performed manually reproducible.
+
+## Parked: on-screen historical narrator (user idea, 2026-10-15; "expensive, keep it for later")
+
+A historical figure who is not in the cast narrates on screen as a talking portrait, e.g. a witness of the Dandi March.
+Tool: `~/portrail` (LivePortrait motion from a driving clip -> LatentSync lip-sync -> CodeFormer face restore).
+- Test (Mona Lisa, 5.5 s): good quality, but LatentSync took 4 min 54 s at 20 steps (~50x real time on the Spark).
+  Whole-film presence is not viable (~3.5 h for 4 min); short windows only (intro, 2-3 bridges, outro, ~30 s total).
+  10 steps untested. The 3 s driving clip loops; longer windows need a longer, calm driving clip. Its caption
+  step fails on an `av` version mismatch (we would not use it; Remotion composes).
+- Fit: lip-sync slices of the already-approved narration (word timings), rendered on the Spark GPU while the image
+  factory renders scenes; narrator excluded from the cast; voice matched from the Indian narrators by gender/age.
+- Content rules: the narrator must have lived through the events and been present where the narration says
+  (Lala Lajpat Rai died 17 Nov 1928, before Dandi 1930; Sarojini Naidu or Mahadev Desai fit); first person only for
+  documented facts; an on-screen note that the narration is imagined in their voice.
+- First step when resumed: a 20 s Salt March intro from existing audio, a public-domain photo, 10 steps.
