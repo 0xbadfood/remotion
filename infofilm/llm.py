@@ -33,7 +33,8 @@ def keep_unflagged(prior, draft, flagged):
 
 
 REASONING_ROOM = 8000
-TRANSIENT_STATUS = {408, 409, 425, 429, 500, 502, 503, 504, 529}
+TRANSIENT_STATUS = {408, 409, 425, 429, 500, 502, 503, 504, 529,
+                    520, 521, 522, 523, 524}     # Cloudflare edge errors in front of hosted APIs (OpenAI 520, 2026-10-15)
 TRANSIENT_ERRORS = (httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadTimeout, httpx.WriteTimeout, httpx.PoolTimeout,
                     httpx.RemoteProtocolError, httpx.ReadError, httpx.WriteError)
 

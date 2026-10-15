@@ -130,6 +130,16 @@ class AdapterTests(unittest.TestCase):
         retries = self.store.db.execute("SELECT COUNT(*) FROM events WHERE state='transient_retry'").fetchone()[0]
         self.assertEqual(retries, 2)
 
+    def test_cloudflare_edge_error_on_responses_api_is_retried(self):
+        # The first History Studio film died on a single OpenAI 520 (Cloudflare) during image-prompt review.
+        edge = httpx.Response(520, request=httpx.Request('POST', 'https://api.openai.com'))
+        raw = {'status': 'completed', 'output': [{'type': 'message', 'content': [{'type': 'output_text', 'text': '{"pass": true}'}]}],
+               'usage': {'input_tokens': 5, 'output_tokens': 1}}
+        _, client = self.client(edge, httpx.Response(200, json=raw, request=httpx.Request('POST', 'https://api.openai.com')))
+        with patch('infofilm.llm.time.sleep'):
+            self.assertEqual(Models(self.config, self.store).call('reviewer', 'review', 'Prompt'), {'pass': True})
+        self.assertEqual(client.post.call_count, 2)
+
     def test_missing_cloud_key_fails_clearly(self):
         config = dict(self.config); config['llm_secrets_root'] = str(self.root / 'empty')
         with patch.dict(os.environ, {}, clear=True), self.assertRaisesRegex(RuntimeError, 'needs an API key'):
