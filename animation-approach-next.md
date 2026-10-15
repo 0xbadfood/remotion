@@ -254,4 +254,24 @@ while encoding); plain PyTorch attention.
 AMD: comfy-kitchen ships a `hip` backend whose validated targets include gfx1200/gfx1201 (RDNA4 WMMA; the R9700s are
 gfx1201) with int8_linear and the convrot ops; its module links libamdhip64.so.7 (amdserver has ROCm 7.x). The
 aiserver wheel is cp311; the amdserver default Python is 3.14, so it needs a 3.11 venv with torch ROCm 7.2.
-Not yet run on AMD. License: LTX-2.x Community License (to be read before product use).
+License: LTX-2.x Community License (to be read before product use).
+
+### On the amdserver: video mode built and tested (2026-10-15)
+
+- Setup: `~/projects/ltx25` (ComfyUI at the aiserver commit + ComfyUI-LTXVideo + ComfyUI-MultiGPU; Python 3.11 venv
+  via uv; torch 2.14.1+rocm7.2; models copied, sha256 identical). User units `ltx-comfy`, `ltx-api` (:8011, our copy
+  of the API with `--text-encoder-device cuda:1`), `ltxvideo.target`. `/opt/gpu-mode/gpu_mode_server.py` has a
+  `video` mode (backup `.bak-20261015-before-video`); starting image mode now drops the file cache first.
+- comfy-kitchen registers its hip backend (gfx1201, WMMA). ComfyUI's dynamic VRAM loading is not active on ROCm,
+  so the 14.6 GB text encoder and the 20.5 GB transformer swapped on every new prompt; the first try ran out of
+  memory at VAE decode (fixed with `--reserve-vram 4`).
+- Times (2 s = 49 frames at 24 fps; RTX 3090 / AMD 250 W / AMD 300 W / AMD 300 W with the text encoder on GPU 1):
+  2 s 768x448 new prompt 20 / 60 / 60 / 28 s; 5 s 768x448 40 / 86 / 84 / 56 s; 2 s 1280x704 44 / 56 / 54 / 56 s;
+  2 s reference (frame 25, strength 0.65) repeated prompt - / 20 / 20 / 20 s; 2 s 1280x704 reference new prompt
+  - / 92 / 92 / 64 s. 300 W barely helps (swap-bound); the encoder on GPU 1 is the real gain. With a repeated
+  prompt the AMD card matches the 3090 at 768x448; at larger sizes it is about 1.2-1.4x slower.
+- Reference mode (still mid-clip, strength 0.65-0.7) keeps the composition and moves on both sides of the still;
+  identity drifts by the clip's end (Cavour lost his glasses), so keep clips short.
+- Switching back to image mode stalled GPU 1's worker for 15+ min (file cache full of LTX weights; the worker pins
+  its text encoder in RAM); dropping the cache fixed it, and the mode switch now does that itself.
+
