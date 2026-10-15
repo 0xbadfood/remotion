@@ -1,5 +1,6 @@
 """One thematic backdrop image per chapter, behind its native-graphic scenes (compare, flow, diagram cards), which
-otherwise sit on a flat gradient (user design, 2026-10-13).
+otherwise sit on a flat gradient (user design, 2026-10-13). A short film is one chapter: its context comes from the
+subject and the creative brief (user, 2026-10-15: shorts had no backdrop).
 
 The prompt is built by code from the chapter's lesson objective, visual direction and the film's shared style. The
 image is generated once with no review loop; only code checks apply (no request for written words). Any failure leaves
@@ -36,13 +37,26 @@ def prompt(context):
             + "Quiet, cinematic, richly textured surfaces and gentle light.")
 
 
-def chapter_backdrop(config, store):
-    """The chapter's backdrop {file, sha256, prompt}, generated once and cached, or None."""
-    from .planning import RASTER_LABEL
-    context_path = store.root / "chapter-context.json"
-    if not context_path.exists() or not config.get("chapter_backdrop", True):
+def backdrop_context(store):
+    """A long film's chapter context, or for a short film the same shape built from its subject and creative brief."""
+    root = Path(store.root)
+    if (root / "chapter-context.json").exists():
+        return read(root / "chapter-context.json")
+    if not (root / "creative-brief.json").exists():
         return None
-    text = prompt(read(context_path))
+    brief = read(root / "creative-brief.json")
+    subject = read(root / "project.json").get("subject", "") if (root / "project.json").exists() else ""
+    subject = re.sub(r"\s*\([^)]*\)", "", subject)       # "(NCERT Class 10 History, ...)" is not imagery
+    return {"chapter": {"objective": subject}, "film": {"shared_visual_style": brief.get("visual_style", "")}}
+
+
+def chapter_backdrop(config, store):
+    """The chapter's (or short film's) backdrop {file, sha256, prompt}, generated once and cached, or None."""
+    from .planning import RASTER_LABEL
+    context = backdrop_context(store)
+    if context is None or not config.get("chapter_backdrop", True):
+        return None
+    text = prompt(context)
     if RASTER_LABEL.search(text):
         store.event("backdrop", "skipped", {"reason": "prompt asks for written words"})
         return None
