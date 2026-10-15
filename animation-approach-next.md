@@ -239,3 +239,19 @@ Depth Anything V2 Small (Apache-2.0) depth map per accepted image (`infofilm/dep
 Render cost: 32 s vs 30 s for 47 s of film. On by default (`image_depth`); advisory. Retrofit of a finished film:
 resume from scenes (images, prompts, audio reused) and render again; Unification of Italy retrofitted, 31/31 scenes,
 layout 70/70. Portrait delivery still uses the flat camera.
+
+## LTX 2.5 (ComfyUI, aiserver) on the amdserver: findings (2026-10-15)
+
+aiserver stack: `storyvault-local-ltx.target` = ComfyUI (`~/story_generator/tmp/ComfyUI-ltx25-int8`, :8197) + API
+(`backend/ltx25_comfy_api_server.py`, :8011; modes conditioning_image_to_video at frame index 1,9,17.. with strength,
+and first_last_frame_to_video). Smoke on the RTX 3090 with Italy images: cold 155 s (model load); warm 2 s at
+768x448 = 20 s, 5 s at 768x448 = 40 s, 2 s at 1280x704 = 44 s. 2 s clips stay faithful and painterly; the 5 s clip
+moves more and drifts from the still (new faces).
+Why it is fast: distilled LTX-2.5 22B (8 steps, cfg 1.0: one pass per step); INT8 ConvRot weights
+(`int8_tensorwise`, convrot group 256) for the transformer (21 GB) and the Gemma-4 12B text encoder (15 GB), run by
+comfy-kitchen 0.2.35 native int8 kernels; ComfyUI dynamic VRAM loading (weights staged, text encoder only resident
+while encoding); plain PyTorch attention.
+AMD: comfy-kitchen ships a `hip` backend whose validated targets include gfx1200/gfx1201 (RDNA4 WMMA; the R9700s are
+gfx1201) with int8_linear and the convrot ops; its module links libamdhip64.so.7 (amdserver has ROCm 7.x). The
+aiserver wheel is cp311; the amdserver default Python is 3.14, so it needs a 3.11 venv with torch ROCm 7.2.
+Not yet run on AMD. License: LTX-2.x Community License (to be read before product use).
