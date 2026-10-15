@@ -83,5 +83,10 @@
   "research_python": "/home/nitin/remotion/.venv/bin/python",
   "mfa_slots": 3,
   "render_slots": 2,
-  "aligner": "mms"
+  "aligner": "mms",
+  "clips": {
+    "enabled": true,
+    "url": "http://10.8.0.8:8011",
+    "mode_switch": "http://10.8.0.8:8099"
+  }
 }

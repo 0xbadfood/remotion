@@ -375,6 +375,9 @@ def finish_visuals(args, config, store, models, evidence, sources, brief, films,
                 raise ValueError(f"Image manifest hash mismatch: {asset_id}")
     from .depth import depth_maps
     depth_maps(config, store, images)           # 2.5D camera; advisory, cached by image hash
+    if not chapter_context:                     # short films: slowed LTX clips from the accepted stills (advisory)
+        from .clips import make_clips
+        make_clips(config, store, models, images, prompts)
     stage("images", "succeeded", images=len(images), image_review=config.get('image_review', True))
     if args.until == "images":
         return
