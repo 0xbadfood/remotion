@@ -157,6 +157,19 @@ rescue chapters; the film ran 46% long.
   loses parallel writing and chapter-sized repair); keeping solo chapters with a wider gate (still patches after
   the fact, cannot manage length).
 
+## Unification of Italy (History Studio short, 5 min, 2026-10-15): CLEAN RUN 1 of 5
+
+- First attempt, no resume, no fix. 18:44 -> 19:23 (39 min). First run with the image pool, short-film cast,
+  short-film backdrop and renderer animation pass 1.
+- Image pool: 2 workers; two renders in flight 82% of the image span. 49 takes (31 images, 18 rejected and repaired)
+  in 20.2 min = 24.7 s per take, vs 39.8 s per take sequential (Salt March): 1.6x. Not 2x because a slot's GPU
+  idles while its own review (~5 s) and scene repair run. Idea: pool one larger than the GPU count ("auto" + 1);
+  max_in_flight 4 already keeps the factory queue bounded.
+- Cast: Garibaldi, Victor Emmanuel II, Cavour, Mazzini; all referenced; one name each; all shown (Garibaldi 9).
+  The cast kept "Cavour" (name as the facts give it).
+- Backdrop rendered after the pool (33 s, serial); could start alongside the images.
+- Length: 305 s vs 165 s requested by the old History Studio estimate (recalibrated the same day; no cap).
+
 ## History Studio first film (Salt March, 255 s short, curriculum mode, 2026-10-15)
 
 - **Failed once: OpenAI 520 (Cloudflare edge error) on an image-prompt review.** Planning, script, Indian-voice audio
