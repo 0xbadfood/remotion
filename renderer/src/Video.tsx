@@ -1,8 +1,8 @@
 import React, {useEffect, useState} from 'react';
-import {AbsoluteFill, Img, Sequence, staticFile, useCurrentFrame, useVideoConfig, delayRender, continueRender, cancelRender, interpolate} from 'remotion';
+import {AbsoluteFill, Img, OffthreadVideo, Sequence, staticFile, useCurrentFrame, useVideoConfig, delayRender, continueRender, cancelRender, interpolate} from 'remotion';
 import {DepthImage} from './DepthImage';
 
-export type Scene = {id:string; point_id:string; from:number; duration:number; kind:'image'|'flow'|'compare'|'cycle'; src?:string; depth?:string; backdrop?:string;
+export type Scene = {id:string; point_id:string; from:number; duration:number; kind:'image'|'flow'|'compare'|'cycle'; src?:string; depth?:string; clip?:string; clipSeconds?:number; backdrop?:string;
   heading:string; summary:string; labels:string[]; details:string[]; banner?:string; needs_review?:boolean; review_tag?:string; copy_density?:'minimal'|'standard'; motion:'push'|'pull'|'drift'|'hold'; index:number; source_ids:string[]; reveals?:number[]};
 export type FilmData = {title:string;subject:string;width:number;height:number;fps:number;durationInFrames:number;transitionFrames?:number;depthStrength?:number;
   creativeBrief?:{resolved_mood:string;intensity:string;theme:{background:string;accent:string;text:string}};
@@ -45,7 +45,7 @@ const SceneView:React.FC<{scene:Scene;lead:number;brief?:FilmData['creativeBrief
   const raw=useCurrentFrame();
   const frame=raw-lead;
   const fade=lead?interpolate(raw,[0,lead],[0,1],clamp):1;
-  const {height,width}=useVideoConfig();
+  const {height,width,fps}=useVideoConfig();
   const portrait=height>width;
   const minimal=scene.kind==='image' && scene.copy_density==='minimal';
   const p=Math.max(0,frame)/Math.max(1,scene.duration-1);
@@ -64,7 +64,11 @@ const SceneView:React.FC<{scene:Scene;lead:number;brief?:FilmData['creativeBrief
   const y=scene.motion==='drift'?(zoom-1)*height*.2*(scene.index%2?1:-1)*(ease-.5):0;
   return <AbsoluteFill style={{background:teal,overflow:'hidden',opacity:fade}}>
     {portrait && minimal && scene.src && <Img src={staticFile(scene.src)} style={{position:'absolute',width:'100%',height:'100%',objectFit:'cover',filter:'blur(28px) brightness(.45)',transform:'scale(1.08)'}}/>}
-    {scene.kind==='image' && scene.src && (scene.depth && !portrait
+    {scene.kind==='image' && scene.clip && !portrait
+      // A short video made from the accepted still, slowed so that it spans the whole scene (no one speaks on screen).
+      ? <OffthreadVideo src={staticFile(scene.clip)} muted playbackRate={Math.max(.3,(scene.clipSeconds??5)/((scene.duration+lead)/fps))}
+          style={{position:'absolute',top:0,width:'100%',height:'100%',objectFit:'cover',transform:`scale(${1+(zoom-1)*.5})`,transformOrigin:`${focus.x}% ${focus.y}%`}}/>
+      : scene.kind==='image' && scene.src && (scene.depth && !portrait
       // Landscape scenes with a depth map get the 2.5D camera: parallax follows the pan, near layers grow on a push.
       ? <DepthImage src={scene.src} depth={scene.depth} width={width} height={height} focus={focus}
           shift={[x/width*.45*depthStrength, y/height*.45*depthStrength]}

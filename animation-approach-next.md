@@ -275,3 +275,16 @@ License: LTX-2.x Community License (to be read before product use).
 - Switching back to image mode stalled GPU 1's worker for 15+ min (file cache full of LTX weights; the worker pins
   its text encoder in RAM); dropping the cache fixed it, and the mode switch now does that itself.
 
+
+### Pilot: LTX clips for a whole film (Unification of Italy, 2026-10-16)
+
+- Motion prompts: `infofilm/motion.py`, one planner call for all 31 accepted images (final approved prompts), code
+  checks only, passed first time.
+- Clips: 5 s (121 frames), 768x448, approved still at frame 57 (middle) strength 0.7, RIFE x2 (ComfyUI-Frame-
+  Interpolation in the amdserver ComfyUI; our API copy takes `interpolate`), so 241 frames. About 68 s per clip warm
+  on one R9700 with the text encoder on GPU 1; 31 clips ~35 min.
+- Renderer: a scene with `clip` plays it (OffthreadVideo) slowed to span the scene, landscape only; others keep depth.
+  Full 304 s film rendered in 181 s. Output: `output/italy-clips-pilot.mp4` (pilot only; the run's delivery unchanged).
+- Seen: identity holds near the middle; details drift at the ends (Cavour's glasses gone at both ends).
+- Not yet in the pipeline: clip stage (after images, image -> video mode switch), clip manifest in video.py, a cheap
+  vision check against the still with the depth still as fallback.
