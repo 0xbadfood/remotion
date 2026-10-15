@@ -167,12 +167,11 @@ rescue chapters; the film ran 46% long.
   required anyone to be shown (Gandhi in 7 of 50 images). Fixed: `film_cast.cast_short` runs the long-film cast step
   for a short as one chapter (F); everyone cast must be seen; curriculum Person points are planned people.
   Trial on the Salt March script: Gandhi, Irwin, Abdul Ghaffar Khan, Bhagat Singh.
-- **Open: likeness of less famous people.** The A049 Gandhi-Irwin image used the right reference (Karsh 1944 portrait
-  of Irwin as Earl of Halifax) but the man does not look like him (hair, round face); the reference is also 13 years
-  older than the scene. Nothing checks likeness. Ideas: a face-similarity check of the generated face against the
-  reference (insightface is in ~/portrail's venv), prefer references near the scene's year. Also the cast keeps the
-  name as the facts give it ("Irwin", birth year null), a thin search key for a less famous person; consider an
-  identity field (formal name/title, encyclopedia page) used only for reference research.
+- **Likeness of less famous people: no requirement (user decision, 2026-10-15).** The A049 Irwin is not a close
+  likeness (right reference, Karsh 1944), and that is acceptable: lesser-known figures may be drawn approximately as
+  long as the broad appearance is right (era, ethnicity, role). A likeness gate would make the pipeline too fragile.
+  Only cheap, non-blocking improvements are welcome, e.g. a reference near the scene's year, or an identity field
+  (formal name/title) used only to make the reference search more precise.
 - History Studio "make again" on a failed film used to start a new job from scratch; it now resumes the saved run
   when the narrator is unchanged.
 
