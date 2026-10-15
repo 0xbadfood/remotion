@@ -200,7 +200,7 @@ class Queue:
                 scenes = read(timeline)["data"]["scenes"]
             except (KeyError, ValueError, OSError):
                 continue
-            media |= {(public / s[k]).parent for s in scenes for k in ("src", "backdrop") if s.get(k)}
+            media |= {(public / s[k]).parent for s in scenes for k in ("src", "depth", "backdrop") if s.get(k)}
         removed = []
         for folder in [project, ROOT / "output" / project.name, *sorted(media)]:
             folder = Path(folder).resolve()

@@ -1,7 +1,8 @@
 import React, {useEffect, useState} from 'react';
 import {AbsoluteFill, Img, Sequence, staticFile, useCurrentFrame, useVideoConfig, delayRender, continueRender, cancelRender, interpolate} from 'remotion';
+import {DepthImage} from './DepthImage';
 
-export type Scene = {id:string; point_id:string; from:number; duration:number; kind:'image'|'flow'|'compare'|'cycle'; src?:string; backdrop?:string;
+export type Scene = {id:string; point_id:string; from:number; duration:number; kind:'image'|'flow'|'compare'|'cycle'; src?:string; depth?:string; backdrop?:string;
   heading:string; summary:string; labels:string[]; details:string[]; banner?:string; needs_review?:boolean; review_tag?:string; copy_density?:'minimal'|'standard'; motion:'push'|'pull'|'drift'|'hold'; index:number; source_ids:string[]; reveals?:number[]};
 export type FilmData = {title:string;subject:string;width:number;height:number;fps:number;durationInFrames:number;transitionFrames?:number;
   creativeBrief?:{resolved_mood:string;intensity:string;theme:{background:string;accent:string;text:string}};
@@ -63,7 +64,13 @@ const SceneView:React.FC<{scene:Scene;lead:number;brief?:FilmData['creativeBrief
   const y=scene.motion==='drift'?(zoom-1)*height*.2*(scene.index%2?1:-1)*(ease-.5):0;
   return <AbsoluteFill style={{background:teal,overflow:'hidden',opacity:fade}}>
     {portrait && minimal && scene.src && <Img src={staticFile(scene.src)} style={{position:'absolute',width:'100%',height:'100%',objectFit:'cover',filter:'blur(28px) brightness(.45)',transform:'scale(1.08)'}}/>}
-    {scene.kind==='image' && scene.src && <Img src={staticFile(scene.src)} style={{position:'absolute',top:portrait&&minimal?'8%':0,width:'100%',height:portrait?'63%':'100%',objectFit:portrait&&minimal?'contain':'cover',objectPosition:portrait&&!minimal?'72% 50%':'50% 50%',transform:`translate(${x}px,${y}px) scale(${zoom})`,transformOrigin:`${focus.x}% ${focus.y}%`}}/>}
+    {scene.kind==='image' && scene.src && (scene.depth && !portrait
+      // Landscape scenes with a depth map get the 2.5D camera: parallax follows the pan, near layers grow on a push.
+      ? <DepthImage src={scene.src} depth={scene.depth} width={width} height={height} focus={focus}
+          shift={[x/width*.45, y/height*.45]}
+          grow={(scene.motion==='pull'?1-ease:scene.motion==='hold'?.35*ease:scene.motion==='drift'?0:ease)*strength*.9}
+          style={{position:'absolute',top:0,width:'100%',height:'100%',transform:`translate(${x}px,${y}px) scale(${zoom})`,transformOrigin:`${focus.x}% ${focus.y}%`}}/>
+      : <Img src={staticFile(scene.src)} style={{position:'absolute',top:portrait&&minimal?'8%':0,width:'100%',height:portrait?'63%':'100%',objectFit:portrait&&minimal?'contain':'cover',objectPosition:portrait&&!minimal?'72% 50%':'50% 50%',transform:`translate(${x}px,${y}px) scale(${zoom})`,transformOrigin:`${focus.x}% ${focus.y}%`}}/>)}
     {scene.kind==='image' && <AbsoluteFill style={{background:minimal?'linear-gradient(180deg,rgba(0,0,0,.48) 0%,rgba(0,0,0,0) 24%,rgba(0,0,0,0) 52%,rgba(0,0,0,.8) 100%)':portrait?'linear-gradient(180deg,rgba(5,25,30,.16) 0%,rgba(5,25,30,.08) 38%,rgba(5,25,30,.94) 60%,rgba(5,25,30,1) 68%)':'linear-gradient(90deg,rgba(5,25,30,.97) 0%,rgba(5,25,30,.9) 25%,rgba(5,25,30,.56) 43%,rgba(5,25,30,.06) 73%)'}}/>}
     {scene.kind!=='image' && <>
       <AbsoluteFill style={{background:`radial-gradient(ellipse at 78% 38%,color-mix(in srgb, ${teal}, white 12%) 0%,${teal} 65%)`}}/>

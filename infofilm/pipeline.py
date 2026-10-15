@@ -373,6 +373,8 @@ def finish_visuals(args, config, store, models, evidence, sources, brief, films,
             value = images[asset_id]
             if digest(Path(value["file"]).read_bytes()) != value["sha256"]:
                 raise ValueError(f"Image manifest hash mismatch: {asset_id}")
+    from .depth import depth_maps
+    depth_maps(config, store, images)           # 2.5D camera; advisory, cached by image hash
     stage("images", "succeeded", images=len(images), image_review=config.get('image_review', True))
     if args.until == "images":
         return

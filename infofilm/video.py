@@ -176,8 +176,11 @@ def compile_timeline(config, store, script, timing, storyboard, images, evidence
     fps = config["fps"]
     frames = math.ceil(info["sample_count"] * fps / info["sample_rate"])
     backdrop = current_backdrop(store)
+    from .depth import current as current_depth
+    depth = current_depth(store, images) if config.get("image_depth", True) else {}
     identity = digest({"script": script, "timing": timing, "storyboard": storyboard, "images": images,
                        **({"backdrop": backdrop["sha256"]} if backdrop else {}),
+                       **({"depth": {k: v["sha256"] for k, v in sorted(depth.items())}} if depth else {}),
                        "size": [config["width"], config["height"]], "fps": fps, "caption_policy":"point-and-sentence-v2", "reveal_policy": "spoken-words-v1", "transition_seconds": config.get("transition_seconds", .5),
                        "creative_brief": creative_brief, "music": music,
                        "renderer_revision": {str(p.relative_to(ROOT / 'renderer')): digest(p.read_bytes())
@@ -227,6 +230,10 @@ def compile_timeline(config, store, script, timing, storyboard, images, evidence
                 raise ValueError("Image changed after selection")
             shutil.copyfile(asset["file"], target_path)
             value["src"] = str(target_path.relative_to(public))
+            if scene["asset_id"] in depth:
+                depth_path = media / (depth[scene["asset_id"]]["sha256"][:20] + "-depth.png")
+                shutil.copyfile(depth[scene["asset_id"]]["file"], depth_path)
+                value["depth"] = str(depth_path.relative_to(public))
         elif backdrop:
             target_path = media / (backdrop["sha256"][:20] + ".png")
             if not target_path.exists():
@@ -258,7 +265,7 @@ def render(config, store, root, timeline):
         shutil.copytree(renderer / folder, snapshot / folder, dirs_exist_ok=True)
     data = read(timeline)["data"]
     for scene in data["scenes"]:
-        for key in ("src", "backdrop"):
+        for key in ("src", "depth", "backdrop"):
             if scene.get(key):
                 target = snapshot / "public" / scene[key]
                 target.parent.mkdir(parents=True, exist_ok=True)
