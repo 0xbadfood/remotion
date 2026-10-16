@@ -85,7 +85,7 @@
   "render_slots": 2,
   "aligner": "mms",
   "clips": {
-    "enabled": true,
+    "enabled": false,
     "workers": [
       {
         "id": "amdserver",
