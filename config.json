@@ -91,7 +91,8 @@
         "id": "amdserver",
         "kind": "ltx_comfy",
         "url": "http://10.8.0.8:8011",
-        "mode_switch": "http://10.8.0.8:8099"
+        "mode_switch": "http://10.8.0.8:8099",
+        "enabled": false
       },
       {
         "id": "spark",
