@@ -157,6 +157,15 @@ rescue chapters; the film ran 46% long.
   loses parallel writing and chapter-sized repair); keeping solo chapters with a wider gate (still patches after
   the fact, cannot manage length).
 
+## Participation of Social Groups (History Studio short, 6.5 min, 2026-10-16): CLEAN RUN 2 of 5
+
+- First attempt, no resume, no fix. 12:01 -> 13:53 (1 h 52 min). First run with the clip stage.
+- Clips: 49/49 made, none fell back; 12:36 -> 13:37 including both amdserver mode switches (video, then image).
+  Every picture scene plays a slowed LTX clip; depth maps made too (used only where a clip is missing).
+- Layout 112/112. Video render 10 min.
+- Spark LTX (NVFP4, weight-only dequant to BF16) benchmarked the same day: 155 s per 5 s clip vs 68 s on an R9700;
+  as a second video node it would cut the clip stage by about a third.
+
 ## Unification of Italy (History Studio short, 5 min, 2026-10-15): CLEAN RUN 1 of 5
 
 - First attempt, no resume, no fix. 18:44 -> 19:23 (39 min). First run with the image pool, short-film cast,
