@@ -353,6 +353,15 @@ def finish_visuals(args, config, store, models, evidence, sources, brief, films,
                     scene['reference_card_sha256'] = asset['reference_card']['sha256']
             scene["banner"] = scene.get("banner_override", banner_by_scene.get(f"{film['requested_seconds']}:{scene.get('id', scene['point_id'])}", ""))
         write(store.root / f"film-{film['requested_seconds']}" / "storyboard.json", film["storyboard"])
+    if not chapter_context:
+        # Short films: the amdserver may still be switching back from the last film's clips; slow video workers
+        # (the Spark's LTX service) start loading now, while the images are made.
+        from .clips import ensure_image_mode, warm
+        try:
+            ensure_image_mode(config)
+        except Exception as exc:                # the image stage itself reports a factory that is not there
+            stage("images", "waiting", detail=f"image mode not confirmed: {exc}"[:300])
+        warm(config)
     backdrop = None
     if any(s.get("kind") != "image" for film in films for s in film["storyboard"]["scenes"]):
         # Native-graphic scenes get the chapter's thematic backdrop instead of a flat gradient (advisory). It renders

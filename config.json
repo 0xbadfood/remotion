@@ -86,7 +86,19 @@
   "aligner": "mms",
   "clips": {
     "enabled": true,
-    "url": "http://10.8.0.8:8011",
-    "mode_switch": "http://10.8.0.8:8099"
+    "workers": [
+      {
+        "id": "amdserver",
+        "kind": "ltx_comfy",
+        "url": "http://10.8.0.8:8011",
+        "mode_switch": "http://10.8.0.8:8099"
+      },
+      {
+        "id": "spark",
+        "kind": "ltx_storyvault",
+        "url": "http://127.0.0.1:8010",
+        "service": "ltx25-api"
+      }
+    ]
   }
 }

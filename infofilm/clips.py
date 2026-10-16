@@ -7,19 +7,16 @@ the viewer only sees an illustration come alive, so there is no prompt-adherence
 catches only real breakage (a clip that will not decode, is blank, or whose middle no longer looks like the still);
 those scenes, like any the video node does not return, keep the depth camera. Clips never stop a film.
 
-The video node today is the amdserver's `video` mode: the stage switches it from image mode and back (the film queue
-runs one film at a time, so nothing else needs the image factory meanwhile). A dedicated sibling node later needs only
-`clips.mode_switch` removed and `clips.url` pointed at it. Short films only for now: long-film chapters render in
-parallel, so their clips need one film-level stage.
+Clips are made by a pool of video workers (`video_pool.py`, `clips.workers`): today the amdserver's `video` mode
+(switched in and out; the film queue runs one film at a time) and the Spark's NVFP4 LTX service, both pulling scenes
+from one queue. A dedicated sibling node is one more worker entry. Short films only for now: long-film chapters render
+in parallel, so their clips need one film-level stage.
 """
 from __future__ import annotations
 
-import json
 import subprocess
 import time
 from pathlib import Path
-
-import httpx
 
 from .core import digest, read, write
 
@@ -53,23 +50,6 @@ def current(store, images):
     return out
 
 
-def switch_mode(url, mode, timeout):
-    """Ask the amdserver mode switch for `mode` and wait until it is ready."""
-    with httpx.Client(timeout=30) as client:
-        if client.get(url + "/status").json().get("mode") == mode:
-            return
-        client.post(f"{url}/mode/{mode}")
-        deadline = time.monotonic() + timeout
-        while time.monotonic() < deadline:
-            state = client.get(url + "/status").json()
-            if state.get("mode") == mode and state.get("phase") == "ready":
-                return
-            if state.get("phase") == "failed":
-                raise RuntimeError(f"Mode switch to {mode} failed: {state.get('detail')}")
-            time.sleep(10)
-    raise RuntimeError(f"Mode switch to {mode} not ready after {timeout // 60} min")
-
-
 def probe_seconds(path):
     return float(subprocess.check_output(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0",
                                           str(path)], text=True).strip())
@@ -94,32 +74,6 @@ def breakage(clip, still, limit):
     return f"middle frame differs from the still ({difference:.0f})" if difference > limit else None
 
 
-def render_clip(config, still, motion, root, key):
-    """One clip from the video API (submit, poll, download). Returns the file."""
-    s = settings(config)
-    target = root / f"{key}.mp4"
-    if target.exists():
-        return target
-    with httpx.Client(timeout=60) as client, open(still, "rb") as image:
-        job = client.post(s["url"] + "/v1/videos/generations", files={"conditioning_image": image}, data={
-            "mode": "conditioning_image_to_video", "prompt": motion, "width": s["width"], "height": s["height"],
-            "num_frames": s["frames"], "frame_rate": s["frame_rate"], "seed": s["seed"],
-            "conditioning_frame_index": s["middle_frame"], "condition_strength": s["strength"],
-            "interpolate": s["interpolate"], "idempotency_key": f"clip-{key}-{int(time.time())}"}).raise_for_status().json()
-        token = job.get("token") or job.get("poll_token")
-        deadline = time.monotonic() + s["timeout_seconds"]
-        while time.monotonic() < deadline:
-            state = client.get(f"{s['url']}/v1/videos/{job['id']}", params={"token": token}).json()
-            if state["status"] in ("succeeded", "completed"):
-                data = client.get(f"{s['url']}/v1/videos/{job['id']}/content", params={"token": token}, timeout=300)
-                target.write_bytes(data.raise_for_status().content)
-                return target
-            if state["status"] in ("failed", "error", "cancelled"):
-                raise RuntimeError(f"clip job {state['status']}: {str(state.get('error'))[:200]}")
-            time.sleep(3)
-    raise TimeoutError("clip job did not finish in time")
-
-
 def scene_inputs(images, prompts):
     by_id = {a["id"]: a for a in prompts.get("assets", [])}
     rows = []
@@ -131,8 +85,25 @@ def scene_inputs(images, prompts):
     return rows
 
 
+def warm(config):
+    """At the start of a short film's image stage: give slow-loading video workers a head start."""
+    s = settings(config)
+    if s["enabled"]:
+        from . import video_pool
+        video_pool.warm(s)
+
+
+def ensure_image_mode(config):
+    """Before an image stage: wait for a video worker's switch back to image mode, if one is still running."""
+    s = settings(config)
+    if s["enabled"]:
+        from . import video_pool
+        video_pool.ensure_image_mode(s)
+
+
 def make_clips(config, store, models, images, prompts):
-    """Clips for every accepted image of a short film; returns what exists. Advisory: never raises."""
+    """Clips for every accepted image of a short film, across the video pool; returns what exists. Never raises."""
+    from . import video_pool
     s = settings(config)
     if not s["enabled"] or not images:
         return {}
@@ -142,45 +113,47 @@ def make_clips(config, store, models, images, prompts):
         return have
     root = Path(store.root) / "clips"
     root.mkdir(parents=True, exist_ok=True)
-    switched = False
     try:
-        store.event("clips", "running", {"clips": len(missing), "video_node": s["url"]})
+        workers = [w.get("id") or w["kind"] for w in video_pool.worker_configs(s)]
+        store.event("clips", "running", {"clips": len(missing), "workers": workers})
         motion_path = root / "motion.json"
         motion = read(motion_path) if motion_path.exists() else {}
         if set(missing) - set(motion):
             from .motion import make_motion_prompts
             motion.update(make_motion_prompts(models, scene_inputs(missing, prompts)))
             write(motion_path, motion)
-        if s.get("mode_switch"):
-            store.event("clips", "switching", {"mode": "video"})
-            switch_mode(s["mode_switch"], "video", s["switch_timeout_seconds"])
-            switched = True
         saved = read(manifest_path(store)).get("clips", {}) if manifest_path(store).exists() else {}
-        for n, (asset_id, image) in enumerate(missing.items(), 1):
+        lock, done = __import__("threading").Lock(), []
+
+        def render_one(worker, asset_id, image):
             key = digest({"protocol": PROTOCOL, "image": image["sha256"], "motion": motion[asset_id],
                           "settings": {k: s[k] for k in ("width", "height", "frames", "middle_frame", "strength",
                                                          "interpolate", "seed")}})[:20]
-            try:
-                clip = render_clip(config, image["file"], motion[asset_id], root, key)
-                problem = breakage(clip, image["file"], s["max_middle_difference"])
-                if problem:
-                    store.event("clips", "fallback", {"asset": asset_id, "reason": problem})
-                    continue
+            clip = root / f"{key}.mp4"
+            if not clip.exists():
+                started = time.monotonic()
+                worker.render(image["file"], motion[asset_id], clip, key)
+                store.event("clips", "rendered", {"asset": asset_id, "worker": worker.id,
+                                                  "seconds": round(time.monotonic() - started, 1)})
+            problem = breakage(clip, image["file"], s["max_middle_difference"])
+            if problem:                                  # real breakage: this scene keeps the depth camera
+                store.event("clips", "fallback", {"asset": asset_id, "worker": worker.id, "reason": problem})
+                return
+            with lock:
                 saved[asset_id] = {"file": str(clip), "sha256": digest(clip.read_bytes()), "seconds": probe_seconds(clip),
-                                   "source_sha256": image["sha256"], "motion": motion[asset_id], "protocol": PROTOCOL}
+                                   "source_sha256": image["sha256"], "motion": motion[asset_id], "worker": worker.id,
+                                   "protocol": PROTOCOL}
                 write(manifest_path(store), {"protocol": PROTOCOL, "clips": saved})
-                store.event("clips", "progress", {"asset": asset_id, "done": n, "total": len(missing)})
-            except Exception as exc:                  # noqa: BLE001 - this scene keeps the depth camera
-                store.event("clips", "fallback", {"asset": asset_id, "reason": f"{type(exc).__name__}: {exc}"[:300]})
+                done.append(asset_id)
+                store.event("clips", "progress", {"asset": asset_id, "worker": worker.id, "done": len(done),
+                                                  "total": len(missing)})
+
+        untaken = video_pool.run(s, list(missing.items()), render_one,
+                                 lambda state, detail: store.event("clips", state, detail))
+        if untaken:
+            store.event("clips", "fallback", {"assets": untaken, "reason": "no video worker was available"})
         have = current(store, images)
         store.event("clips", "succeeded", {"clips": len(have), "of": len(images)})
-    except Exception as exc:                          # noqa: BLE001 - advisory: the film keeps its stills
+    except Exception as exc:                            # noqa: BLE001 - advisory: the film keeps its stills
         store.event("clips", "failed", {"error": f"{type(exc).__name__}: {exc}"[:300]})
-    finally:
-        if switched:
-            try:
-                store.event("clips", "switching", {"mode": "image"})
-                switch_mode(s["mode_switch"], "image", s["switch_timeout_seconds"])
-            except Exception as exc:                  # noqa: BLE001 - reported; the next image stage will wait
-                store.event("clips", "switch_back_failed", {"error": str(exc)[:300]})
     return current(store, images)

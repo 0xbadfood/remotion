@@ -36,3 +36,6 @@ renderer/public/*
 
 # Dated local backups of config files
 *.bak-*
+
+# RIFE checkpoint (rife47.pth, from ComfyUI-Frame-Interpolation's release mirrors)
+models/rife/
