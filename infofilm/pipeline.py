@@ -106,7 +106,7 @@ def prepare_audio(config, store, models, evidence, duration, rate, experimental,
     script = supplied_script or make_script(models, evidence, duration, rate, experimental=experimental, creative_brief=creative_brief)
     if supplied_script:
         from .planning import script_errors
-        errors = script_errors(script, evidence)
+        errors = script_errors(script, evidence, duration=duration)
         if errors:
             raise ValueError(f"Supplied script is invalid: {errors}")
         # Both endpoints independently check semantics; deterministic code owns counts.
@@ -318,7 +318,9 @@ def finish_visuals(args, config, store, models, evidence, sources, brief, films,
         if people:
             config = {**config, 'film_cast': people}
     cast_chapter = chapter_context['chapter']['id'] if chapter_context else SHORT_CHAPTER
+    from .prompt_styles import prompt_style
     prompts = make_image_prompts(models, library, films, evidence, orientations, experimental=experimental,
+                                 prompt_style=prompt_style(config),
                                  message_recovery=config.get("image_recovery_mode") == "message_v1",
                                  **({'classify_review': True} if config.get('image_classify_review', False) else {}),
                                  **({'person_references': True} if reference_enabled else {}),

@@ -70,9 +70,10 @@ def generation_prompt(case, scene):
     a = case["message_annotation"]
     # Semantic guardrails belong to the planner contract. Do not forward
     # abstract legal explanations or lists of unwanted objects to the generator.
-    return ("Setting: " + a["setting"] +
-            "\nVisual treatment: " + case["library"]["assets"][0]["visual_style"] + "\nComposition: " + layout_direction(case) +
-            "\nScene: " + scene + reference_addendum(case['library']['assets'][0]))
+    from .prompt_styles import compose
+    return compose(case.get("prompt_style", "structured"), setting=a["setting"],
+                   visual_style=case["library"]["assets"][0]["visual_style"], layout=layout_direction(case),
+                   scene=scene, addendum=reference_addendum(case['library']['assets'][0]))
 
 
 def review_errors(value, message, *, require_inventory=False, reference_available=None):
@@ -186,6 +187,7 @@ def repair_errors(value, case, last_scene, review):
 
 
 def repair_scene(models, case, last_scene, last_prompt, review, name, max_json_attempts=2):
+    from .prompt_styles import REPAIR_GUIDE
     asset = case["library"]["assets"][0]
     facts = [f for f in case["source_context"]["facts"] if f["id"] in asset.get("fact_ids", [])]
     context = {"visual_message": case["visual_message"], "current_scene": last_scene,
@@ -212,6 +214,7 @@ def repair_scene(models, case, last_scene, last_prompt, review, name, max_json_a
         "A useful scene is not rejected merely for using ordinary negative wording. "
         "Return {visual_message:string copied exactly, repair_mode:'targeted'|'simplify', prompt:string, "
         "simplifications:[string], message_preserved:string}. The replacement must materially differ from current_scene.\n"
+        + (REPAIR_GUIDE.strip() + "\n" if case.get("prompt_style") == "descriptive_v1" else "") +
         "INPUT:\n" + json.dumps(context)
     )
     if asset.get('people_in_frame'):
@@ -437,6 +440,10 @@ def generate_message_images(config, store, library, models, *, on_progress=None)
     settings = {"provider": provider_id, "max_image_attempts": maximum,
                 "max_json_attempts": 2, "full_size": [current["image_width"], current["image_height"]]}
     policy = {"protocol": PROTOCOL, "settings": settings, "provider": registry["providers"][provider_id]}
+    from .prompt_styles import prompt_style
+    style = prompt_style(config)
+    if style != "structured":         # recorded only when set, so existing runs keep their policy and images
+        policy["prompt_style"] = style
     policy_path = store.root / "image-recovery-policy.json"
     if policy_path.exists() and read(policy_path) != policy:
         raise ValueError("Saved image recovery policy changed; archive the prior image revision first")
@@ -451,7 +458,7 @@ def generate_message_images(config, store, library, models, *, on_progress=None)
             if not isinstance(asset.get(field), str) or not asset[field].strip():
                 raise ValueError(f"{asset['id']} missing {field}")
         case = {"asset_id": asset["id"], "visual_message": asset["visual_message"],
-                "library": {**library, "assets": [asset]}, "source_context": source,
+                "library": {**library, "assets": [asset]}, "source_context": source, "prompt_style": style,
                 "message_annotation": {"setting": asset["setting"], "initial_scene": asset["prompt"],
                     "essential_constraints": "Preserve the message, sourced era, geographical intent and essential facts."}}
         identity = digest({"policy": policy, "asset": asset,

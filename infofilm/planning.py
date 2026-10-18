@@ -184,12 +184,20 @@ def script_text(script):
     return "\n\n".join(p["narration"].strip() for p in script["points"])
 
 
-def script_errors(value, evidence, budget=None):
+def max_points(duration=None):
+    """25 points up to about six minutes, then one more per 14 seconds: duration is a target, not a cap, and a
+    7.5-minute curriculum film (Rebels and the Raj, 2026-10-18) needs about 30 points."""
+    return max(25, -(-int(duration) // 14)) if duration else 25
+
+
+def script_errors(value, evidence, budget=None, duration=None):
     errors = []
     points = value.get("points", [])
     facts = {f["id"] for f in evidence["facts"]}
-    if not points or len(points) > 25:
-        errors.append("Need a concise, nonempty duration-appropriate point sequence")
+    limit = max_points(duration)
+    if not points or len(points) > limit:
+        errors.append(f"Need a concise, nonempty duration-appropriate point sequence: {len(points)} points, "
+                      f"at most {limit} for this length; merge closely related points")
     if len({p.get("id") for p in points}) != len(points):
         errors.append("Point IDs must be unique")
     for p in points:
@@ -275,7 +283,7 @@ def make_script(models, evidence, duration, rate=135, experimental=True, suffix=
         repair = (seed, continuity_findings(chapter["continuity_notes"], (chapter.get("chapter") or {}).get("id", "")))
     from .curriculum import script_coverage_errors
     return models.loop(f"script-{duration}{suffix}", task, context,
-                       lambda x: script_errors(x, evidence, budget) + script_coverage_errors(x, evidence), experimental=experimental,
+                       lambda x: script_errors(x, evidence, budget, duration) + script_coverage_errors(x, evidence), experimental=experimental,
                        units=SCRIPT_UNITS, seed=repair)
 
 
@@ -416,7 +424,7 @@ def cover_required_people(models, task, base, result, used, contexts, evidence, 
     return report
 
 
-def make_image_prompts(models, library, films, evidence, orientations, experimental=True, message_recovery=False, batch_size=8, person_references=False, classify_review=False, film_cast=None, required_people=None):
+def make_image_prompts(models, library, films, evidence, orientations, experimental=True, message_recovery=False, batch_size=8, person_references=False, classify_review=False, film_cast=None, required_people=None, prompt_style='structured'):
     """Bind prompts to actual spoken scenes, including reuse and banner intent."""
     contexts = {}
     scene_ids = set()
@@ -474,6 +482,9 @@ def make_image_prompts(models, library, films, evidence, orientations, experimen
             "the compositor realises those with native overlays (e.g. a compare layout), so stage each such scene as one coherent full-frame image. "
             "Return {style, assets:[{id,purpose,prompt,acceptance:[string],fact_ids:[string]}], banners:[{scene_key,text:'at most 8 words',reason}]}. "
             "Exactly cover the supplied used assets and image scene keys; an empty banner text is allowed if a banner adds no useful context.")
+    if prompt_style == 'descriptive_v1':
+        from .prompt_styles import PLANNER_GUIDE
+        task += PLANNER_GUIDE
     if classify_review:
         task += (" Additionally classify each asset with review_profile: 'scientific_diagram', "
                  "'explanatory_apparatus', 'narrative' or 'symbolic'. Classify the concrete image, not the "
