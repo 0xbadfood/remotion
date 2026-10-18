@@ -106,3 +106,42 @@ class FilmCastTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class UncastPeopleLimitTests(unittest.TestCase):
+    """Prompts made without a cast named 19 people for a 12-person budget and stopped the film (Rebels replay)."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.store = Store(Path(self.tmp.name))
+        self.config = {'person_references': {'enabled': True, 'max_people': 2}}
+        self.film = {'requested_seconds': 60, 'script': {'subject': 'Rebels'}}
+        person = lambda name: {'name': name, 'reference_kind': 'historical_portrait', 'birth_year': 1800,
+                               'appearance_context': 'leader'}
+        self.prompts = {'assets': [{'id': 'A1', 'people_in_frame': [person('Nana Sahib'), person('Kunwar Singh')]},
+                                   {'id': 'A2', 'people_in_frame': [person('Shah Mal'), person('Nana Sahib')]},
+                                   {'id': 'A3', 'people_in_frame': []}]}
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def names(self, prompts):
+        return [[p['name'] for p in a['people_in_frame']] for a in prompts['assets']]
+
+    def test_the_cast_llm_picks_who_stays_named_and_the_rest_go_generic(self):
+        from infofilm.film_cast import limit_uncast_people
+        with patch('infofilm.film_cast.make_cast', return_value=[{'name': 'Nana Sahib'}, {'name': 'Shah Mal'}]) as cast:
+            out = limit_uncast_people(self.config, self.store, Mock(), self.film, self.prompts)
+        self.assertEqual(cast.call_args.kwargs['planned_people'][SHORT_CHAPTER][0], 'Nana Sahib')   # most depicted first
+        self.assertEqual(self.names(out), [['Nana Sahib'], ['Shah Mal', 'Nana Sahib'], []])
+
+    def test_a_failed_pick_keeps_the_most_depicted_and_within_budget_is_untouched(self):
+        from infofilm.film_cast import limit_uncast_people
+        with patch('infofilm.film_cast.make_cast', side_effect=RuntimeError('planner down')):
+            out = limit_uncast_people(self.config, self.store, Mock(), self.film, self.prompts)
+        self.assertEqual(len({n for names in self.names(out) for n in names}), 2)
+        self.assertIn('Nana Sahib', self.names(out)[0])
+        roomy = {'person_references': {'enabled': True, 'max_people': 12}}
+        with patch('infofilm.film_cast.make_cast') as cast:
+            self.assertIs(limit_uncast_people(roomy, self.store, Mock(), self.film, self.prompts), self.prompts)
+            cast.assert_not_called()

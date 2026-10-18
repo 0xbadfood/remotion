@@ -146,6 +146,41 @@ def curriculum_people(evidence):
             if isinstance(p, dict) and str(p.get("point", "")).startswith("Person: ")]
 
 
+def limit_uncast_people(config, store, models, film, prompts, *, experimental=True):
+    """Prompts made without a cast (the cast step failed, or a run kept uncast prompts) may name more people than the
+    reference budget. The cast LLM then picks the most important max_people from the people the prompts name; the
+    others stay in their scenes as generic figures. Falls back to the most-depicted people if that pick fails."""
+    from .person_references import reference_settings
+    maximum = reference_settings(config)["max_people"]
+    counts, spelling = {}, {}
+    for asset in prompts["assets"]:
+        for person in asset.get("people_in_frame") or []:
+            name = str(person.get("name", "")).strip()
+            spelling.setdefault(name.casefold(), name)
+            counts[name.casefold()] = counts.get(name.casefold(), 0) + 1
+    if len(counts) <= maximum:
+        return prompts
+    named = [spelling[k] for k in sorted(counts, key=lambda k: -counts[k])]
+    keep = set()
+    try:
+        record = {"project": str(store.root), "duration": film["requested_seconds"],
+                  "chapter": {"id": SHORT_CHAPTER, "title": film["script"].get("subject") or "Film"}}
+        chosen = make_cast(models, [record], maximum, experimental=experimental,
+                           planned_people={SHORT_CHAPTER: named})
+        keep = {p["name"].casefold() for p in chosen} & set(counts)
+    except Exception as exc:                       # noqa: BLE001 - trimming never stops a film
+        store.event("cast", "failed", {"scope": "uncast-limit", "error": f"{type(exc).__name__}: {exc}"[:300]})
+    for name in named:                             # fill (or replace a failed pick) with the most-depicted people
+        if len(keep) >= maximum:
+            break
+        keep.add(name.casefold())
+    assets = [{**a, "people_in_frame": [p for p in a["people_in_frame"] if str(p.get("name", "")).strip().casefold() in keep]}
+              if a.get("people_in_frame") else a for a in prompts["assets"]]
+    store.event("cast", "limited", {"named": len(counts), "kept": sorted(spelling[k] for k in keep),
+                                    "generic": [n for n in named if n.casefold() not in keep]})
+    return {**prompts, "assets": assets}
+
+
 def cast_short(config, store, models, film, evidence, *, experimental=True):
     """The long films' cast step for a short film, treated as one chapter: every cast member has show_in [F], so each
     is depicted at least once. Reuses a saved cast. Never blocks the film: on failure the prompts go uncast, as before."""

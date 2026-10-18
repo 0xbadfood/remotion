@@ -327,6 +327,9 @@ def finish_visuals(args, config, store, models, evidence, sources, brief, films,
                                  **({'film_cast': config['film_cast']} if reference_enabled and config.get('film_cast') else {}),
                                  **({'required_people': required_in_chapter(config['film_cast'], cast_chapter)}
                                     if reference_enabled and config.get('film_cast') else {}))
+    if reference_enabled and not config.get('film_cast'):
+        from .film_cast import limit_uncast_people
+        prompts = limit_uncast_people(config, store, models, films[0], prompts, experimental=experimental)
     if reference_enabled:
         prompts = prepare_person_references(config, store, prompts)
     write(store.root/"scene-image-prompts.json", prompts)
