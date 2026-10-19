@@ -443,6 +443,9 @@ class RomanNumeralNumberTests(unittest.TestCase):
         self.assertTrue(same_number({"expected": "iv", "observed": "four"}))
         self.assertTrue(same_number({"expected": "IV", "observed": "4"}))
         self.assertFalse(same_number({"expected": "iv", "observed": "five"}))   # a changed value never passes
+        self.assertTrue(same_number({"expected": "two y", "observed": "2y"}))   # a coefficient joined to its symbol
+        self.assertFalse(same_number({"expected": "two y", "observed": "3y"}))
+        self.assertTrue(same_number({"expected": "the first", "observed": "1st"}))
         self.assertEqual((roman_value("XIV"), roman_value("iiii"), roman_value("tiger")), (14, None, None))
 
 

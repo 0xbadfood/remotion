@@ -128,6 +128,7 @@ def same_number(difference):
     def compact(value):
         value = re.sub(r"^the\s+", "", str(value).strip(), flags=re.I)     # regnal reading: "the second" = "II"
         roman = roman_value(value)
+        value = re.sub(r"(\d)(?=[a-z])(?!(?:st|nd|rd|th)\b)", r"\1 ", value, flags=re.I)   # "2y" = "two y"
         words = canonical_numeric_text(str(roman) if roman else value).lower().split()
         return re.sub(r"[^a-z]", "", "".join(ORDINAL_CARDINAL.get(w, w) for w in words))
     return bool(compact(difference["expected"])) and compact(difference["expected"]) == compact(difference["observed"])
