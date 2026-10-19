@@ -242,7 +242,13 @@ def compile_timeline(config, store, script, timing, storyboard, images, evidence
                 clip_path = media / (clip["sha256"][:20] + "-clip.mp4")
                 shutil.copyfile(clip["file"], clip_path)
                 value.update(clip=str(clip_path.relative_to(public)), clipSeconds=clip["seconds"])
-        elif backdrop:
+        if scene["kind"] == "figure":
+            if digest(Path(scene["figure_file"]).read_bytes()) != scene["figure_sha256"]:
+                raise ValueError("Figure changed after it was drawn")
+            target_path = media / (scene["figure_sha256"][:20] + "-figure.png")
+            shutil.copyfile(scene["figure_file"], target_path)
+            value["src"] = str(target_path.relative_to(public))
+        if scene["kind"] != "image" and backdrop:
             target_path = media / (backdrop["sha256"][:20] + ".png")
             if not target_path.exists():
                 shutil.copyfile(backdrop["file"], target_path)
@@ -252,6 +258,7 @@ def compile_timeline(config, store, script, timing, storyboard, images, evidence
     data = {"title": script["title"], "subject": script.get("subject", script["title"]), "width": config["width"], "height": config["height"],
             "fps": fps, "durationInFrames": frames, "transitionFrames": round(config.get("transition_seconds", .5) * fps), "depthStrength": config.get("depth_strength", 1), "scenes": scenes, "captions": captions,
             "creativeBrief": creative_brief,
+            "credits": sorted({s["credit"] for s in scenes if s.get("credit")}),
             "sources": [{"id": f"S{i+1}", "url": r["url"], "title": r.get("title") or r["url"]} for i, r in enumerate(sources["results"])]}
     timeline = write(root / "timeline.json", {"data": data})
     write(root / "source.json", {**master_info, "audio_file": str(master.relative_to(root))})

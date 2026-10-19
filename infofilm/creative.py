@@ -112,8 +112,9 @@ def resolved_scenes(storyboard, script, timing):
     return result
 
 
-def beat_errors(value, script, timing):
-    """Validate coverage and references, never impose creative image-count quotas."""
+def beat_errors(value, script, timing, figures=None):
+    """Validate coverage and references, never impose creative image-count quotas. `figures`: the film's figure
+    options (figures.options); without them a figure beat is not allowed."""
     scenes = value.get("scenes", [])
     if not isinstance(scenes, list) or not scenes or len(scenes) > 120:
         return ["Need 1–120 executable visual beats"]
@@ -153,6 +154,9 @@ def beat_errors(value, script, timing):
                 errors.append(f"{sid}: {kind} needs {n} labels and details")
             if any(not isinstance(v, str) or len(v.split()) > 4 for v in labels) or any(not isinstance(v, str) or len(v.split()) > 10 for v in details):
                 errors.append(f"{sid}: diagram labels/details are too long")
+        elif kind == "figure":
+            from .figures import scene_errors
+            errors.extend(scene_errors(scene, figures))
         else:
             errors.append(f"{sid}: unsupported visual beat kind")
         for key, limit in [("heading", 7), ("summary", 12)]:
@@ -246,6 +250,11 @@ def make_visual_beats(models, film, evidence, brief, *, experimental=True):
         "heading:'<=7 words',summary:'<=12 words or empty',labels:[],details:[],motion:'push'|'pull'|'drift'|'hold', "
         "copy_density:'minimal'|'standard',rationale,image_brief:'for images, else empty'}]}."
     )
+    from .figures import FIGURE_TASK, options, planner_options
+    figures = options(evidence)
+    if figures:                                       # chemistry films: exact figures as a beat kind
+        task = task.replace("kind:'image'|'flow'|'compare'|'cycle'", "kind:'image'|'flow'|'compare'|'cycle'|'figure'")
+        task += FIGURE_TASK
     guidance = visual_guidance(film["timing"], brief)
     aligned = film["timing"]["points"]
     starts = [p["start"] for p in aligned]
@@ -258,8 +267,10 @@ def make_visual_beats(models, film, evidence, brief, *, experimental=True):
                     "suggested_shots": max(1, round((end-start)/guidance["suggested_mean_hold_seconds"])),
                     "sentences": sentence_timing(p, film["timing"]["words"], end)}
                     for p,start,end in zip(aligned,starts,ends)]}
+    if figures:
+        context["figure_options"] = planner_options(figures)
     return models.loop(f"visual-beats-{film['requested_seconds']}", task, context,
-                      lambda x: beat_errors(x, film["script"], film["timing"]), experimental=experimental,
+                      lambda x: beat_errors(x, film["script"], film["timing"], figures), experimental=experimental,
                       metrics=lambda x: visual_metrics(x, film["script"], film["timing"]), units=BEAT_UNITS)
 
 

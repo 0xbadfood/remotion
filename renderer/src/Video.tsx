@@ -2,11 +2,11 @@ import React, {useEffect, useState} from 'react';
 import {AbsoluteFill, Img, OffthreadVideo, Sequence, staticFile, useCurrentFrame, useVideoConfig, delayRender, continueRender, cancelRender, interpolate} from 'remotion';
 import {DepthImage} from './DepthImage';
 
-export type Scene = {id:string; point_id:string; from:number; duration:number; kind:'image'|'flow'|'compare'|'cycle'; src?:string; depth?:string; clip?:string; clipSeconds?:number; backdrop?:string;
+export type Scene = {id:string; point_id:string; from:number; duration:number; kind:'image'|'flow'|'compare'|'cycle'|'figure'; src?:string; credit?:string; depth?:string; clip?:string; clipSeconds?:number; backdrop?:string;
   heading:string; summary:string; labels:string[]; details:string[]; banner?:string; needs_review?:boolean; review_tag?:string; copy_density?:'minimal'|'standard'; motion:'push'|'pull'|'drift'|'hold'; index:number; source_ids:string[]; reveals?:number[]};
 export type FilmData = {title:string;subject:string;width:number;height:number;fps:number;durationInFrames:number;transitionFrames?:number;depthStrength?:number;
   creativeBrief?:{resolved_mood:string;intensity:string;theme:{background:string;accent:string;text:string}};
-  scenes:Scene[]; captions:{start:number;end:number;text:string}[];sources:{id:string;url:string;title:string}[]};
+  scenes:Scene[]; captions:{start:number;end:number;text:string}[];credits?:string[];sources:{id:string;url:string;title:string}[]};
 
 const clamp = {extrapolateLeft:'clamp',extrapolateRight:'clamp'} as const;
 const amber='var(--film-accent, #f3b85e)', ink='var(--film-text, #f7f3e9)', teal='var(--film-bg, #082d34)';
@@ -37,6 +37,18 @@ const Diagram:React.FC<{scene:Scene;progress:number;frame:number}> = ({scene,pro
         {!compare && i<n-1 && <div style={{textAlign:'center',height:18,color:amber,fontSize:34,lineHeight:'18px'}}>↓</div>}
       </React.Fragment>;
     })}
+  </div>;
+};
+
+// An exact figure (equation, structure, atom model, or a credited library diagram) where diagram cards would sit,
+// shown at its drawn size up to the area, easing in and settling slowly.
+const Figure:React.FC<{scene:Scene;progress:number;frame:number}> = ({scene,progress,frame}) => {
+  const {width,height}=useVideoConfig();
+  const portrait=height>width;
+  const show=interpolate(frame,[0,14],[0,1],clamp);
+  return <div style={{position:'absolute',left:portrait?'8%':'45%',right:portrait?'8%':'5.5%',top:portrait?'41%':'22%',bottom:portrait?'17%':'22%',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center'}}>
+    {scene.src && <Img data-measure="figure" src={staticFile(scene.src)} style={{maxWidth:'100%',maxHeight:scene.credit?'90%':'100%',objectFit:'contain',opacity:show,transform:`scale(${(.97+.03*show)*(1+.025*progress)})`}}/>}
+    {scene.credit && <div data-measure="figure-credit" style={{marginTop:14,fontSize:portrait?18:17,lineHeight:1.3,color:'#9ebebc',opacity:show,textAlign:'center',maxWidth:'100%'}}>{scene.credit}</div>}
   </div>;
 };
 
@@ -80,7 +92,7 @@ const SceneView:React.FC<{scene:Scene;lead:number;brief?:FilmData['creativeBrief
       <AbsoluteFill style={{background:`radial-gradient(ellipse at 78% 38%,color-mix(in srgb, ${teal}, white 12%) 0%,${teal} 65%)`}}/>
       {scene.backdrop && <Img src={staticFile(scene.backdrop)} style={{position:'absolute',width:'100%',height:'100%',objectFit:'cover',filter:'blur(5px) brightness(.42) saturate(.85)',transform:`scale(${1.06+0.04*p})`,transformOrigin:'50% 50%'}}/>}
       {scene.backdrop && <AbsoluteFill style={{background:`radial-gradient(ellipse at 50% 50%,color-mix(in srgb, ${teal} 45%, transparent) 0%,color-mix(in srgb, ${teal} 80%, transparent) 75%)`}}/>}
-      <Diagram scene={scene} progress={p} frame={frame}/>
+      {scene.kind==='figure' ? <Figure scene={scene} progress={p} frame={frame}/> : <Diagram scene={scene} progress={p} frame={frame}/>}
     </>}
     {scene.kind==='image' && scene.banner && <div data-measure="context-banner" style={{position:'absolute',top:portrait?'10%':'14%',right:portrait?'8%':'6%',maxWidth:portrait?'84%':'45%',padding:'15px 23px',background:amber,color:'#082d34',borderRadius:6,fontSize:portrait?36:29,fontWeight:800,lineHeight:1.18,letterSpacing:1,textTransform:'uppercase',boxShadow:'0 4px 22px rgba(0,0,0,.16)'}}>{scene.banner}</div>}
     {scene.kind==='image' && scene.needs_review && <div data-measure="expert-review-tag" style={{position:'absolute',left:portrait?'8%':96,top:12,maxWidth:portrait?'84%':'55%',fontSize:portrait?26:23,fontWeight:600,lineHeight:1.25,color:'#ffffff',background:'rgba(65,30,6,.9)',padding:'6px 13px',border:'1px solid #d8ac70',borderRadius:5}}>{scene.review_tag || 'AI generated, needs expert review'}</div>}

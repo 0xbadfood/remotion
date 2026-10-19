@@ -135,6 +135,7 @@ def resume_narration(args):
     from .vibe_media import render_vibevoice, align_vibevoice
     from .omni_media import render_omnivoice
     from .creative import beat_errors, visual_metrics
+    from .figures import options as figure_options
     from .video import compile_timeline, render
     from .narrators import select_reference
     from .audio_audit import AUDIT_POLICY
@@ -184,7 +185,7 @@ def resume_narration(args):
                               if engine == "vibevoice" else
                               align_audio(config, store, film["audio"], film["script"], f"alignment-{duration}-recovery",
                                           spoken_points=film["audio_info"].get("spoken_points")))
-            errors = beat_errors(film["storyboard"], film["script"], film["timing"])
+            errors = beat_errors(film["storyboard"], film["script"], film["timing"], figure_options(evidence))
             if errors:
                 raise ValueError(f"Saved visual anchors no longer match repaired narration: {errors}")
         store.event("pipeline:timing", "succeeded", {"point_alignment": True})
