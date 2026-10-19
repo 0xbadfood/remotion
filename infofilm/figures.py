@@ -64,7 +64,7 @@ def key(spec):
     return hashlib.sha256(json.dumps(spec, sort_keys=True).encode()).hexdigest()[:20]
 
 
-SCALE = {'equation': 4.0}           # dvisvgm draws 10 pt type; 4x reads at ~50 px in a 1080p frame
+SCALE = {'equation': 5.5}           # dvisvgm draws 10 pt type; 5.5x reads at ~70 px in a 1080p frame
 LIBRARY_BOX = (1100, 640)           # the figure area of a 1080p frame
 
 
@@ -102,7 +102,7 @@ def render(store, films, figures):
                         module = chem(figures)
                         import cairosvg
                         cairosvg.svg2png(bytestring=module.draw(spec).encode(), write_to=str(out),
-                                         scale=SCALE.get(spec['type'], 1.4))
+                                         scale=SCALE.get(spec['type'], 2.0))
             except Exception as exc:                                     # noqa: BLE001 - reported together
                 errors.append(f'{scene.get("id")}: {type(exc).__name__}: {exc}'[:300])
                 continue
