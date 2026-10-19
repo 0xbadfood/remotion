@@ -2,7 +2,7 @@ import React, {useEffect, useState} from 'react';
 import {AbsoluteFill, Img, OffthreadVideo, Sequence, staticFile, useCurrentFrame, useVideoConfig, delayRender, continueRender, cancelRender, interpolate} from 'remotion';
 import {DepthImage} from './DepthImage';
 
-export type Scene = {id:string; point_id:string; from:number; duration:number; kind:'image'|'flow'|'compare'|'cycle'|'figure'; src?:string; credit?:string; depth?:string; clip?:string; clipSeconds?:number; backdrop?:string;
+export type Scene = {id:string; point_id:string; from:number; duration:number; kind:'image'|'flow'|'compare'|'cycle'|'figure'|'animation'; src?:string; credit?:string; depth?:string; clip?:string; clipSeconds?:number; backdrop?:string;
   heading:string; summary:string; labels:string[]; details:string[]; banner?:string; needs_review?:boolean; review_tag?:string; copy_density?:'minimal'|'standard'; motion:'push'|'pull'|'drift'|'hold'; index:number; source_ids:string[]; reveals?:number[]};
 export type FilmData = {title:string;subject:string;width:number;height:number;fps:number;durationInFrames:number;transitionFrames?:number;depthStrength?:number;
   creativeBrief?:{resolved_mood:string;intensity:string;theme:{background:string;accent:string;text:string}};
@@ -74,6 +74,13 @@ const SceneView:React.FC<{scene:Scene;lead:number;brief?:FilmData['creativeBrief
   const margin=(zoom-1)*width*.45;
   const x=scene.motion==='drift'?margin*(1-2*ease)*(focus.x>=50?1:-1):0;
   const y=scene.motion==='drift'?(zoom-1)*height*.2*(scene.index%2?1:-1)*(ease-.5):0;
+  // An animated beat: a Manim clip coded for this beat, timed to the narration from the cut and drawn on the film's
+  // background, with its own heading; it fills the frame and the film's captions sit over its free bottom band.
+  if (scene.kind==='animation') return <AbsoluteFill style={{background:teal,overflow:'hidden',opacity:fade}}>
+    {scene.src && <Sequence from={lead}><OffthreadVideo data-measure="animation" src={staticFile(scene.src)} muted
+      style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',objectFit:'contain'}}/></Sequence>}
+    {scene.needs_review && <div data-measure="expert-review-tag" style={{position:'absolute',left:portrait?'8%':96,top:12,maxWidth:portrait?'84%':'55%',fontSize:portrait?26:23,fontWeight:600,lineHeight:1.25,color:'#ffffff',background:'rgba(65,30,6,.9)',padding:'6px 13px',border:'1px solid #d8ac70',borderRadius:5}}>{scene.review_tag || 'AI generated, needs expert review'}</div>}
+  </AbsoluteFill>;
   return <AbsoluteFill style={{background:teal,overflow:'hidden',opacity:fade}}>
     {portrait && minimal && scene.src && <Img src={staticFile(scene.src)} style={{position:'absolute',width:'100%',height:'100%',objectFit:'cover',filter:'blur(28px) brightness(.45)',transform:'scale(1.08)'}}/>}
     {scene.kind==='image' && scene.clip && !portrait
@@ -115,10 +122,10 @@ const Chrome:React.FC<{data:FilmData}> = ({data}) => {
   const scene=data.scenes[index];
   const p=scene?Math.min(1,(frame-scene.from)/Math.max(1,scene.duration-1)):0;
   return <>
-    <div style={{position:'absolute',top:64,left:96,right:100,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+    {scene?.kind!=='animation' && <div style={{position:'absolute',top:64,left:96,right:100,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
       <div data-measure="series-label" style={{fontSize:portrait?20:23,fontWeight:700,letterSpacing:portrait?2:5,color:'#bfd5d5',textTransform:'uppercase',maxWidth:'80%'}}>{data.subject}</div>
       <div style={{color:'#bfd5d5',fontSize:25,fontWeight:600}}> {String(index+1).padStart(2,'0')} <span style={{color:'#68898d'}}> / {String(total).padStart(2,'0')}</span></div>
-    </div>
+    </div>}
     <div style={{position:'absolute',bottom:0,left:0,right:0,height:6,background:'#183c42'}}>
       <div style={{height:'100%',width:`${((index+p)/Math.max(1,total))*100}%`,background:amber}}/>
     </div>

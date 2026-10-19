@@ -248,6 +248,15 @@ def compile_timeline(config, store, script, timing, storyboard, images, evidence
             target_path = media / (scene["figure_sha256"][:20] + "-figure.png")
             shutil.copyfile(scene["figure_file"], target_path)
             value["src"] = str(target_path.relative_to(public))
+        if scene["kind"] == "animation":
+            if digest(Path(scene["animation_file"]).read_bytes()) != scene["animation_sha256"]:
+                raise ValueError("Animation changed after it was reviewed")
+            target_path = media / (scene["animation_sha256"][:20] + "-animation.mp4")
+            shutil.copyfile(scene["animation_file"], target_path)
+            value["src"] = str(target_path.relative_to(public))
+            if not scene.get("animation_review", {}).get("passed", True):
+                from .image_terminal import REVIEW_TAG
+                value.update(needs_review=True, review_tag=REVIEW_TAG)
         if scene["kind"] != "image" and backdrop:
             target_path = media / (backdrop["sha256"][:20] + ".png")
             if not target_path.exists():
@@ -266,7 +275,7 @@ def compile_timeline(config, store, script, timing, storyboard, images, evidence
         "frames": frames, "rounding": "nearest absolute boundary; ceil final sample duration", "full_coverage": True,
         "source_audio_sha256": info["audio_sha256"], "delivery_master_sha256": master_info["audio_sha256"],
         "music_engine": music.get("engine", "none") if music else "none", "scene_count": len(scenes), "point_count": len(script["points"]),
-        "needs_expert_review_assets": sorted({s['asset_id'] for s in scenes if s.get('needs_review')})})
+        "needs_expert_review_assets": sorted({s.get('asset_id') or s['id'] for s in scenes if s.get('needs_review')})})
     return root, timeline
 
 

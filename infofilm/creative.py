@@ -157,6 +157,8 @@ def beat_errors(value, script, timing, figures=None):
         elif kind == "figure":
             from .figures import scene_errors
             errors.extend(scene_errors(scene, figures))
+        elif kind == "animation":
+            pass                                      # checked with its words below (animations.scene_errors)
         else:
             errors.append(f"{sid}: unsupported visual beat kind")
         for key, limit in [("heading", 7), ("summary", 12)]:
@@ -168,6 +170,9 @@ def beat_errors(value, script, timing, figures=None):
             errors.append(f"{sid}: set copy_density to minimal or standard")
         if not scene.get("rationale"):
             errors.append(f"{sid}: explain the visual purpose of the beat")
+    if any(s.get("kind") == "animation" for s in scenes) and not errors:
+        from .animations import scene_errors as animation_errors
+        errors.extend(animation_errors(scenes, timing, figures))
     if collapsed != point_ids:
         missing = [p for p in point_ids if p not in collapsed]
         errors.append("Visual beats must cover every narration point in unchanged order; expected " + " ".join(point_ids) +
@@ -253,8 +258,10 @@ def make_visual_beats(models, film, evidence, brief, *, experimental=True):
     from .figures import FIGURE_TASK, options, planner_options
     figures = options(evidence)
     if figures:                                       # chemistry films: exact figures as a beat kind
-        task = task.replace("kind:'image'|'flow'|'compare'|'cycle'", "kind:'image'|'flow'|'compare'|'cycle'|'figure'")
-        task += FIGURE_TASK
+        from .animations import ANIMATION_TASK, options as animation_options
+        kinds = "'figure'|'animation'" if animation_options(figures) else "'figure'"
+        task = task.replace("kind:'image'|'flow'|'compare'|'cycle'", "kind:'image'|'flow'|'compare'|'cycle'|" + kinds)
+        task += FIGURE_TASK + (ANIMATION_TASK if animation_options(figures) else "")
     guidance = visual_guidance(film["timing"], brief)
     aligned = film["timing"]["points"]
     starts = [p["start"] for p in aligned]

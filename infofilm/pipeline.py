@@ -309,6 +309,13 @@ def finish_visuals(args, config, store, models, evidence, sources, brief, films,
         for film in films:
             write(store.root / f"film-{film['requested_seconds']}" / "storyboard.json", film["storyboard"])
         write(store.root / f"film-{duration}" / "visual-metrics.json", visual_metrics(film["storyboard"], film["script"], film["timing"]))
+    if figures and any(s.get("kind") == "animation" for film in films for s in film["storyboard"]["scenes"]):
+        from .animations import render as render_animations
+        stage("scenes", "running", task="Coding and reviewing the animated beats")
+        render_animations(store, films, figures, evidence, brief,
+                          log=lambda m: store.event("animations", "progress", {"message": m}))
+        for film in films:
+            write(store.root / f"film-{film['requested_seconds']}" / "storyboard.json", film["storyboard"])
     stage("scenes", "succeeded")
     if args.until == "storyboard":
         return
