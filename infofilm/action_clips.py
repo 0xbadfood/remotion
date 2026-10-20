@@ -4,7 +4,7 @@ from the accepted still and shows the action, as long as its beat (3-10 s), play
 Unlike the illustration clips (clips.py: gentle motion slowed to fill a scene), these clips carry part of the
 explanation: the guide climbing down two steps is the idea. They are planned with the scene, rendered from the
 still's first frame (tested 2026-10-20 on the Spark: the character stays the same and does the action; 8 s in about
-4 minutes, 10 s in about 5), across both LTX stacks (video_pool), and noted on the scene (action_file,
+4 minutes, 10 s in about 5; the amdserver, warm, about 11 s per second of clip), and noted on the scene (action_file,
 action_sha256, action_seconds). No review for now: the user judges the first pilots and the review strategy follows
 from that. A clip that fails to render leaves its scene as the still with the depth camera; clips never stop a film.
 """
@@ -17,15 +17,14 @@ from pathlib import Path
 from .core import digest
 
 PROTOCOL = "infofilm.action-clips.v1"
-# Both LTX stacks take clips from one queue (video_pool): the amdserver, switched to video mode once the stills are
-# accepted (96 GB since 2026-10-20: the user cleared mode switches during films), and the Spark's LTX service.
+# The amdserver makes the clips (video_pool), switched to video mode once the stills are accepted (96 GB since
+# 2026-10-20: the user cleared mode switches during films). Measured on I4 v2, warm: about 0.47 s per frame there
+# against 1.2 s on the Spark, so the user chose the amdserver alone; the Spark entry can be added back by config.
 DEFAULTS = {"width": 768, "height": 448, "frame_rate": 24, "condition_strength": .9, "seed": 11,
             "timeout_seconds": 1500, "switch_timeout_seconds": 1500,
             "style": "Flat 2D cartoon animation, steady camera, plain uncluttered background, no text.",
             "workers": [{"id": "amdserver", "kind": "ltx_comfy", "url": "http://10.8.0.8:8011",
-                         "mode_switch": "http://10.8.0.8:8099"},
-                        {"id": "spark", "kind": "ltx_storyvault", "url": "http://127.0.0.1:8010",
-                         "service": "ltx25-api"}]}
+                         "mode_switch": "http://10.8.0.8:8099"}]}
 LONGEST_FRAMES = 241            # 10 s at 24 fps; LTX needs (frames - 1) % 8 == 0
 
 
