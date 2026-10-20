@@ -20,8 +20,10 @@ TASK = (
     "{terms} book terms the learner must leave with (book_terms); the film explains each in everyday words and uses "
     "no other technical words. Design a "
     "simple, consistent visual world: a friendly guide character (describe exactly how it looks, so every picture "
-    "draws the same character) and the analogy's setting, light and uncluttered, so short animations can play in "
-    "it. Then outline {fewest}-{most} beats in teaching order: open with the learner's own question, let the analogy "
+    "draws the same character) and the analogy's setting (describe it exactly too: its shape, material and colours, "
+    "so every picture draws the same setting), uncluttered so short animations can play in it, on a dark plain "
+    "background (deep navy or charcoal; the film's text is light and sits over the pictures) with the guide and "
+    "setting in bright, light colours. Then outline {fewest}-{most} beats in teaching order: open with the learner's own question, let the analogy "
     "play out step by step with room to breathe, reach the 'aha', only then map it onto the real thing with the "
     "book's terms, say in one light beat where the analogy stops working, and close with a short recap. A beat "
     "teaches one thing. Use numbers or equations in at most {equations} beats, exactly as the evidence gives them. "
@@ -59,8 +61,14 @@ def errors(value, equations):
         out.append('mapping needs at least two {analogy, real} pairs')
     if not isinstance(world, dict) or not all(isinstance(world.get(k), str) for k in ('guide', 'setting', 'style')):
         out.append('world needs guide, setting and style')
-    elif len(world['guide'].split()) < 8:
-        out.append('world.guide: describe exactly how the guide looks (at least 8 words)')
+    else:
+        if len(world['guide'].split()) < 8:
+            out.append('world.guide: describe exactly how the guide looks (at least 8 words)')
+        if len(world['setting'].split()) < 10:
+            out.append('world.setting: describe the setting exactly (shape, material, colours; at least 10 words)')
+        if not re.search(r"\b(dark|navy|charcoal|black|midnight)\b", world['setting'] + ' ' + world['style'], re.I):
+            out.append('world: the background must be dark and plain (the film\'s text is light); say so in setting '
+                       'or style')
     beats = value.get('beats')
     if not isinstance(beats, list) or not FEWEST <= len(beats) <= MOST:
         return out + [f'give {FEWEST}-{MOST} beats']

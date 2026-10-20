@@ -384,6 +384,10 @@ def library_from_beats(films, brief):
             if key not in shared:
                 asset_id = f"A{len(assets) + 1:03d}"
                 shared[key] = asset_id
+                if brief.get("world"):                # key-idea films: the plan's world, word for word, every time
+                    world = brief["world"]
+                    prompt = (f"{prompt} Draw exactly: the guide is {world['guide']} The setting is {world['setting']} "
+                              f"Style: {world['style']}")
                 assets.append({"id": asset_id, "purpose": scene["rationale"], "prompt": prompt,
                     "acceptance": ["Matches the exact narrated passage and subject", "Consistent with the shared creative brief", "No raster typography, charts or invented factual labels"],
                     "fact_ids": list(points[scene["point_id"]]["fact_ids"])})

@@ -79,7 +79,18 @@ KEY_IDEA_BEATS_TASK = (
     "exactly as described there); use motion for the analogy's world: climbing, jumping, throwing, glowing. An "
     "action beat lasts 3-10 seconds of narration; split longer passages into several beats. Animation beats (coded, "
     "exact): for the real science, wherever positions, levels, numbers or spectra must be right. Plain image beats: "
-    "a still moment. Few words on screen; at most one equation figure in the whole film, built up slowly.")
+    "a still moment. Few words on screen; at most one equation figure in the whole film, built up slowly. Keep "
+    "every image_brief simple: the guide in one pose in the plan's setting, nothing more. Never ask an image for "
+    "brackets, dashed lines, arrows, labels, numbers, counted steps or measured gaps: an image model cannot draw them "
+    "exactly; anything exact belongs in an animation beat.")
+
+KEY_IDEA_IMAGE_TASK = (
+    " This is a simplified key-idea film. Every image is one simple moment in the plan's world (creative_brief.world): "
+    "draw the guide character and the setting exactly as described there, on its dark plain background, the guide "
+    "large and clear. Do not ask for brackets, dashed lines, arrows, labels, numbers, an exact count of steps or exact "
+    "positions. Acceptance criteria only check what matters here: the guide looks as described, the setting is the "
+    "described one, the background is dark and plain, and the moment reads at a glance (for a motion scene: the "
+    "moment before the action, with room for it). Never make acceptance depend on exact positions, counts or marks.")
 
 
 KEY_IDEA_EQUATIONS = 1           # points that may speak an equation, calculation or measured number

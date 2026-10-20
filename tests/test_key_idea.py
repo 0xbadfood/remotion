@@ -173,14 +173,16 @@ class IdeaPlanAndMotionTests(unittest.TestCase):
                 'book_terms': ['energy level', 'photon'],
                 'analogy': {'name': 'Staircase', 'picture': 'Energy levels are steps.', 'stops_working': 'Electrons are not people.'},
                 'mapping': [{'analogy': 'step', 'real': 'energy level'}, {'analogy': 'step height', 'real': 'energy gap'}],
-                'world': {'guide': 'a small round robot with big blue eyes and a yellow scarf', 'setting': 'a staircase',
+                'world': {'guide': 'a small round robot with big blue eyes and a yellow scarf',
+                          'setting': 'a tall staircase of five wide pale-yellow landings on a plain dark navy background',
                           'style': 'flat cartoon'}, 'beats': beats, **change}
 
     def test_the_idea_plan_needs_an_analogy_that_carries_the_film(self):
         from infofilm import idea_plan
         self.assertEqual(idea_plan.errors(self.plan(), 2), [])
-        thin = self.plan(world={'guide': 'a robot', 'setting': 's', 'style': 'flat'})
-        self.assertIn('describe exactly how the guide looks', ' '.join(idea_plan.errors(thin, 2)))
+        thin = ' '.join(idea_plan.errors(self.plan(world={'guide': 'a robot', 'setting': 's', 'style': 'flat'}), 2))
+        for problem in ('describe exactly how the guide looks', 'describe the setting exactly', 'background must be dark'):
+            self.assertIn(problem, thin)
         beats = self.plan()['beats']
         for b in beats[1:]:
             b['analogy_moment'] = ''
@@ -275,3 +277,19 @@ class IdeaPlanAndMotionTests(unittest.TestCase):
             action_clips.make_action_clips({}, store, [film], images, pool(Broken()))
             self.assertNotIn('action_file', storyboard['scenes'][0])
             self.assertIn(('action-clips', 'fallback'), [(n, s) for n, s, _ in store.events])
+
+
+class KeyIdeaStillTests(unittest.TestCase):
+    def test_every_still_draws_the_plans_world_word_for_word(self):
+        from infofilm.creative import library_from_beats
+        from test_creative import example
+        script, timing, storyboard, brief = example()
+        world = {'guide': 'Lumi, a pale-blue ball with an antenna.', 'setting': 'Five yellow landings on dark navy.',
+                 'style': 'Flat cartoon.'}
+        library = library_from_beats([{'script': script, 'storyboard': storyboard}], {**brief, 'world': world})
+        for asset in library['assets']:
+            self.assertIn('Draw exactly: the guide is Lumi, a pale-blue ball with an antenna. The setting is Five '
+                          'yellow landings on dark navy. Style: Flat cartoon.', asset['prompt'])
+        script, timing, storyboard, brief = example()
+        self.assertNotIn('Draw exactly', library_from_beats([{'script': script, 'storyboard': storyboard}], brief)
+                         ['assets'][0]['prompt'])                       # other films: unchanged

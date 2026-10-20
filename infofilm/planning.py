@@ -523,6 +523,9 @@ def make_image_prompts(models, library, films, evidence, orientations, experimen
             "the compositor realises those with native overlays (e.g. a compare layout), so stage each such scene as one coherent full-frame image. "
             "Return {style, assets:[{id,purpose,prompt,acceptance:[string],fact_ids:[string]}], banners:[{scene_key,text:'at most 8 words',reason}]}. "
             "Exactly cover the supplied used assets and image scene keys; an empty banner text is allowed if a banner adds no useful context.")
+    if (evidence.get("curriculum") or {}).get("kind") == "key_idea":
+        from .curriculum import KEY_IDEA_IMAGE_TASK
+        task += KEY_IDEA_IMAGE_TASK
     if prompt_style == 'descriptive_v1':
         from .prompt_styles import PLANNER_GUIDE
         task += PLANNER_GUIDE

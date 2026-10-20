@@ -253,6 +253,8 @@ def create(args):
         brief = chapter_creative(chapter_context["shared_creative"], chapter_context["chapter"], mood)
     else:
         brief = make_creative_brief(models, evidence, mood, intensity, balance, experimental=experimental)
+    if evidence.get("idea_plan"):                 # key-idea films: every image draws the plan's world exactly
+        brief["world"] = evidence["idea_plan"]["world"]
     write(store.root / "creative-brief.json", brief)
     stage("creative", "succeeded", resolved_mood=brief["resolved_mood"], visual_balance=brief["visual_balance"])
     stage("narration", "running", task="Voice calibration")
