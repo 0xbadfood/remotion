@@ -321,8 +321,8 @@ def land_idea(models, evidence, duration, suffix, task, context, validate, scrip
                     "previous_script": script}
         script = models.loop(f"script-{duration}{suffix}-land{n + 1}", task + (
             " learner_feedback shows how a learner understood the previous script: rewrite it so the idea lands. "
-            "Apply the fixes, remove every cause of a wrong belief, and simplify where the learner got lost; keep "
-            "what worked."), {**context, "learner_feedback": feedback}, validate, experimental=experimental,
+            "Apply every fix (when a fix says to drop or leave something out, leave it out), remove every cause of "
+            "a wrong belief, and simplify where the learner got lost or was confused; keep what worked."), {**context, "learner_feedback": feedback}, validate, experimental=experimental,
             units=SCRIPT_UNITS)
     write(models.store.root / f"learner-check-{duration}.json", {"landed": rounds[-1]["landed"], "rounds": rounds})
     return script

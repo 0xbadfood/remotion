@@ -47,20 +47,21 @@ KEY_IDEA_EVIDENCE_TASK = (
     "anything not needed to understand this one idea; completeness is not wanted.")
 
 KEY_IDEA_SCRIPT_TASK = (
-    " This is a short simplified film for {audience} on ONE key idea: {idea}. The learner should come away "
-    "understanding: {understanding} Simplification comes before everything else, including the advice above about a "
-    "general audience, coverage and the book's style. Build the whole film on one strong analogy or everyday picture "
-    "(from the evidence, or your own when it fits better) and let it breathe: introduce it, play it out step by step "
-    "in everyday words, let the learner feel the 'aha', and only then map it onto the real thing and name the book's "
-    "terms. The analogy carries most of the film, not just the opening. Be creative and warm: a question the learner "
+    " This is a short simplified film for {audience} on ONE key idea: {idea}. The learner should come away able to "
+    "say: {understanding} Simplification comes before everything else, including the advice above about a general "
+    "audience, coverage and the book's style. Build the whole film on the plan's one analogy (evidence.idea_plan."
+    "analogy; add no second analogy) and let it breathe: introduce it, play it out step by step in everyday words, "
+    "let the learner feel the 'aha', and only then map it onto the real thing. Book terms: only {terms}, each "
+    "introduced after the picture is clear and explained in everyday words; use no other technical word, symbol or "
+    "unit. The analogy carries most of the film, not just the opening. Be creative and warm: a question the learner "
     "actually has, a friendly guide's voice, short sentences, one idea per point, a 'so that is why' moment, and a "
     "short recap. Leave out whatever the idea does not need: no tour of the model's limits, other theories or extra "
-    "results. Say where the analogy stops working in one light sentence, so it leaves no wrong belief. Equations: "
-    "at most {equations} points may speak an equation or a calculation, and only if it helps the idea land; any "
-    "number said must be exactly as the evidence gives it. Never state something false to make it simpler. Each "
-    "point also carries uses_analogy: true when the analogy carries or is mapped in that point; at least half the "
-    "points must use it. evidence.idea_plan is the film's plan: narrate its beats in order (a beat may take one or "
-    "two points), with its analogy and mapping; keep to it.")
+    "results. Say where the analogy stops working in one light sentence, so it leaves no wrong belief. Equations and "
+    "numbers are rarely needed here: at most {equations} point may speak an equation, a calculation or a measured "
+    "number, and only if it helps the idea land, exactly as the evidence gives it. Never state something false to "
+    "make it simpler. Each point also carries uses_analogy: true when the analogy carries or is mapped in that "
+    "point; at least half the points must use it. evidence.idea_plan is the film's plan: narrate its beats in order "
+    "(a beat may take one or two points), with its analogy and mapping; keep to it.")
 
 KEY_IDEA_CREATIVE_TASK = (
     " This is a short simplified explainer of one key idea for students. Choose a warm, playful, curious mood and a "
@@ -81,10 +82,11 @@ KEY_IDEA_BEATS_TASK = (
     "a still moment. Few words on screen; at most one equation figure in the whole film, built up slowly.")
 
 
-KEY_IDEA_EQUATIONS = 2           # points that may speak an equation or calculation
+KEY_IDEA_EQUATIONS = 1           # points that may speak an equation, calculation or measured number
 KEY_IDEA_ANALOGY_SHARE = .5      # points that must use the analogy
 KEY_IDEA_FIGURES = 1             # equation figures on screen
-SPOKEN_MATHS = re.compile(r"\b(equals|divided by|to the power|times 10|squared|multiplied by)\b|=", re.I)
+SPOKEN_MATHS = re.compile(r"\b(equals|divided by|to the power|times 10|squared|multiplied by|joules?|hertz|"
+                          r"nanometres?|nanometers?)\b|=|\d+\.\d+", re.I)
 
 
 def is_key_idea(curriculum):
@@ -97,7 +99,9 @@ def context(curriculum):
 
 def idea_context(curriculum):
     idea = curriculum.get('idea') or {}
-    return {**context(curriculum), 'idea': idea.get('title', ''), 'understanding': idea.get('understanding', '')}
+    terms = idea.get('terms')
+    return {**context(curriculum), 'idea': idea.get('title', ''), 'understanding': idea.get('understanding', ''),
+            'terms': ', '.join(f'"{t}"' for t in terms) if terms else 'the two or three the idea cannot do without'}
 
 
 def evidence_task(curriculum):

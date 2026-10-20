@@ -7,28 +7,48 @@ creative brief takes its visual style from the world, so the analogy cannot fall
 """
 from __future__ import annotations
 
+import re
+
 TASK = (
     "Plan a short simplified film that makes ONE idea land for students who find science hard, before any narration "
     "is written. Idea: {idea}. The learner should come away understanding: {understanding} The learner usually "
-    "struggles because: {why} Choose ONE strong analogy or everyday picture that carries the whole idea (the "
-    "evidence may offer some; use your own if it fits better). Map each part of it onto the real thing. Design a "
+    "struggles because: {why} First write the takeaway: what the learner will be able to say after the film, in the "
+    "everyday words of a 15-year-old who finds science hard, with no symbols, formulas or numbers (the understanding "
+    "above may be written at the book's level: translate it, and drop what a first understanding does not need). "
+    "Choose ONE strong analogy or everyday picture that carries the whole idea (the evidence may offer some; use your "
+    "own if it fits better); do not add a second analogy. Map each part of it onto the real thing. Pick at most "
+    "{terms} book terms the learner must leave with (book_terms); the film explains each in everyday words and uses "
+    "no other technical words. Design a "
     "simple, consistent visual world: a friendly guide character (describe exactly how it looks, so every picture "
     "draws the same character) and the analogy's setting, light and uncluttered, so short animations can play in "
     "it. Then outline {fewest}-{most} beats in teaching order: open with the learner's own question, let the analogy "
     "play out step by step with room to breathe, reach the 'aha', only then map it onto the real thing with the "
     "book's terms, say in one light beat where the analogy stops working, and close with a short recap. A beat "
     "teaches one thing. Use numbers or equations in at most {equations} beats, exactly as the evidence gives them. "
-    "Return {{analogy:{{name, picture:'one or two sentences', stops_working:'where it stops being true'}}, "
+    "Return {{takeaway:'1-2 plain sentences', book_terms:['at most {terms}'], "
+    "analogy:{{name, picture:'one or two sentences', stops_working:'where it stops being true'}}, "
     "mapping:[{{analogy:'part of the picture', real:'what it stands for'}}], "
     "world:{{guide:'exact look of the guide character', setting:'the analogy setting', style:'drawing style'}}, "
     "beats:[{{id:'B1', teaches:'one thing', analogy_moment:'what happens in the analogy, or empty', "
     "real_link:'the real thing it maps to, or empty'}}]}}.")
 
 FEWEST, MOST = 6, 14
+TERMS = 3                         # book terms a key-idea film may introduce
+TECHNICAL = re.compile(r"\d|[=^±√∆ΔΣλνπ]|\b(delta|lambda|nu|squared)\b", re.I)
 
 
 def errors(value, equations):
     out = []
+    takeaway = value.get('takeaway')
+    if not isinstance(takeaway, str) or not 8 <= len(takeaway.split()) <= 60:
+        out.append('takeaway: 1-2 plain sentences (8-60 words) of what the learner will be able to say')
+    elif TECHNICAL.search(takeaway):
+        out.append(f'takeaway: no symbols, formulas or numbers ("{TECHNICAL.search(takeaway).group(0)}"); say it '
+                   'in everyday words')
+    terms = value.get('book_terms')
+    if not isinstance(terms, list) or len(terms) > TERMS or not all(isinstance(t, str) and 1 <= len(t.split()) <= 4
+                                                                      for t in terms):
+        out.append(f'book_terms: at most {TERMS} short terms')
     analogy, world = value.get('analogy'), value.get('world')
     if not isinstance(analogy, dict) or not all(isinstance(analogy.get(k), str) and analogy[k].strip()
                                                  for k in ('name', 'picture', 'stops_working')):
@@ -58,7 +78,7 @@ def make_idea_plan(models, evidence, experimental=True):
     from .curriculum import KEY_IDEA_EQUATIONS
     idea = evidence['curriculum'].get('idea') or {}
     task = TASK.format(idea=idea.get('title', ''), understanding=idea.get('understanding', ''),
-                       why=idea.get('why', ''), fewest=FEWEST, most=MOST, equations=KEY_IDEA_EQUATIONS)
+                       why=idea.get('why', ''), fewest=FEWEST, most=MOST, equations=KEY_IDEA_EQUATIONS, terms=TERMS)
     context = {'evidence': {k: v for k, v in evidence.items() if k != 'idea_plan'}}
     return models.loop('idea-plan', task, context, lambda x: errors(x, KEY_IDEA_EQUATIONS),
                        experimental=experimental)

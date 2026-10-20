@@ -237,6 +237,12 @@ def create(args):
         stage("evidence", "running", task="Planning the idea")
         evidence["idea_plan"] = make_idea_plan(models, evidence, experimental=experimental)
         write(store.root / "idea-plan.json", evidence["idea_plan"])
+        # The script and the learner check aim at the plan's plain takeaway, not the book-level wording of the idea
+        # (I4 v2, 2026-10-20: "signed energy change ΔE = R_H(...)" kept the formula in every rewrite).
+        idea = curriculum.get("idea") or {}
+        curriculum["idea"] = {**idea, "book_understanding": idea.get("book_understanding", idea.get("understanding")),
+                              "understanding": evidence["idea_plan"]["takeaway"],
+                              "terms": evidence["idea_plan"].get("book_terms") or []}
     write(store.root / "evidence-final.json", evidence)
     stage("evidence", "succeeded", facts=len(evidence["facts"]))
     if args.until == "evidence":

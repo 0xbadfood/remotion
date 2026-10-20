@@ -110,7 +110,11 @@ class KeyIdeaTests(unittest.TestCase):
         self.assertEqual(key_idea_script_errors({'points': maths}, {'curriculum': {'kind': 'textbook_concept'}}), [])
         board = {'scenes': [{'id': 'S1', 'kind': 'figure'}, {'id': 'S2', 'kind': 'figure'}, {'id': 'S3', 'kind': 'animation'}]}
         self.assertIn('S1, S2: 2 figure beats', ' '.join(key_idea_beat_errors(board, evidence)))
-        self.assertIn('at most 2 points may speak an equation', script_task(IDEA))
+        self.assertIn('at most 1 point may speak an equation', script_task(IDEA))
+        numbers = [{'id': 'P1', 'narration': 'Its frequency is about 6.91 hertz.', 'uses_analogy': True}]
+        self.assertIn('P01, P1', ' '.join(key_idea_script_errors({'points': maths[:1] + numbers + story}, evidence)))
+        self.assertIn('Book terms: only "energy level", "photon"',
+                      script_task({**IDEA, 'idea': {**IDEA['idea'], 'terms': ['energy level', 'photon']}}))
 
     def test_understood_is_not_enough_it_must_be_simple(self):
         with tempfile.TemporaryDirectory() as root:
@@ -141,7 +145,11 @@ class KeyIdeaTests(unittest.TestCase):
         self.assertEqual(key_idea_script_errors({'points': maths}, {'curriculum': {'kind': 'textbook_concept'}}), [])
         board = {'scenes': [{'id': 'S1', 'kind': 'figure'}, {'id': 'S2', 'kind': 'figure'}, {'id': 'S3', 'kind': 'animation'}]}
         self.assertIn('S1, S2: 2 figure beats', ' '.join(key_idea_beat_errors(board, evidence)))
-        self.assertIn('at most 2 points may speak an equation', script_task(IDEA))
+        self.assertIn('at most 1 point may speak an equation', script_task(IDEA))
+        numbers = [{'id': 'P1', 'narration': 'Its frequency is about 6.91 hertz.', 'uses_analogy': True}]
+        self.assertIn('P01, P1', ' '.join(key_idea_script_errors({'points': maths[:1] + numbers + story}, evidence)))
+        self.assertIn('Book terms: only "energy level", "photon"',
+                      script_task({**IDEA, 'idea': {**IDEA['idea'], 'terms': ['energy level', 'photon']}}))
 
     def test_concept_films_get_no_learner_check(self):
         with tempfile.TemporaryDirectory() as root:
@@ -161,7 +169,9 @@ class IdeaPlanAndMotionTests(unittest.TestCase):
     def plan(self, **change):
         beats = [{'id': f'B{n}', 'teaches': 'one step', 'analogy_moment': 'the guide steps down' if n % 2 else '',
                   'real_link': ''} for n in range(1, 9)]
-        return {'analogy': {'name': 'Staircase', 'picture': 'Energy levels are steps.', 'stops_working': 'Electrons are not people.'},
+        return {'takeaway': 'An electron can only sit on certain steps, and each drop gives out one colour of light.',
+                'book_terms': ['energy level', 'photon'],
+                'analogy': {'name': 'Staircase', 'picture': 'Energy levels are steps.', 'stops_working': 'Electrons are not people.'},
                 'mapping': [{'analogy': 'step', 'real': 'energy level'}, {'analogy': 'step height', 'real': 'energy gap'}],
                 'world': {'guide': 'a small round robot with big blue eyes and a yellow scarf', 'setting': 'a staircase',
                           'style': 'flat cartoon'}, 'beats': beats, **change}
@@ -175,6 +185,9 @@ class IdeaPlanAndMotionTests(unittest.TestCase):
         for b in beats[1:]:
             b['analogy_moment'] = ''
         self.assertIn('only 1 of 8 beats have an analogy_moment', ' '.join(idea_plan.errors(self.plan(beats=beats), 2)))
+        for takeaway in ('Delta E equals the energy gap between steps.', 'Each drop gives light of 434 nm colour.'):
+            self.assertIn('no symbols, formulas or numbers', ' '.join(idea_plan.errors(self.plan(takeaway=takeaway), 1)))
+        self.assertIn('book_terms: at most 3', ' '.join(idea_plan.errors(self.plan(book_terms=['a', 'b', 'c', 'd']), 1)))
 
     def test_action_beats_are_image_beats_of_3_to_10_seconds(self):
         from infofilm.creative import beat_errors
