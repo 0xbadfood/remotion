@@ -94,11 +94,14 @@ def warm(config):
 
 
 def ensure_image_mode(config):
-    """Before an image stage: wait for a video worker's switch back to image mode, if one is still running."""
+    """Before an image stage: wait for a video worker's switch back to image mode, if one is still running (the
+    illustration clips' workers, and the action clips' amdserver, which key-idea films switch to video mode)."""
+    from . import video_pool
+    from .action_clips import settings as action_settings
     s = settings(config)
     if s["enabled"]:
-        from . import video_pool
         video_pool.ensure_image_mode(s)
+    video_pool.ensure_image_mode(action_settings(config))
 
 
 def make_clips(config, store, models, images, prompts):

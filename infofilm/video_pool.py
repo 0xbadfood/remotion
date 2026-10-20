@@ -105,6 +105,27 @@ class ComfyWorker(Worker):
         return target
 
 
+    def render_action(self, still, prompt, frames, target, key, s):
+        """An action clip from the still: this API conditions on frame 1 at the earliest, so one more frame is made
+        and the frame before the still is cut off."""
+        raw = target.with_suffix(".raw.mp4")
+        with httpx.Client(timeout=60) as client, open(still, "rb") as image:
+            job = client.post(self.url + "/v1/videos/generations", files={"conditioning_image": image}, data={
+                "mode": "conditioning_image_to_video", "prompt": prompt, "width": s["width"], "height": s["height"],
+                "num_frames": frames + 8, "frame_rate": s["frame_rate"], "seed": s["seed"],
+                "conditioning_frame_index": 1, "condition_strength": s["condition_strength"], "interpolate": 1,
+                "idempotency_key": f"action-{key}-{int(time.time())}"}).raise_for_status().json()
+            token = job.get("token") or job.get("poll_token")
+            self._poll(client, f"{self.url}/v1/videos/{job['id']}", {"token": token})
+            data = client.get(f"{self.url}/v1/videos/{job['id']}/content", params={"token": token}, timeout=300)
+            raw.write_bytes(data.raise_for_status().content)
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(raw), "-vf", "trim=start_frame=1,setpts=PTS-STARTPTS",
+                        "-an", "-c:v", "libx264", "-crf", "16", "-pix_fmt", "yuv420p", str(target)], check=True,
+                       timeout=300)
+        raw.unlink(missing_ok=True)
+        return target
+
+
 class StoryVaultWorker(Worker):
     def _systemctl(self, *args):
         return subprocess.run(["systemctl", "--user", *args], capture_output=True, text=True, timeout=60)
@@ -146,6 +167,24 @@ class StoryVaultWorker(Worker):
             raw.write_bytes(client.get(self.url + path, timeout=300).raise_for_status().content)
         interpolate(raw, target, self.settings["interpolate"])
         raw.unlink(missing_ok=True)
+        return target
+
+
+    def render_action(self, still, prompt, frames, target, key, s):
+        """An action clip that starts exactly at the still (first_image_to_video)."""
+        with httpx.Client(timeout=60) as client, open(still, "rb") as image:
+            job = client.post(self.url + "/v1/videos/generations",
+                              files={"first_image": (Path(still).name, image, "image/png")}, data={
+                "mode": "first_image_to_video", "prompt": prompt, "width": s["width"], "height": s["height"],
+                "num_frames": frames, "frame_rate": s["frame_rate"], "seed": s["seed"],
+                "condition_strength": s["condition_strength"], "output_audio": "false",
+                "idempotency_key": f"action-{key}-{int(time.time())}", "client_request_id": f"infofilm-action-{key}",
+                "story_id": "infofilm", "shot_id": key[:16], "asset_id": key[:16],
+                "source_plan_sha256": key.ljust(64, "0")[:64]}).raise_for_status().json()
+            state = self._poll(client, f"{self.url}/v1/videos/{job['id']}", {"token": job["token"]})
+            link = state.get("download_url") or f"/v1/videos/{job['id']}/content?token={job['token']}"
+            path = "/" + link.split("/", 3)[-1] if link.startswith("http") else link
+            target.write_bytes(client.get(self.url + path, timeout=300).raise_for_status().content)
         return target
 
 

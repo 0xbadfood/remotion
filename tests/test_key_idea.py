@@ -227,32 +227,38 @@ class IdeaPlanAndMotionTests(unittest.TestCase):
             images = {'A1': {'file': str(still), 'sha256': hashlib.sha256(b'png').hexdigest()}}
             film = {'script': script, 'timing': timing, 'storyboard': storyboard}
 
-            class Service:
-                renders = []
+            renders = []
 
-                def __enter__(self):
-                    return self
+            class Worker:
+                id = 'spark'
 
-                def __exit__(self, *exc):
-                    pass
-
-                def render(self, still, prompt, frames, target, key):
-                    self.renders.append((prompt, frames))
+                def render_action(self, still, prompt, frames, target, key, settings):
+                    renders.append((prompt, frames))
                     target.write_bytes(b'clip')
+
+            class Broken(Worker):
+                def render_action(self, *args):
+                    raise RuntimeError('LTX fell over')
+
+            def pool(worker):
+                def run(settings, jobs, render_one, event):            # video_pool.run: a failure keeps the still
+                    for key, payload in jobs:
+                        try:
+                            render_one(worker, key, payload)
+                        except Exception as exc:                        # noqa: BLE001
+                            event('fallback', {'asset': key, 'reason': str(exc)})
+                return run
             store = Events(root)
-            action_clips.make_action_clips({}, store, [film], images, Service())
+            action_clips.make_action_clips({}, store, [film], images, pool(Worker()))
             scene = storyboard['scenes'][0]
-            self.assertEqual(Service.renders, [(action_clips.DEFAULTS['style'] + ' The puppy runs to the bowl.', 145)])
+            self.assertEqual(renders, [(action_clips.DEFAULTS['style'] + ' The puppy runs to the bowl.', 145)])
             self.assertEqual((scene['action_seconds'], len(scene['action_sha256'])), (6.0, 64))
             self.assertNotIn('action_file', storyboard['scenes'][1])
-            action_clips.make_action_clips({}, store, [film], images, None)      # cached: no service needed
-            self.assertEqual(len(Service.renders), 1)
-
-            class Broken(Service):
-                def render(self, *args):
-                    raise RuntimeError('LTX fell over')
+            action_clips.make_action_clips({}, store, [film], images, pool(Broken()))   # cached: nothing to render
+            self.assertEqual(len(renders), 1)
+            self.assertIn('action_file', scene)
             storyboard['scenes'][0]['action'] = 'The puppy sits down.'
             del storyboard['scenes'][0]['action_file']
-            action_clips.make_action_clips({}, store, [film], images, Broken())
+            action_clips.make_action_clips({}, store, [film], images, pool(Broken()))
             self.assertNotIn('action_file', storyboard['scenes'][0])
             self.assertIn(('action-clips', 'fallback'), [(n, s) for n, s, _ in store.events])
