@@ -27,6 +27,9 @@ def agent_role(config):
     return "reviewer" if endpoint(config, "reviewer")["type"] != "openai_responses" else "planner"
 
 
+KEY_IDEA_SOURCES = 6              # web pages on how others explain a key idea, added after the book
+
+
 def research(config, store, subject, *, subject_guidance=None, budget=None):
     """Run kbagent with its existing dependencies; archive and resume fetched evidence. `budget` ({max_searches,
     max_fetches}) widens film-level research, whose digest every chapter builds on."""
@@ -209,6 +212,14 @@ def create(args):
     stage("research", "running")
     research_subject = (chapter_context["research_subject"] if chapter_context else args.subject)
     sources = read(args.sources) if args.sources else research(config, store, research_subject)
+    if (curriculum or {}).get("kind") == "key_idea" and curriculum.get("research"):
+        # Key-idea films: how others explain the idea simply (analogies, pictures, misconceptions) joins the book.
+        # Optional: without it the planner still has the book and its own analogies.
+        try:
+            found = research(config, store, curriculum["research"])
+            sources = {**sources, "results": sources["results"] + found["results"][:KEY_IDEA_SOURCES]}
+        except Exception as exc:                                     # noqa: BLE001 - the film goes on from the book
+            store.event("research", "skipped", {"error": str(exc)[:300]})
     write(store.root / "sources.json", sources)
     stage("research", "succeeded", source_count=len(sources["results"]))
     evidence_path = store.root / "evidence-final.json"

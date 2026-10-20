@@ -149,8 +149,9 @@ def make_evidence(models, extraction, subject="How the Indian monsoon works", au
         errors = []
         facts = value.get("facts", [])
         most = 30 if curriculum else 20
-        if not 8 <= len(facts) <= most:
-            errors.append(f"Provide 8–{most} distinct, useful facts: this draft has {len(facts)}" +
+        least = 5 if (curriculum or {}).get("kind") == "key_idea" else 8      # one idea needs few facts
+        if not least <= len(facts) <= most:
+            errors.append(f"Provide {least}–{most} distinct, useful facts: this draft has {len(facts)}" +
                           ("; merge overlapping facts or drop the least useful ones, keeping every fact the narration needs"
                            if len(facts) > most else "; add verified facts from the sources"))
         if curriculum:
@@ -167,9 +168,12 @@ def make_evidence(models, extraction, subject="How the Indian monsoon works", au
             "Distinguish tendencies from guarantees and local mechanisms from large-scale systems. Avoid dated statistics and absolute guarantees. "
             "Return {title, facts:[{id:'F01',claim,source_ids:['S1'],evidence_note:'paraphrased support and section'},...], uncertainties:[string], narrative_priorities:[string]}.")
     if curriculum:
-        from .curriculum import evidence_task
-        task = task.replace("usable for short informational films", "usable for a short curriculum film").replace(
-            "evidence_note:'paraphrased support and section'}", "evidence_note:'paraphrased support and section',coverage:['K1']}")
+        from .curriculum import evidence_task, is_key_idea
+        if is_key_idea(curriculum):
+            task = task.replace("usable for short informational films", "usable for a short simplified film")
+        else:
+            task = task.replace("usable for short informational films", "usable for a short curriculum film").replace(
+                "evidence_note:'paraphrased support and section'}", "evidence_note:'paraphrased support and section',coverage:['K1']}")
         task += evidence_task(curriculum)
     if chapter_context:
         task += (" This is one chapter of a longer film. Research its owned questions, scope and objective thoroughly. "
@@ -273,18 +277,52 @@ def make_script(models, evidence, duration, rate=135, experimental=True, suffix=
                  f"total about {sheet['word_budget']} words (code checks within {round(sheet.get('length_tolerance', .25) * 100)}%); "
                  "this budget replaces the advisory duration and word reference above.")
     if evidence.get("curriculum"):
-        from .curriculum import script_task
-        task = task.replace("a general-audience informational video", "a curriculum video") + script_task(evidence["curriculum"])
+        from .curriculum import is_key_idea, script_task
+        kind = "a short simplified explainer" if is_key_idea(evidence["curriculum"]) else "a curriculum video"
+        task = task.replace("a general-audience informational video", kind) + script_task(evidence["curriculum"])
     if correction:
         context["measured_duration_feedback"] = correction
     chapter = evidence.get("chapter_context") or {}
     repair = None
     if seed is not None and chapter.get("continuity_notes"):
         repair = (seed, continuity_findings(chapter["continuity_notes"], (chapter.get("chapter") or {}).get("id", "")))
-    from .curriculum import script_coverage_errors
-    return models.loop(f"script-{duration}{suffix}", task, context,
-                       lambda x: script_errors(x, evidence, budget, duration) + script_coverage_errors(x, evidence), experimental=experimental,
-                       units=SCRIPT_UNITS, seed=repair)
+    from .curriculum import is_key_idea, script_coverage_errors
+    validate = lambda x: script_errors(x, evidence, budget, duration) + script_coverage_errors(x, evidence)  # noqa: E731
+    script = models.loop(f"script-{duration}{suffix}", task, context, validate, experimental=experimental,
+                         units=SCRIPT_UNITS, seed=repair)
+    if is_key_idea(evidence.get("curriculum")):
+        script = land_idea(models, evidence, duration, suffix, task, context, validate, script, experimental)
+    return script
+
+
+LANDING_ROUNDS = 2
+
+
+def land_idea(models, evidence, duration, suffix, task, context, validate, script, experimental):
+    """Key-idea films: a learner who knows nothing of the subject explains the idea back from the narration; while it
+    does not land (or leaves a wrong belief), the script is rewritten with the judge's fixes, up to LANDING_ROUNDS
+    times. The rounds are kept in learner-check-<duration>.json; a film whose idea never landed still goes on, with
+    the verdict on record (the measure the user will calibrate against)."""
+    from .curriculum import learner_check
+    rounds = []
+    for n in range(LANDING_ROUNDS + 1):
+        check = learner_check(models, script, evidence["curriculum"], f"learner-{duration}{suffix}-{n}")
+        rounds.append({"round": n, **check})
+        models.store.event("learner-check", "landed" if check["landed"] else "missed",
+                           {"round": n, "score": check["verdict"].get("score")})
+        if check["landed"] or n == LANDING_ROUNDS:
+            break
+        feedback = {"learner_explanation": check["learner"].get("explanation"),
+                    "learner_lost_at": check["learner"].get("lost_at"),
+                    "wrong_beliefs": check["verdict"].get("wrong_beliefs"), "fixes": check["verdict"].get("fixes"),
+                    "previous_script": script}
+        script = models.loop(f"script-{duration}{suffix}-land{n + 1}", task + (
+            " learner_feedback shows how a learner understood the previous script: rewrite it so the idea lands. "
+            "Apply the fixes, remove every cause of a wrong belief, and simplify where the learner got lost; keep "
+            "what worked."), {**context, "learner_feedback": feedback}, validate, experimental=experimental,
+            units=SCRIPT_UNITS)
+    write(models.store.root / f"learner-check-{duration}.json", {"landed": rounds[-1]["landed"], "rounds": rounds})
+    return script
 
 
 def make_library(models, evidence, scripts, experimental=True):

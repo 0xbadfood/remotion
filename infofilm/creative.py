@@ -71,6 +71,9 @@ def make_creative_brief(models, evidence, mood="auto", intensity="restrained", b
         "theme:{background:'#RRGGBB',accent:'#RRGGBB',text:'#RRGGBB'}, "
         "music:{caption,bpm:integer,keyscale:'C Major' or another simple key,timesignature:'4'}}."
     )
+    if (evidence.get("curriculum") or {}).get("kind") == "key_idea":
+        from .curriculum import KEY_IDEA_CREATIVE_TASK
+        task += KEY_IDEA_CREATIVE_TASK
     result = models.loop("creative-brief", task, {"evidence": evidence, "requested_mood": mood,
         "intensity": intensity, "requested_visual_balance": balance, "presets": MOODS,
         "resolved_visual_balances": list(BALANCE_SHARES)},
@@ -262,6 +265,9 @@ def make_visual_beats(models, film, evidence, brief, *, experimental=True):
         kinds = "'figure'|'animation'" if animation_options(figures) else "'figure'"
         task = task.replace("kind:'image'|'flow'|'compare'|'cycle'", "kind:'image'|'flow'|'compare'|'cycle'|" + kinds)
         task += FIGURE_TASK + (ANIMATION_TASK if animation_options(figures) else "")
+    if (evidence.get("curriculum") or {}).get("kind") == "key_idea":
+        from .curriculum import KEY_IDEA_BEATS_TASK
+        task += KEY_IDEA_BEATS_TASK
     guidance = visual_guidance(film["timing"], brief)
     aligned = film["timing"]["points"]
     starts = [p["start"] for p in aligned]
