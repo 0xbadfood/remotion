@@ -62,7 +62,7 @@ def spans(scenes, timing):
     positions = {w["id"]: i for i, w in enumerate(words)}
     indices = [positions.get(s.get("start_word_id"), 0) for s in scenes]
     duration = timing.get("audio_info", {}).get("duration_seconds") or (words[-1]["end"] if words else 0)
-    starts = [0.0] + [words[i]["start"] for i in indices[1:]]
+    starts = [timing.get("start_seconds", 0.0)] + [words[i]["start"] for i in indices[1:]]
     ends = starts[1:] + [duration]
     return [(start, end, words[index:(indices[i + 1] if i + 1 < len(indices) else len(words))])
             for i, (start, end, index) in enumerate(zip(starts, ends, indices))]

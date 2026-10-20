@@ -153,3 +153,106 @@ class KeyIdeaTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class IdeaPlanAndMotionTests(unittest.TestCase):
+    """The idea plan before the script, scenes planned in batches, and motion beats made into LTX clips."""
+
+    def plan(self, **change):
+        beats = [{'id': f'B{n}', 'teaches': 'one step', 'analogy_moment': 'the guide steps down' if n % 2 else '',
+                  'real_link': ''} for n in range(1, 9)]
+        return {'analogy': {'name': 'Staircase', 'picture': 'Energy levels are steps.', 'stops_working': 'Electrons are not people.'},
+                'mapping': [{'analogy': 'step', 'real': 'energy level'}, {'analogy': 'step height', 'real': 'energy gap'}],
+                'world': {'guide': 'a small round robot with big blue eyes and a yellow scarf', 'setting': 'a staircase',
+                          'style': 'flat cartoon'}, 'beats': beats, **change}
+
+    def test_the_idea_plan_needs_an_analogy_that_carries_the_film(self):
+        from infofilm import idea_plan
+        self.assertEqual(idea_plan.errors(self.plan(), 2), [])
+        thin = self.plan(world={'guide': 'a robot', 'setting': 's', 'style': 'flat'})
+        self.assertIn('describe exactly how the guide looks', ' '.join(idea_plan.errors(thin, 2)))
+        beats = self.plan()['beats']
+        for b in beats[1:]:
+            b['analogy_moment'] = ''
+        self.assertIn('only 1 of 8 beats have an analogy_moment', ' '.join(idea_plan.errors(self.plan(beats=beats), 2)))
+
+    def test_action_beats_are_image_beats_of_3_to_10_seconds(self):
+        from infofilm.creative import beat_errors
+        from test_creative import example
+        script, timing, storyboard, _ = example()
+        storyboard['scenes'][0]['action'] = 'The puppy runs to the bowl and starts eating.'
+        self.assertEqual(beat_errors(storyboard, script, timing), [])
+        del storyboard['scenes'][1]                                   # S1 now runs 12 s
+        self.assertIn('split the passage into more beats', ' '.join(beat_errors(storyboard, script, timing)))
+        script, timing, storyboard, _ = example()
+        storyboard['scenes'][2].update(kind='compare', labels=['a', 'b'], details=['c', 'd'], action='It moves along.')
+        self.assertIn('S3: only image beats can carry an action', beat_errors(storyboard, script, timing))
+
+    def test_scenes_are_planned_in_batches_and_numbered_in_order(self):
+        from unittest import mock
+        from infofilm import creative
+        from test_creative import example
+        script, timing, storyboard, _ = example()
+        film = {'script': script, 'timing': timing, 'requested_seconds': 60, 'actual_seconds': 18}
+        context = {'narration_points': [{'point_id': 'P1'}, {'point_id': 'P2'}], 'script': script}
+        seen = []
+
+        class Models:
+            def loop(self, stage, task, context, validator, **kwargs):
+                points = [r['point_id'] for r in context['narration_points']]
+                scenes = [dict(s, id='X' + s['id']) for s in storyboard['scenes'] if s['point_id'] in points]
+                seen.append((stage, points, context['batch'], [s['id'] for s in context['previous_scenes']]))
+                self.errors = validator({'scenes': scenes})
+                assert not self.errors, self.errors
+                return {'scenes': scenes}
+        with mock.patch.object(creative, 'BATCH_POINTS', 1):
+            board = creative.batched_beats(Models(), film, {'curriculum': IDEA}, 'TASK', context, None, True)
+        self.assertEqual([s['id'] for s in board['scenes']], ['S01', 'S02', 'S03'])
+        self.assertEqual([(st, p) for st, p, _, _ in seen], [('visual-beats-60-b1', ['P1']), ('visual-beats-60-b2', ['P2'])])
+        self.assertEqual(seen[1][2]['first_scene_id'], 'S03')
+        self.assertEqual(seen[1][3], ['XS1', 'XS2'])
+
+    def test_motion_clips_cover_their_beat_and_a_failure_keeps_the_still(self):
+        import hashlib
+        from infofilm import action_clips
+        from test_creative import example
+        self.assertEqual((action_clips.frames_for(6, 24), action_clips.frames_for(12, 24)), (145, 241))
+        script, timing, storyboard, _ = example()
+        with tempfile.TemporaryDirectory() as root:
+            still = Path(root) / 'still.png'
+            still.write_bytes(b'png')
+            for scene in storyboard['scenes']:
+                scene['asset_id'] = 'A1' if scene['id'] == 'S1' else 'A2'
+            storyboard['scenes'][0]['action'] = 'The puppy runs to the bowl.'
+            images = {'A1': {'file': str(still), 'sha256': hashlib.sha256(b'png').hexdigest()}}
+            film = {'script': script, 'timing': timing, 'storyboard': storyboard}
+
+            class Service:
+                renders = []
+
+                def __enter__(self):
+                    return self
+
+                def __exit__(self, *exc):
+                    pass
+
+                def render(self, still, prompt, frames, target, key):
+                    self.renders.append((prompt, frames))
+                    target.write_bytes(b'clip')
+            store = Events(root)
+            action_clips.make_action_clips({}, store, [film], images, Service())
+            scene = storyboard['scenes'][0]
+            self.assertEqual(Service.renders, [(action_clips.DEFAULTS['style'] + ' The puppy runs to the bowl.', 145)])
+            self.assertEqual((scene['action_seconds'], len(scene['action_sha256'])), (6.0, 64))
+            self.assertNotIn('action_file', storyboard['scenes'][1])
+            action_clips.make_action_clips({}, store, [film], images, None)      # cached: no service needed
+            self.assertEqual(len(Service.renders), 1)
+
+            class Broken(Service):
+                def render(self, *args):
+                    raise RuntimeError('LTX fell over')
+            storyboard['scenes'][0]['action'] = 'The puppy sits down.'
+            del storyboard['scenes'][0]['action_file']
+            action_clips.make_action_clips({}, store, [film], images, Broken())
+            self.assertNotIn('action_file', storyboard['scenes'][0])
+            self.assertIn(('action-clips', 'fallback'), [(n, s) for n, s, _ in store.events])

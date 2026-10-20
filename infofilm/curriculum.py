@@ -59,18 +59,26 @@ KEY_IDEA_SCRIPT_TASK = (
     "at most {equations} points may speak an equation or a calculation, and only if it helps the idea land; any "
     "number said must be exactly as the evidence gives it. Never state something false to make it simpler. Each "
     "point also carries uses_analogy: true when the analogy carries or is mapped in that point; at least half the "
-    "points must use it.")
+    "points must use it. evidence.idea_plan is the film's plan: narrate its beats in order (a beat may take one or "
+    "two points), with its analogy and mapping; keep to it.")
 
 KEY_IDEA_CREATIVE_TASK = (
     " This is a short simplified explainer of one key idea for students. Choose a warm, playful, curious mood and a "
     "bright, friendly visual style; cartoon illustration is welcome and a recurring friendly cartoon guide character "
     "(describe it exactly once in visual_style so every image draws the same character) can appear in image scenes. "
-    "Keep a dark theme background so on-screen text stays readable.")
+    "Keep a dark theme background so on-screen text stays readable. evidence.idea_plan.world fixes the guide "
+    "character, the analogy's setting and the drawing style: copy them into visual_style exactly.")
 
 KEY_IDEA_BEATS_TASK = (
-    " This film simplifies one key idea: show the analogy and the real thing, ideally side by side or one turning "
-    "into the other. Prefer animation beats for every process and change; image beats can show the analogy's "
-    "everyday world and the cartoon guide character. Few words on screen; at most one equation, built up slowly.")
+    " This film simplifies one key idea (evidence.idea_plan): show the analogy happening, then the real thing, "
+    "ideally side by side or one turning into the other. Choose each beat's medium for what it must show. Motion: "
+    "an image beat may carry action:'what visibly happens during the beat, in one or two plain sentences' (a video "
+    "model animates the still from its first frame for the length of the beat, so image_brief describes the moment "
+    "before the action, in the light, uncluttered world of evidence.idea_plan.world, with the guide character "
+    "exactly as described there); use motion for the analogy's world: climbing, jumping, throwing, glowing. An "
+    "action beat lasts 3-10 seconds of narration; split longer passages into several beats. Animation beats (coded, "
+    "exact): for the real science, wherever positions, levels, numbers or spectra must be right. Plain image beats: "
+    "a still moment. Few words on screen; at most one equation figure in the whole film, built up slowly.")
 
 
 KEY_IDEA_EQUATIONS = 2           # points that may speak an equation or calculation

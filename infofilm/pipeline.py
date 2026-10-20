@@ -231,6 +231,12 @@ def create(args):
         evidence["chapter_context"] = chapter_context
     if curriculum:
         evidence["curriculum"] = curriculum      # the script step covers every point (planning.make_script)
+    if (curriculum or {}).get("kind") == "key_idea":
+        # Key-idea films: the analogy, its mapping, the visual world and the beat outline come before the script.
+        from .idea_plan import make_idea_plan
+        stage("evidence", "running", task="Planning the idea")
+        evidence["idea_plan"] = make_idea_plan(models, evidence, experimental=experimental)
+        write(store.root / "idea-plan.json", evidence["idea_plan"])
     write(store.root / "evidence-final.json", evidence)
     stage("evidence", "succeeded", facts=len(evidence["facts"]))
     if args.until == "evidence":
@@ -416,6 +422,12 @@ def finish_visuals(args, config, store, models, evidence, sources, brief, films,
     if not chapter_context:                     # short films: slowed LTX clips from the accepted stills (advisory)
         from .clips import make_clips
         make_clips(config, store, models, images, prompts)
+    if any(sc.get("action") for film in films for sc in film["storyboard"]["scenes"]):
+        # Key-idea films: motion beats become short LTX videos from their accepted stills (action_clips.py).
+        from .action_clips import make_action_clips
+        make_action_clips(config, store, films, images)
+        for film in films:
+            write(store.root / f"film-{film['requested_seconds']}" / "storyboard.json", film["storyboard"])
     stage("images", "succeeded", images=len(images), image_review=config.get('image_review', True))
     if args.until == "images":
         return

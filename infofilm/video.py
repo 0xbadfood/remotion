@@ -248,6 +248,12 @@ def compile_timeline(config, store, script, timing, storyboard, images, evidence
                 clip_path = media / (clip["sha256"][:20] + "-clip.mp4")
                 shutil.copyfile(clip["file"], clip_path)
                 value.update(clip=str(clip_path.relative_to(public)), clipSeconds=clip["seconds"])
+            if scene.get("action_file"):              # a motion beat: its own video, played at about normal speed
+                if digest(Path(scene["action_file"]).read_bytes()) != scene["action_sha256"]:
+                    raise ValueError(f"Action clip changed after it was made: {scene['id']}")
+                clip_path = media / (scene["action_sha256"][:20] + "-action.mp4")
+                shutil.copyfile(scene["action_file"], clip_path)
+                value.update(clip=str(clip_path.relative_to(public)), clipSeconds=scene["action_seconds"])
         if scene["kind"] == "figure":
             if digest(Path(scene["figure_file"]).read_bytes()) != scene["figure_sha256"]:
                 raise ValueError("Figure changed after it was drawn")

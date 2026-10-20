@@ -103,7 +103,7 @@ def resolved_scenes(storyboard, script, timing):
     point_words = {p["point_id"]: p["word_ids"] for p in timing["points"]}
     indices = [positions[s.get("start_word_id", point_words[s["point_id"]][0])] for s in scenes]
     duration = timing["audio_info"]["duration_seconds"]
-    starts = [0.0] + [words[i]["start"] for i in indices[1:]]
+    starts = [timing.get("start_seconds", 0.0)] + [words[i]["start"] for i in indices[1:]]   # a batch starts later
     ends = starts[1:] + [duration]
     result = []
     for i, (scene, start, end, index) in enumerate(zip(scenes, starts, ends, indices)):
@@ -173,6 +173,8 @@ def beat_errors(value, script, timing, figures=None):
             errors.append(f"{sid}: set copy_density to minimal or standard")
         if not scene.get("rationale"):
             errors.append(f"{sid}: explain the visual purpose of the beat")
+    if any(s.get("action") is not None for s in scenes) and not errors:
+        errors.extend(action_errors(value, script, timing))
     if any(s.get("kind") == "animation" for s in scenes) and not errors:
         from .animations import scene_errors as animation_errors
         errors.extend(animation_errors(scenes, timing, figures))
@@ -187,6 +189,29 @@ def beat_errors(value, script, timing, figures=None):
     if not errors:
         if any(s["end"] <= s["start"] for s in resolved_scenes(value, script, timing)):
             errors.append("Visual beat intervals must have positive duration")
+    return errors
+
+
+ACTION_SECONDS = (3.0, 10.0)      # a motion (LTX) clip runs about as long as its beat: 3-10 s keeps it lively
+
+
+def action_errors(value, script, timing):
+    """Motion beats (key-idea films): an image beat whose still starts a short video of what happens in it."""
+    errors = []
+    for scene in resolved_scenes(value, script, timing):
+        action = scene.get("action")
+        if action is None:
+            continue
+        sid = scene.get("id")
+        if scene.get("kind") != "image":
+            errors.append(f"{sid}: only image beats can carry an action")
+        elif not isinstance(action, str) or not 4 <= len(action.split()) <= 70:
+            errors.append(f"{sid}: action must say in 4-70 words what visibly happens during the beat")
+        seconds = scene["end"] - scene["start"]
+        low, high = ACTION_SECONDS
+        if not low <= seconds <= high + .5:
+            errors.append(f"{sid}: an action beat lasts {low:.0f}-{high:.0f} s of narration; this one has {seconds:.1f} s "
+                          f"({'split the passage into more beats' if seconds > high else 'join it with the next sentence'})")
     return errors
 
 
@@ -283,10 +308,67 @@ def make_visual_beats(models, film, evidence, brief, *, experimental=True):
                     for p,start,end in zip(aligned,starts,ends)]}
     if figures:
         context["figure_options"] = planner_options(figures)
+    if (evidence.get("curriculum") or {}).get("kind") == "key_idea":
+        return batched_beats(models, film, evidence, task, context, figures, experimental)
     return models.loop(f"visual-beats-{film['requested_seconds']}", task, context,
                       lambda x: beat_errors(x, film["script"], film["timing"], figures)
                       + key_idea_beat_errors(x, evidence), experimental=experimental,
                       metrics=lambda x: visual_metrics(x, film["script"], film["timing"]), units=BEAT_UNITS)
+
+
+BATCH_POINTS = 6
+
+
+def batch_timing(timing, points, start, end):
+    """The film's timing cut down to some points: their words, starting at `start`, ending at `end`."""
+    ids = {w for p in timing["points"] if p["point_id"] in points for w in p["word_ids"]}
+    return {**timing, "points": [p for p in timing["points"] if p["point_id"] in points],
+            "words": [w for w in timing["words"] if w["id"] in ids], "start_seconds": start,
+            "audio_info": {**timing["audio_info"], "duration_seconds": end}}
+
+
+def batched_beats(models, film, evidence, task, context, figures, experimental):
+    """Key-idea films: scenes planned a few points at a time, each batch with the film's plan and the scenes just
+    before it, so every batch gets the planner's full attention. Batches are validated as small films; the joined
+    storyboard is validated as a whole and its beats numbered S01... in order."""
+    from .curriculum import KEY_IDEA_FIGURES, key_idea_beat_errors
+    script, timing = film["script"], film["timing"]
+    rows = context["narration_points"]
+    starts = [p["start"] for p in timing["points"]]
+    ends = starts[1:] + [film["actual_seconds"]]
+    scenes = []
+    for first in range(0, len(rows), BATCH_POINTS):
+        batch = rows[first:first + BATCH_POINTS]
+        ids = [r["point_id"] for r in batch]
+        part_script = {**script, "points": [p for p in script["points"] if p["id"] in ids]}
+        start, end = (0.0 if first == 0 else starts[first]), ends[first + len(batch) - 1]
+        part_timing = batch_timing(timing, ids, start, end)
+        figures_left = KEY_IDEA_FIGURES - sum(1 for s in scenes if s.get("kind") == "figure")
+        part_context = {**context, "narration_points": batch, "script": {**context["script"], "points": [
+            p for p in context["script"]["points"] if p["id"] in ids]},
+            "batch": {"number": first // BATCH_POINTS + 1, "of": -(-len(rows) // BATCH_POINTS),
+                      "first_scene_id": f"S{len(scenes) + 1:02d}", "figure_beats_left": figures_left},
+            "previous_scenes": scenes[-2:]}
+        part_task = task + (" Plan only the narration points in this batch (context.batch); the film's other batches "
+                            "are planned separately. Continue naturally from context.previous_scenes, number beats "
+                            "from context.batch.first_scene_id, and use at most context.batch.figure_beats_left "
+                            "figure beats.")
+
+        def validate(x, part_script=part_script, part_timing=part_timing, figures_left=figures_left):
+            extra = [s.get("id") for s in x.get("scenes") or [] if isinstance(s, dict) and s.get("kind") == "figure"]
+            return beat_errors(x, part_script, part_timing, figures) + (
+                [f"{', '.join(map(str, extra))}: only {figures_left} figure beats are left for this batch"]
+                if len(extra) > figures_left else [])
+        part = models.loop(f"visual-beats-{film['requested_seconds']}-b{first // BATCH_POINTS + 1}", part_task,
+                           part_context, validate, experimental=experimental, units=BEAT_UNITS)
+        scenes.extend(part["scenes"])
+    for n, scene in enumerate(scenes, 1):
+        scene["id"] = f"S{n:02d}"
+    storyboard = {"scenes": scenes}
+    errors = beat_errors(storyboard, script, timing, figures) + key_idea_beat_errors(storyboard, evidence)
+    if errors:
+        raise ValueError(f"Joined visual beats fail validation: {errors}")
+    return storyboard
 
 
 def library_from_beats(films, brief):
@@ -309,4 +391,9 @@ def library_from_beats(films, brief):
                 asset = next(a for a in assets if a["id"] == shared[key])
                 asset["fact_ids"] = sorted(set(asset["fact_ids"]) | set(points[scene["point_id"]]["fact_ids"]))
             scene["asset_id"] = shared[key]
+            if scene.get("action"):                   # the still is the first frame of a short video
+                asset = next(a for a in assets if a["id"] == shared[key])
+                asset["purpose"] += f" First frame of a short animation in which: {scene['action']}"
+                asset["acceptance"] = asset["acceptance"] + [
+                    "Shows the moment before the action starts, with room in the frame for it to happen"]
     return {"style": brief["visual_style"], "assets": assets, "creative_brief": brief}
