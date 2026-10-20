@@ -286,8 +286,9 @@ def make_script(models, evidence, duration, rate=135, experimental=True, suffix=
     repair = None
     if seed is not None and chapter.get("continuity_notes"):
         repair = (seed, continuity_findings(chapter["continuity_notes"], (chapter.get("chapter") or {}).get("id", "")))
-    from .curriculum import is_key_idea, script_coverage_errors
-    validate = lambda x: script_errors(x, evidence, budget, duration) + script_coverage_errors(x, evidence)  # noqa: E731
+    from .curriculum import is_key_idea, key_idea_script_errors, script_coverage_errors
+    validate = lambda x: (script_errors(x, evidence, budget, duration) + script_coverage_errors(x, evidence)  # noqa: E731
+                          + key_idea_script_errors(x, evidence))
     script = models.loop(f"script-{duration}{suffix}", task, context, validate, experimental=experimental,
                          units=SCRIPT_UNITS, seed=repair)
     if is_key_idea(evidence.get("curriculum")):
@@ -314,6 +315,8 @@ def land_idea(models, evidence, duration, suffix, task, context, validate, scrip
             break
         feedback = {"learner_explanation": check["learner"].get("explanation"),
                     "learner_lost_at": check["learner"].get("lost_at"),
+                    "learner_confused_by": check["learner"].get("confusing"),
+                    "scores": {k: check["verdict"].get(k) for k in ("understood", "simple")},
                     "wrong_beliefs": check["verdict"].get("wrong_beliefs"), "fixes": check["verdict"].get("fixes"),
                     "previous_script": script}
         script = models.loop(f"script-{duration}{suffix}-land{n + 1}", task + (

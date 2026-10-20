@@ -19,6 +19,7 @@ and a reviewer compares that with the idea (learner_check).
 from __future__ import annotations
 
 import json
+import re
 
 EVIDENCE_TASK = (
     " This is a curriculum film for {audience}, teaching one textbook concept: {concept} (NCERT {book}, Chapter "
@@ -48,13 +49,17 @@ KEY_IDEA_EVIDENCE_TASK = (
 KEY_IDEA_SCRIPT_TASK = (
     " This is a short simplified film for {audience} on ONE key idea: {idea}. The learner should come away "
     "understanding: {understanding} Simplification comes before everything else, including the advice above about a "
-    "general audience, coverage and the book's style. Build the film around one strong analogy or everyday picture "
-    "(from the evidence, or your own when it fits better), develop it step by step, then map it onto the real thing "
-    "and name the book's terms once the picture is clear. Be creative and warm: a question the learner actually has, "
-    "a friendly guide's voice, short sentences, one idea per point, a 'so that is why' moment, and a short recap at "
-    "the end. Leave out whatever the idea does not need. Say where the analogy stops working in one light sentence, "
-    "so it leaves no wrong belief. Use numbers or equations only when they help the idea land, and then exactly as "
-    "the evidence gives them. Never state something false to make it simpler.")
+    "general audience, coverage and the book's style. Build the whole film on one strong analogy or everyday picture "
+    "(from the evidence, or your own when it fits better) and let it breathe: introduce it, play it out step by step "
+    "in everyday words, let the learner feel the 'aha', and only then map it onto the real thing and name the book's "
+    "terms. The analogy carries most of the film, not just the opening. Be creative and warm: a question the learner "
+    "actually has, a friendly guide's voice, short sentences, one idea per point, a 'so that is why' moment, and a "
+    "short recap. Leave out whatever the idea does not need: no tour of the model's limits, other theories or extra "
+    "results. Say where the analogy stops working in one light sentence, so it leaves no wrong belief. Equations: "
+    "at most {equations} points may speak an equation or a calculation, and only if it helps the idea land; any "
+    "number said must be exactly as the evidence gives it. Never state something false to make it simpler. Each "
+    "point also carries uses_analogy: true when the analogy carries or is mapped in that point; at least half the "
+    "points must use it.")
 
 KEY_IDEA_CREATIVE_TASK = (
     " This is a short simplified explainer of one key idea for students. Choose a warm, playful, curious mood and a "
@@ -66,6 +71,12 @@ KEY_IDEA_BEATS_TASK = (
     " This film simplifies one key idea: show the analogy and the real thing, ideally side by side or one turning "
     "into the other. Prefer animation beats for every process and change; image beats can show the analogy's "
     "everyday world and the cartoon guide character. Few words on screen; at most one equation, built up slowly.")
+
+
+KEY_IDEA_EQUATIONS = 2           # points that may speak an equation or calculation
+KEY_IDEA_ANALOGY_SHARE = .5      # points that must use the analogy
+KEY_IDEA_FIGURES = 1             # equation figures on screen
+SPOKEN_MATHS = re.compile(r"\b(equals|divided by|to the power|times 10|squared|multiplied by)\b|=", re.I)
 
 
 def is_key_idea(curriculum):
@@ -89,24 +100,60 @@ def evidence_task(curriculum):
 
 def script_task(curriculum):
     if is_key_idea(curriculum):
-        return KEY_IDEA_SCRIPT_TASK.format(**idea_context(curriculum))
+        return KEY_IDEA_SCRIPT_TASK.format(**idea_context(curriculum), equations=KEY_IDEA_EQUATIONS)
     return SCRIPT_TASK.format(**context(curriculum))
+
+
+def key_idea_script_errors(script, evidence):
+    """Key-idea films: few spoken equations, and the analogy carries at least half the points."""
+    if not is_key_idea(evidence.get('curriculum')):
+        return []
+    points = script.get('points') or []
+    errors = []
+    maths = [p.get('id') for p in points if SPOKEN_MATHS.search(str(p.get('narration', '')))]
+    if len(maths) > KEY_IDEA_EQUATIONS:
+        errors.append(f'{", ".join(maths)}: {len(maths)} points speak equations or calculations; at most '
+                      f'{KEY_IDEA_EQUATIONS} may. Tell the rest through the analogy in everyday words')
+    analogy = [p for p in points if p.get('uses_analogy') is True]
+    if points and len(analogy) < KEY_IDEA_ANALOGY_SHARE * len(points):
+        errors.append(f'only {len(analogy)} of {len(points)} points use the analogy (uses_analogy: true); at least '
+                      f'half must: let the analogy carry the explanation, not only open it')
+    return errors
+
+
+def key_idea_beat_errors(storyboard, evidence):
+    """Key-idea films: at most KEY_IDEA_FIGURES equation figures on screen."""
+    if not is_key_idea(evidence.get('curriculum')):
+        return []
+    figures = [s.get('id') for s in storyboard.get('scenes') or [] if s.get('kind') == 'figure']
+    if len(figures) > KEY_IDEA_FIGURES:
+        return [f'{", ".join(figures)}: {len(figures)} figure beats; a key-idea film may show at most '
+                f'{KEY_IDEA_FIGURES}. Show the idea through the analogy and animation instead']
+    return []
 
 
 # ------------------------------------------------------------------ does the idea land?
 LEARNER_TASK = (
-    "You are a {audience_short} who has never studied this topic. Below is the narration of a short film, and nothing "
-    "else. Using only what the film said, explain its main idea in your own words (3-5 sentences, as a student would), "
-    "then answer each question in one or two sentences, and say where you got lost, if anywhere. Do not use outside "
-    "knowledge. Return {{explanation, answers:[{{question, answer}}], lost_at:[string]}}.")
+    "Play a learner: an average {audience_short} who finds science hard, has NOT studied this topic, and forgets "
+    "anything that was not explained in everyday words. Below is the narration of a short film, and nothing else. "
+    "Stay in character: use only what the film said, and when a symbol, formula, term or step was not made clear in "
+    "plain words, you do not understand it; do not fill gaps from your own knowledge. Explain the film's main idea "
+    "in your own words (3-5 sentences, as this student would talk), answer each question in one or two sentences "
+    "(say 'I don't know' when the film did not make it clear to you), and list what confused you: every term, "
+    "symbol, formula or jump you would need explained. Return {{explanation, answers:[{{question, answer}}], "
+    "confusing:[string], lost_at:[string]}}.")
 
 JUDGE_TASK = (
-    "A film tries to make one idea land for students: {idea}. Understanding wanted: {understanding} A learner who "
-    "had only the film's narration explained it back and answered questions (learner below). Judge whether the idea "
-    "landed: the learner's explanation captures the understanding wanted, and the learner holds no wrong belief "
-    "(for example an analogy taken literally). Do NOT ask for completeness, more facts or more of the book. Suggest "
-    "simplifications that would help: a clearer analogy, a missing step, a sentence that confused the learner. "
-    "Return {{landed:boolean, score:0..100, wrong_beliefs:[string], fixes:[{{point_id:'P03', problem, suggestion}}]}}.")
+    "A short film tries to make one idea land, simply, for students who find science hard: {idea}. Understanding "
+    "wanted: {understanding} A learner who had only the film's narration (playing a struggling student) explained "
+    "it back, answered questions and listed what confused it (learner below). Judge two things. understood: does the "
+    "learner's explanation capture the understanding wanted, with no wrong belief (for example an analogy taken "
+    "literally)? simple: did the film reach this learner without losing it in symbols, formulas and terms? Do NOT "
+    "ask for completeness, more facts or more of the book; ask for less when less would help. Suggest "
+    "simplifications: a clearer analogy, a missing everyday step, an equation or term to drop or explain. "
+    "Return {{understood:0..100, simple:0..100, wrong_beliefs:[string], fixes:[{{point_id:'P03', problem, suggestion}}]}}.")
+
+LANDING = {'understood': 75, 'simple': 70, 'confusing': 2}     # what "the idea landed" means
 
 
 def learner_check(models, script, curriculum, name):
@@ -120,8 +167,18 @@ def learner_check(models, script, curriculum, name):
     verdict = models.call('reviewer', f'{name}-judge', JUDGE_TASK.format(
         idea=idea.get('title', ''), understanding=idea.get('understanding', ''))
         + '\nNARRATION:\n' + narration + '\nLEARNER:\n' + json.dumps(learner, ensure_ascii=False), max_tokens=3000)
-    return {'learner': learner, 'verdict': verdict,
-            'landed': bool(verdict.get('landed')) and not verdict.get('wrong_beliefs')}
+    landed = (_score(verdict.get('understood')) >= LANDING['understood']
+              and _score(verdict.get('simple')) >= LANDING['simple']
+              and len(learner.get('confusing') or []) <= LANDING['confusing'] and not verdict.get('wrong_beliefs'))
+    verdict['score'] = min(_score(verdict.get('understood')), _score(verdict.get('simple')))
+    return {'learner': learner, 'verdict': verdict, 'landed': landed}
+
+
+def _score(value):
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
 
 
 def coverage_ids(curriculum):

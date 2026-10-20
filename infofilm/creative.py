@@ -236,6 +236,7 @@ def sentence_timing(point, words, point_end):
 
 
 def make_visual_beats(models, film, evidence, brief, *, experimental=True):
+    from .curriculum import key_idea_beat_errors
     task = (
         "Plan visual beats for this exact MFA-aligned narration, following the shared creative brief. "
         "One narration point may contain several shots. Longer audio needs proportionate visual coverage, not stretched identical stills. "
@@ -283,7 +284,8 @@ def make_visual_beats(models, film, evidence, brief, *, experimental=True):
     if figures:
         context["figure_options"] = planner_options(figures)
     return models.loop(f"visual-beats-{film['requested_seconds']}", task, context,
-                      lambda x: beat_errors(x, film["script"], film["timing"], figures), experimental=experimental,
+                      lambda x: beat_errors(x, film["script"], film["timing"], figures)
+                      + key_idea_beat_errors(x, evidence), experimental=experimental,
                       metrics=lambda x: visual_metrics(x, film["script"], film["timing"]), units=BEAT_UNITS)
 
 

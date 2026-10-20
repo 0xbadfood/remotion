@@ -6,7 +6,8 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from infofilm import planning
-from infofilm.curriculum import evidence_coverage_errors, evidence_task, is_key_idea, script_coverage_errors, script_task
+from infofilm.curriculum import (evidence_coverage_errors, evidence_task, is_key_idea, key_idea_beat_errors,
+                                 key_idea_script_errors, learner_check, script_coverage_errors, script_task)
 from infofilm.core import read
 
 IDEA = {'kind': 'key_idea', 'concept': "Bohr's Model of the Hydrogen Atom", 'audience': 'Class 11 students in India',
@@ -54,9 +55,9 @@ class KeyIdeaTests(unittest.TestCase):
 
     def test_a_script_is_rewritten_until_the_idea_lands(self):
         with tempfile.TemporaryDirectory() as root:
-            models = FakeModels(root, [{'landed': False, 'score': 40, 'wrong_beliefs': ['electrons are planets'],
+            models = FakeModels(root, [{'understood': 90, 'simple': 80, 'wrong_beliefs': ['electrons are planets'],
                                         'fixes': [{'point_id': 'P01', 'problem': 'x', 'suggestion': 'y'}]},
-                                       {'landed': True, 'score': 85, 'wrong_beliefs': [], 'fixes': []}])
+                                       {'understood': 85, 'simple': 90, 'wrong_beliefs': [], 'fixes': []}])
             evidence = {'title': 'Lines', 'facts': [{'id': 'F01'}], 'curriculum': IDEA}
             script = planning.make_script(models, evidence, 240, 120)
             self.assertIn('Version 2', script['points'][0]['narration'])
@@ -73,12 +74,74 @@ class KeyIdeaTests(unittest.TestCase):
             self.assertIn('Why are there gaps between the lines?', learner_prompt)
 
     def test_a_wrong_belief_means_not_landed_and_rounds_are_bounded(self):
-        miss = {'landed': True, 'score': 80, 'wrong_beliefs': ['light is made in the nucleus'], 'fixes': []}
+        miss = {'understood': 95, 'simple': 95, 'wrong_beliefs': ['light is made in the nucleus'], 'fixes': []}
         with tempfile.TemporaryDirectory() as root:
             models = FakeModels(root, [miss] * 3)
             planning.make_script(models, {'title': 'L', 'facts': [{'id': 'F01'}], 'curriculum': IDEA}, 240, 120)
             self.assertEqual(len(models.loops), 1 + planning.LANDING_ROUNDS)
             self.assertFalse(read(Path(root) / 'learner-check-240.json')['landed'])
+
+    def test_understood_is_not_enough_it_must_be_simple(self):
+        with tempfile.TemporaryDirectory() as root:
+            script = {'points': [{'id': 'P01', 'narration': 'A ladder.'}]}
+            for verdict, landed in (({'understood': 100, 'simple': 40}, False), ({'understood': 60, 'simple': 95}, False),
+                                    ({'understood': 80, 'simple': 75}, True)):
+                check = learner_check(FakeModels(root, [verdict]), script, IDEA, 'x')
+                self.assertEqual(check['landed'], landed, verdict)
+            self.assertEqual(check['verdict']['score'], 75)
+
+    def test_a_confused_learner_means_not_landed(self):
+        with tempfile.TemporaryDirectory() as root:
+            models = FakeModels(root, [{'understood': 90, 'simple': 90}])
+            models.call = (lambda role, name, prompt, **k: {'explanation': 'x', 'confusing': ['R H', 'nu', 'delta E']}
+                           if role == 'planner' else {'understood': 90, 'simple': 90})
+            self.assertFalse(learner_check(models, {'points': [{'id': 'P01', 'narration': 'n'}]}, IDEA, 'x')['landed'])
+
+    def test_few_equations_and_the_analogy_carries_the_film(self):
+        evidence = {'curriculum': IDEA}
+        maths = [{'id': f'P0{n}', 'narration': 'Delta E equals minus 4.58 times 10 to the power minus 19 joules.',
+                  'uses_analogy': False} for n in range(1, 4)]
+        story = [{'id': f'P1{n}', 'narration': 'The electron hops down two steps of the staircase.', 'uses_analogy': True}
+                 for n in range(1, 3)]
+        errors = ' '.join(key_idea_script_errors({'points': maths + story}, evidence))
+        self.assertIn('P01, P02, P03: 3 points speak equations', errors)
+        self.assertIn('only 2 of 5 points use the analogy', errors)
+        self.assertEqual(key_idea_script_errors({'points': maths[:1] + story}, evidence), [])
+        self.assertEqual(key_idea_script_errors({'points': maths}, {'curriculum': {'kind': 'textbook_concept'}}), [])
+        board = {'scenes': [{'id': 'S1', 'kind': 'figure'}, {'id': 'S2', 'kind': 'figure'}, {'id': 'S3', 'kind': 'animation'}]}
+        self.assertIn('S1, S2: 2 figure beats', ' '.join(key_idea_beat_errors(board, evidence)))
+        self.assertIn('at most 2 points may speak an equation', script_task(IDEA))
+
+    def test_understood_is_not_enough_it_must_be_simple(self):
+        with tempfile.TemporaryDirectory() as root:
+            script = {'points': [{'id': 'P01', 'narration': 'A ladder.'}]}
+            for verdict, landed in (({'understood': 100, 'simple': 40}, False), ({'understood': 60, 'simple': 95}, False),
+                                    ({'understood': 80, 'simple': 75}, True)):
+                check = learner_check(FakeModels(root, [verdict]), script, IDEA, 'x')
+                self.assertEqual(check['landed'], landed, verdict)
+            self.assertEqual(check['verdict']['score'], 75)
+
+    def test_a_confused_learner_means_not_landed(self):
+        with tempfile.TemporaryDirectory() as root:
+            models = FakeModels(root, [])
+            models.call = (lambda role, name, prompt, **k: {'explanation': 'x', 'confusing': ['R H', 'nu', 'delta E']}
+                           if role == 'planner' else {'understood': 90, 'simple': 90})
+            self.assertFalse(learner_check(models, {'points': [{'id': 'P01', 'narration': 'n'}]}, IDEA, 'x')['landed'])
+
+    def test_few_equations_and_the_analogy_carries_the_film(self):
+        evidence = {'curriculum': IDEA}
+        maths = [{'id': f'P0{n}', 'narration': 'Delta E equals minus 4.58 times 10 to the power minus 19 joules.',
+                  'uses_analogy': False} for n in range(1, 4)]
+        story = [{'id': f'P1{n}', 'narration': 'The electron hops down two steps of the staircase.', 'uses_analogy': True}
+                 for n in range(1, 3)]
+        errors = ' '.join(key_idea_script_errors({'points': maths + story}, evidence))
+        self.assertIn('P01, P02, P03: 3 points speak equations', errors)
+        self.assertIn('only 2 of 5 points use the analogy', errors)
+        self.assertEqual(key_idea_script_errors({'points': maths[:1] + story}, evidence), [])
+        self.assertEqual(key_idea_script_errors({'points': maths}, {'curriculum': {'kind': 'textbook_concept'}}), [])
+        board = {'scenes': [{'id': 'S1', 'kind': 'figure'}, {'id': 'S2', 'kind': 'figure'}, {'id': 'S3', 'kind': 'animation'}]}
+        self.assertIn('S1, S2: 2 figure beats', ' '.join(key_idea_beat_errors(board, evidence)))
+        self.assertIn('at most 2 points may speak an equation', script_task(IDEA))
 
     def test_concept_films_get_no_learner_check(self):
         with tempfile.TemporaryDirectory() as root:

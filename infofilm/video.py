@@ -10,6 +10,12 @@ from .core import ROOT, digest, read, write
 from .creative import resolved_scenes
 
 
+
+# Chrome tabs rendering frames at once. Measured on the Spark (20 cores, 2026-10-20, 300 Bohr frames): 3 tabs 23 fps,
+# 8 tabs 41 fps, 12 tabs 44 fps. Headless Chrome there cannot use the GPU for WebGL (egl/angle-egl: no WebGL;
+# vulkan: software, same speed), so speed comes from tabs; 8 leaves room for the services sharing the Spark.
+RENDER_CONCURRENCY = 8
+
 def video_stream_hash(path):
     """Hash encoded video packets, excluding audio and container metadata."""
     result = subprocess.run(["ffmpeg", "-v", "error", "-nostdin", "-i", str(path),
@@ -311,7 +317,8 @@ def render(config, store, root, timeline):
     picture = root / "picture.mp4"
     start = __import__("time").monotonic()
     command = [str(executable), "render", "src/index.ts", "InfoFilm", str(picture), "--props="+str(timeline),
-               "--browser-executable="+config["browser"], "--codec=h264", "--crf=19", "--muted", "--pixel-format=yuv420p", "--concurrency=3"]
+               "--browser-executable="+config["browser"], "--codec=h264", "--crf=19", "--muted", "--pixel-format=yuv420p",
+               f"--concurrency={config.get('render_concurrency', RENDER_CONCURRENCY)}"]
     write(root / "render-request.json", {"command": command, "renderer_sources": {
         str(p.relative_to(snapshot)): digest(p.read_bytes()) for p in sorted((snapshot / "src").glob("*")) if p.is_file()},
         "executed_snapshot": str(snapshot)})
