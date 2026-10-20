@@ -158,8 +158,8 @@ def _scivid(figures):
     root = str(Path(figures.get("code_root") or "/home/nitin/manim"))
     if root not in sys.path:
         sys.path.insert(0, root)
-    from scivid import coded, chem_kit
-    return coded, chem_kit
+    from scivid import coded, kit_docs
+    return coded, kit_docs
 
 
 def evidence_text(evidence, scene, script):
@@ -180,11 +180,11 @@ def render(store, films, figures, evidence, brief=None, log=print, workers=3):
     """Code, render and review every animation beat (cached by its spec and timing); note the clip, its hash and the
     review outcome on the scene. Raises when a beat has no rendered clip at all."""
     animation = options(figures)
-    coded, chem_kit = _scivid(figures)
+    coded, kit_docs = _scivid(figures)
     background = ((brief or {}).get("theme") or {}).get("background") or "#082d34"
     if not re.fullmatch(r"#[0-9a-fA-F]{6}", background):
         background = "#082d34"
-    kit = coded.KIT + ("\n" + chem_kit.KIT_DOC if "chem" in animation.get("kits", ["chem"]) else "")
+    kit = coded.KIT + ("\n" + kit_docs.CHEM if "chem" in animation.get("kits", ["chem"]) else "")
     folder = Path(store.root) / "animations"
     jobs = []
     for film in films:

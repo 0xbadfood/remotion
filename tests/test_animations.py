@@ -74,7 +74,7 @@ class AnimationRenderTests(unittest.TestCase):
             video.write_bytes(b'clip')
             return video, {'attempts': 2, 'tier': 'routine', 'kept_attempt': 2, 'notes': ['open point']}
         coded = SimpleNamespace(KIT='KIT', code_chapter=code_chapter)
-        kit = SimpleNamespace(KIT_DOC='CHEM')
+        kit = SimpleNamespace(CHEM='CHEM')
         with tempfile.TemporaryDirectory() as directory, \
                 mock.patch.object(animations, '_scivid', lambda figures: (coded, kit)), \
                 mock.patch.object(animations, 'CoderJob', lambda *a: None):
