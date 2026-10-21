@@ -5,7 +5,7 @@ A film gets the animation kind only when its figure options carry "animation" (C
 film plans and renders exactly as before. The options:
   {"code_root": "/home/nitin/manim", ...figures..., "animation": {"manim_python": ".../bin/python",
    "python_base": "/home/nitin/.pyenv/versions/3.11.15", "scivid_data": "/home/nitin/manim/scivid-data",
-   "kits": ["chem"]}}
+   "kits": ["chem"], "workers": 6}} (workers optional: beats coded at once)
 The coder and reviewers use Lesson Studio's model settings (scivid-data/model-settings.json), the models that code
 its lessons.
 """
@@ -176,10 +176,17 @@ def key(scene, span_cues, seconds):
                           .encode()).hexdigest()[:20]
 
 
-def render(store, films, figures, evidence, brief=None, log=print, workers=3):
-    """Code, render and review every animation beat (cached by its spec and timing); note the clip, its hash and the
-    review outcome on the scene. Raises when a beat has no rendered clip at all."""
+# Beats coded at once. Each is model calls plus sandbox renders (Manim, 2 threads each); the Spark has 20 cores.
+# Three made the Bohr film's 15 beats take 32 minutes, twice its final render (user, 2026-10-21: pools of 6).
+WORKERS = 6
+
+
+def render(store, films, figures, evidence, brief=None, log=print, workers=None):
+    """Code, render and review every animation beat (cached by its spec and timing), WORKERS at a time (or the
+    options' "workers"); note the clip, its hash and the review outcome on the scene. Raises when a beat has no
+    rendered clip at all."""
     animation = options(figures)
+    workers = workers or animation.get("workers") or WORKERS
     coded, kit_docs = _scivid(figures)
     background = ((brief or {}).get("theme") or {}).get("background") or "#082d34"
     if not re.fullmatch(r"#[0-9a-fA-F]{6}", background):
