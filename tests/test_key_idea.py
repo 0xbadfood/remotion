@@ -251,6 +251,21 @@ class IdeaPlanAndMotionTests(unittest.TestCase):
         self.assertEqual(seen[1][2]['first_scene_id'], 'S03')
         self.assertEqual(seen[1][3], ['XS1', 'XS2'])
 
+    def test_narration_says_names_not_formulas(self):
+        # Alkenes film: P25 read "(CH3)3C-OH" aloud and failed three audio takes; P08 narrated a misprint.
+        from infofilm.curriculum import heard_errors, spoken_formula
+        for said in ('HBr', 'H2O', 'CO2,', 'H2SO4', 'KMnO4', 'UV', 'Markovnikov', '2-methylpropan-2-ol,'):
+            self.assertFalse(spoken_formula(said), said)
+        for unsayable in ('(CH3)3C-OH.', 'CH3-CHCl-CH2Cl.', 'CH2=CH2,', 'H-Cl', 'CH3CH2OH'):
+            self.assertTrue(spoken_formula(unsayable), unsayable)
+        script = {'points': [{'id': 'P01', 'narration': 'Its hydration gives 2-methylpropan-2-ol, also called '
+                              'tert-butyl alcohol.'},
+                             {'id': 'P02', 'narration': 'It is written as (CH3)3C-OH.'},
+                             {'id': 'P03', 'narration': 'Here is a correction to the printed equation 9.40.'}]}
+        problems = heard_errors(script, {'curriculum': {'concept': 'x'}})
+        self.assertEqual([p[:3] for p in problems], ['P02', 'P03'])
+        self.assertEqual(heard_errors(script, {}), [])                              # only curriculum films
+
     def test_key_idea_animations_show_the_real_thing(self):
         # Molecular-models film: coded beats asked to draw "friends" made grey circles of neither world.
         from infofilm.curriculum import key_idea_animation_errors

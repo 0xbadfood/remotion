@@ -126,10 +126,57 @@ def evidence_task(curriculum):
     return EVIDENCE_TASK.format(**context(curriculum))
 
 
+# Alkenes concept film (2026-10-21): P25 read "(CH3)3C-OH" aloud; the spoken form became "ch three 3c oh", three
+# takes failed the audio check and the film stopped. Seven points read condensed formulas, two narrated the book's
+# misprints. Narration is heard: names are spoken, formulas are shown.
+HEARD_TASK = (
+    " The narration is heard, not read. Say compounds by their names (2-methylpropan-2-ol, also called tert-butyl "
+    "alcohol) and never read a condensed, bracketed or bonded formula aloud (CH3-CHCl-CH2Cl, (CH3)3C-OH, CH2=CH2, "
+    "H-Cl): show such formulas on screen in the scene instead; a short formula said as letters is fine (HBr, H2O, CO2, "
+    "Cl2, H2SO4). Teach the science as the book intends it: never narrate the book's misprints or corrections to it "
+    "('printed as', 'a correction', 'should be read as'); where the book has a slip, simply say the correct version.")
+FORMULA_TOKEN = re.compile(r"(?:[A-Z][a-z]?\d*|[()\[\]]\d*|[-=≡–—])+")
+ELEMENT_GROUP = re.compile(r"[A-Z][a-z]?")
+ERRATA = re.compile(r"\b(misprint\w*|errat(?:a|um)|printed as|printed equation|a correction|correction to|"
+                    r"should be read)\b", re.I)
+
+
+def spoken_formula(token):
+    """A formula no listener can follow: bracketed, bonded (-, =) or more than three element groups (CH3CH2OH);
+    short ones said as letters (HBr, H2O, CO2, H2SO4, KMnO4) pass."""
+    token = token.strip('.,;:!?\'"')
+    if not token or not FORMULA_TOKEN.fullmatch(token) or not token[0].isupper() and token[0] not in '([':
+        return False
+    groups = ELEMENT_GROUP.findall(token)
+    if len(groups) < 2 and not re.search(r"[()\[\]]", token):
+        return False
+    if not re.search(r"\d|[()\[\]=≡]|(?<=[A-Za-z\d])[-–—](?=[A-Z(])", token):
+        return False                                  # capitalised words and acronyms (UV, NCERT) are not formulas
+    return bool(re.search(r"[()\[\]=≡]|[-–—]", token)) or len(groups) > 3
+
+
+def heard_errors(script, evidence):
+    """Curriculum films: no unspeakable formulas and no narrated misprints."""
+    if not evidence.get('curriculum'):
+        return []
+    out = []
+    for p in script.get('points') or []:
+        text = str(p.get('narration', ''))
+        bad = [t.strip('.,;:!?') for t in text.split() if spoken_formula(t)]
+        if bad:
+            out.append(f'{p.get("id")}: say the compound\'s name instead of reading {", ".join(bad[:3])} aloud; '
+                       'show the formula on screen')
+        hit = ERRATA.search(text)
+        if hit:
+            out.append(f'{p.get("id")}: do not narrate the book\'s misprints ("{hit.group(0)}"); just teach the '
+                       'correct version')
+    return out
+
+
 def script_task(curriculum):
     if is_key_idea(curriculum):
-        return KEY_IDEA_SCRIPT_TASK.format(**idea_context(curriculum), equations=KEY_IDEA_EQUATIONS)
-    return SCRIPT_TASK.format(**context(curriculum))
+        return KEY_IDEA_SCRIPT_TASK.format(**idea_context(curriculum), equations=KEY_IDEA_EQUATIONS) + HEARD_TASK
+    return SCRIPT_TASK.format(**context(curriculum)) + HEARD_TASK
 
 
 def key_idea_script_errors(script, evidence):
