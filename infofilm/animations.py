@@ -226,6 +226,8 @@ def render(store, films, figures, evidence, brief=None, log=print, workers=None)
         scene["animation_seconds"] = round(seconds, 3)
         scene["animation_review"] = {"passed": "kept_attempt" not in record, "attempts": record.get("attempts"),
                                      "tier": record.get("tier"), "notes": record.get("notes", [])[:6]}
+        outcome = "passed review" if "kept_attempt" not in record else "kept the best attempt"
+        log(f"Chapter {chapter['id'][1:]}: finished, {outcome} after {record.get('attempts')} attempt(s)")
 
     with ThreadPoolExecutor(max_workers=workers) as pool:
         for item, outcome in zip(jobs, pool.map(lambda i: _safe(one, i), jobs)):
