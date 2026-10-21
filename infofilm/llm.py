@@ -274,19 +274,22 @@ class Models:
                 self.store.event(name, "format_retry", {"attempt": index + 1, "max_attempts": 2, "error": str(exc)})
 
     def loop(self, stage, task, context, validator, *, experimental=True, metrics=None, units=None, seed=None,
-             max_tokens=7000, screen=None, ladder=None):
+             max_tokens=7000, screen=None, ladder=None, review_as=None):
         """Planner/reviewer trial with targeted repair: `units` declares the stage's smallest repairable units
         (see repair_units); code maps findings to units, asks for only the flagged units and merges them by id.
         `screen(review, candidate)` lets the stage drop findings about what code owns (e.g. cast coverage).
         `ladder(rung, unit_id, value)` is the stage's downward ladder for a unit that keeps failing: strike 2 simplify
         (generic), strike 3 rung 2 (returns an instruction, e.g. an abstract visual), strike 4 rung 3 (returns a
         code-built replacement that review cannot block). Development only: production replaces the ladder with the
-        premium arbiter and renderer, since a paid film must show complex subjects."""
+        premium arbiter and renderer, since a paid film must show complex subjects.
+        `review_as(context)` returns (task, context) for a stage whose reviewer plays a role instead of the default
+        review (key-idea scripts: a struggling student)."""
         from . import repair_units as ru
         root = self.store.root / "planning" / stage
         identity = digest({"task": task, "context": context, "experimental": experimental,
                            "planner": self.config["planner_url"], "reviewer": self.config["reviewer_url"],
-                           **({"review_contract":"narrative-semantic-v2"} if stage.startswith("script-") else {})})
+                           **({"review_contract":"narrative-semantic-v2"} if stage.startswith("script-") else {}),
+                           **({"review_as": review_as.__name__} if review_as else {})})
         directory = root / identity[:16]
         selected = directory / "selected.json"
         if selected.exists():
@@ -380,6 +383,8 @@ class Models:
                         review_context["creative_brief"] = context["creative_brief"]
                     review_candidate = {k:v for k,v in current.items() if k not in {"requested_seconds","duration_seconds","target_seconds"}}
                     deterministic_metrics = {"duration_policy":"advisory; final recording determines duration"}
+                if review_as is not None:
+                    review_task, review_context = review_as(context)
                 review = self.call_json("reviewer", f"{stage}-review-{identity[:8]}-{attempt}",
                     "Independently review the candidate against the task and source context. Identify concrete factual, causal, narration, pacing or executable-visual problems. "
                     "Do not request cosmetic edits without benefit. Every finding needs a field pointer, evidence and actionable correction. "

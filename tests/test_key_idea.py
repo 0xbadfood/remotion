@@ -191,6 +191,19 @@ class IdeaPlanAndMotionTests(unittest.TestCase):
             self.assertIn('no symbols, formulas or numbers', ' '.join(idea_plan.errors(self.plan(takeaway=takeaway), 1)))
         self.assertIn('book_terms: at most 3', ' '.join(idea_plan.errors(self.plan(book_terms=['a', 'b', 'c', 'd']), 1)))
 
+    def test_the_script_reviewer_is_a_student_not_a_judge(self):
+        # User 2026-10-21: the reviewer reads as a student; it gets the takeaway, the analogy and the facts only.
+        from infofilm.curriculum import student_review
+        evidence = {'idea_plan': {'takeaway': 'Each drop between steps lets out one flash of one colour.',
+                                  'analogy': {'name': 'staircase'}},
+                    'facts': [{'id': 'F01', 'claim': 'c'}],
+                    'curriculum': {'idea': {'book_understanding': 'signed ΔE = R_H(...)'}}}
+        task, context = student_review({'evidence': evidence})
+        self.assertIn('one flash of one colour', task)
+        self.assertIn('never ask for more content', task)
+        self.assertEqual(set(context), {'analogy', 'facts'})
+        self.assertNotIn('ΔE', str(context))
+
     def test_the_plan_review_does_not_force_completeness(self):
         # I4 v3: majors asking for the sign convention or policing words failed the plan twice.
         from infofilm import idea_plan

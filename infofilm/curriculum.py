@@ -156,6 +156,31 @@ def key_idea_beat_errors(storyboard, evidence):
 
 
 # ------------------------------------------------------------------ does the idea land?
+# User, 2026-10-21: "in this step we need to just use the reviewer as a student not a judge". A key-idea film is not
+# complete coverage or every formula: it makes one analogy land and explains the idea in simple terms. I4 v3 failed
+# its landing rewrite when the narration reviewer demanded the signed energy change, nu = |dE|/h and the worked values
+# five rounds running.
+STUDENT_REVIEW_TASK = (
+    "You are a 15-year-old who finds science hard, watching a short film that explains one idea with one analogy. "
+    "Read the narration (the CANDIDATE's points, in order) as that student would hear it. The film is meant to leave "
+    "you able to say: {takeaway} It is NOT meant to cover the whole topic, give formulas or worked numbers, or teach "
+    "rules beyond that, so never ask for more content. Report as major only: (1) a point where you got lost or could "
+    "not follow the step from the one before; (2) a place where the analogy stops making sense, changes, or seems to "
+    "say something the film later contradicts; (3) a statement, number or equation that is actually wrong (check it "
+    "against the facts given). A word you did not know that the film never explained is a minor issue, unless it "
+    "made you lose the thread. Everything else (wording, pace, what you would have liked to hear more about) is minor. "
+    "Score how well you followed and could explain the idea back (0-100). Point each issue at the point id.")
+
+
+def student_review(context):
+    """review_as for key-idea scripts: the reviewer reads as a struggling student, with the takeaway, the analogy and
+    the facts (to catch a wrong statement), not the book's statement of the idea or its coverage."""
+    evidence = context.get("evidence") or {}
+    plan = evidence.get("idea_plan") or {}
+    return (STUDENT_REVIEW_TASK.format(takeaway=plan.get("takeaway", "")),
+            {"analogy": plan.get("analogy"), "facts": evidence.get("facts", [])})
+
+
 LEARNER_TASK = (
     "Play a learner: an average {audience_short} who finds science hard, has NOT studied this topic, and forgets "
     "anything that was not explained in everyday words. Below is the narration of a short film, and nothing else. "

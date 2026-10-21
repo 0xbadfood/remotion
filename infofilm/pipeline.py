@@ -233,7 +233,7 @@ def create(args):
         evidence["curriculum"] = curriculum      # the script step covers every point (planning.make_script)
     if (curriculum or {}).get("kind") == "key_idea":
         # Key-idea films: the analogy, its mapping, the visual world and the beat outline come before the script.
-        from .idea_plan import make_idea_plan
+        from .idea_plan import TECHNICAL, make_idea_plan
         stage("evidence", "running", task="Planning the idea")
         evidence["idea_plan"] = make_idea_plan(models, evidence, experimental=experimental)
         write(store.root / "idea-plan.json", evidence["idea_plan"])
@@ -242,7 +242,10 @@ def create(args):
         idea = curriculum.get("idea") or {}
         curriculum["idea"] = {**idea, "book_understanding": idea.get("book_understanding", idea.get("understanding")),
                               "understanding": evidence["idea_plan"]["takeaway"],
-                              "terms": evidence["idea_plan"].get("book_terms") or []}
+                              "terms": evidence["idea_plan"].get("book_terms") or [],
+                              # the learner is asked only what the takeaway answers, in plain words (I4: "how is the
+                              # photon's energy related to the signed ΔE?" asked for the sign rule the plan left out)
+                              "questions": [q for q in idea.get("questions") or [] if not TECHNICAL.search(q)]}
     write(store.root / "evidence-final.json", evidence)
     stage("evidence", "succeeded", facts=len(evidence["facts"]))
     if args.until == "evidence":

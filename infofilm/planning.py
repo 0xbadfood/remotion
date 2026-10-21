@@ -286,12 +286,14 @@ def make_script(models, evidence, duration, rate=135, experimental=True, suffix=
     repair = None
     if seed is not None and chapter.get("continuity_notes"):
         repair = (seed, continuity_findings(chapter["continuity_notes"], (chapter.get("chapter") or {}).get("id", "")))
-    from .curriculum import is_key_idea, key_idea_script_errors, script_coverage_errors
+    from .curriculum import is_key_idea, key_idea_script_errors, script_coverage_errors, student_review
+    from .idea_plan import screen as idea_screen
     validate = lambda x: (script_errors(x, evidence, budget, duration) + script_coverage_errors(x, evidence)  # noqa: E731
                           + key_idea_script_errors(x, evidence))
+    student = {"review_as": student_review, "screen": idea_screen} if is_key_idea(evidence.get("curriculum")) else {}
     script = models.loop(f"script-{duration}{suffix}", task, context, validate, experimental=experimental,
-                         units=SCRIPT_UNITS, seed=repair)
-    if is_key_idea(evidence.get("curriculum")):
+                         units=SCRIPT_UNITS, seed=repair, **student)
+    if student:
         script = land_idea(models, evidence, duration, suffix, task, context, validate, script, experimental)
     return script
 
@@ -304,7 +306,8 @@ def land_idea(models, evidence, duration, suffix, task, context, validate, scrip
     does not land (or leaves a wrong belief), the script is rewritten with the judge's fixes, up to LANDING_ROUNDS
     times. The rounds are kept in learner-check-<duration>.json; a film whose idea never landed still goes on, with
     the verdict on record (the measure the user will calibrate against)."""
-    from .curriculum import learner_check
+    from .curriculum import learner_check, student_review
+    from .idea_plan import screen as idea_screen
     rounds = []
     for n in range(LANDING_ROUNDS + 1):
         check = learner_check(models, script, evidence["curriculum"], f"learner-{duration}{suffix}-{n}")
@@ -323,7 +326,7 @@ def land_idea(models, evidence, duration, suffix, task, context, validate, scrip
             " learner_feedback shows how a learner understood the previous script: rewrite it so the idea lands. "
             "Apply every fix (when a fix says to drop or leave something out, leave it out), remove every cause of "
             "a wrong belief, and simplify where the learner got lost or was confused; keep what worked."), {**context, "learner_feedback": feedback}, validate, experimental=experimental,
-            units=SCRIPT_UNITS)
+            units=SCRIPT_UNITS, review_as=student_review, screen=idea_screen)
     write(models.store.root / f"learner-check-{duration}.json", {"landed": rounds[-1]["landed"], "rounds": rounds})
     return script
 
