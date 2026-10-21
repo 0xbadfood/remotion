@@ -1,5 +1,6 @@
-"""Exact figures in curriculum films: chemistry equations, structures and atom models drawn by code, and diagrams from
-the figure library (Wikimedia Commons, public domain / CC0 / CC BY, credited on screen).
+"""Exact figures in curriculum films: chemistry equations, structures (with a functional group highlighted), organic
+reactions, resonance structures and atom models drawn by code, and diagrams from the figure library (Wikimedia
+Commons, public domain / CC0 / CC BY, credited on screen).
 
 Only films whose curriculum record carries "figures" get the figure beat kind (Chemistry Studio sets it); every other
 film plans and renders exactly as before. The record's figures object:
@@ -20,7 +21,13 @@ FIGURE_TASK = (
     "levels, an orbital shape, a spectrum, or an apparatus or experiment that figure_options.library offers. A figure "
     "beat has a heading and summary like other beats, empty labels/details/image_brief, and a 'figure' object, one of: "
     "{type:'equation',latex:'\\\\ce{2H2 + O2 -> 2H2O}' or maths}; {type:'molecule',smiles,formula:'molecular formula, "
-    "checked against the SMILES',name}; {type:'bohr',element:'Na'}; {type:'orbital_boxes',element:'N',"
+    "checked against the SMILES',name,highlight:'optional functional group to light up: hydroxyl, carbonyl, aldehyde, "
+    "ketone, carboxylic acid, carboxylate, ester, ether, amine, amide, halide, alkene, alkyne, benzene ring, nitrile "
+    "or nitro'}; {type:'reaction',reactants:[{smiles,formula}],products:[{smiles,formula}],conditions:'reagent or "
+    "condition over the arrow, at most 40 characters',below:'optional text under it',balanced:true when every atom "
+    "is shown on both sides (code checks)} for an organic reaction drawn as structures; {type:'resonance',"
+    "structures:['2-4 SMILES with the same atoms in the same order, only double bonds and charges moved']} for "
+    "resonance structures (benzene, carboxylate, an inductive or resonance effect); {type:'bohr',element:'Na'}; {type:'orbital_boxes',element:'N',"
     "valence_only:false} or {type:'orbital_boxes',config:'1s2 2s2 2p3'}; {type:'energy_levels',transitions:[[3,2],"
     "[4,2]]} (hydrogen: code computes the energies and wavelengths); {type:'orbital',orbital:'s'|'px'|'py'|'pz'|'dxy'|"
     "'dxz'|'dyz'|'dx2-y2'|'dz2'}; {type:'spectrum',kind:'electromagnetic'|'hydrogen'|'continuous'}; "
