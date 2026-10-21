@@ -74,7 +74,7 @@ class AnimationRenderTests(unittest.TestCase):
             video.write_bytes(b'clip')
             return video, {'attempts': 2, 'tier': 'routine', 'kept_attempt': 2, 'notes': ['open point']}
         coded = SimpleNamespace(KIT='KIT', code_chapter=code_chapter)
-        kit = SimpleNamespace(CHEM='CHEM')
+        kit = SimpleNamespace(CHEM='CHEM', MOL='MOL')
         with tempfile.TemporaryDirectory() as directory, \
                 mock.patch.object(animations, '_scivid', lambda figures: (coded, kit)), \
                 mock.patch.object(animations, 'CoderJob', lambda *a: None):
@@ -85,7 +85,7 @@ class AnimationRenderTests(unittest.TestCase):
         scene = storyboard['scenes'][0]
         self.assertEqual(seen['duration'], 12.0)
         self.assertEqual([c['start'] for c in seen['cues']], [0.0, 6.0])
-        self.assertEqual(seen['kit'], 'KIT\nCHEM')
+        self.assertEqual(seen['kit'], 'KIT\nCHEM\nMOL')
         self.assertEqual(seen['plan']['theme']['background'], '#102030')
         self.assertIn('balanced food', seen['evidence'])
         self.assertEqual(scene['animation_seconds'], 12.0)
