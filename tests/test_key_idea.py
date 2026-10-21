@@ -251,6 +251,21 @@ class IdeaPlanAndMotionTests(unittest.TestCase):
         self.assertEqual(seen[1][2]['first_scene_id'], 'S03')
         self.assertEqual(seen[1][3], ['XS1', 'XS2'])
 
+    def test_key_idea_animations_show_the_real_thing(self):
+        # Molecular-models film: coded beats asked to draw "friends" made grey circles of neither world.
+        from infofilm.curriculum import key_idea_animation_errors
+        real = {'id': 'S07', 'kind': 'animation', 'animation': {
+            'title': 'Ethanol in three models', 'objective': 'See what each model shows',
+            'visual': 'Ethanol turns, then morphs from framework to ball-and-stick to space-filling',
+            'real': 'ethanol as framework, ball-and-stick and space-filling models'}}
+        self.assertEqual(key_idea_animation_errors([real, {'id': 'S01', 'kind': 'image'}]), [])
+        analogy = {'id': 'S12', 'kind': 'animation', 'animation': {
+            'title': 'Friends swell into touching balls', 'objective': 'The ring fills up',
+            'visual': 'Six friends swell into puffy balls'}}
+        problems = ' '.join(key_idea_animation_errors([analogy]))
+        self.assertIn('animation.real', problems)
+        self.assertIn('not the analogy ("Friends")', problems)
+
     def test_motion_clips_cover_their_beat_and_a_failure_keeps_the_still(self):
         import hashlib
         from infofilm import action_clips

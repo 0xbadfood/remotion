@@ -78,7 +78,12 @@ KEY_IDEA_BEATS_TASK = (
     "before the action, in the light, uncluttered world of evidence.idea_plan.world, with the guide character "
     "exactly as described there); use motion for the analogy's world: climbing, jumping, throwing, glowing. An "
     "action beat lasts 3-10 seconds of narration; split longer passages into several beats. Animation beats (coded, "
-    "exact): for the real science, wherever positions, levels, numbers or spectra must be right. Plain image beats: "
+    "exact) show only the real thing: real molecules, atoms, energy levels, spectra, quantities, wherever shapes, "
+    "positions or numbers must be right. A coder draws shapes and molecules, not people: never put the guide, the "
+    "analogy's characters or its setting in an animation beat (those are image and motion beats). Each animation "
+    "names the real thing it shows in animation.real (e.g. 'ethanol as framework, ball-and-stick and space-filling "
+    "models', 'hydrogen energy levels n=1 to 4'). Once the analogy has played out, show the real thing it maps to in "
+    "at least one animation beat, ideally the moment the analogy turns into it. Plain image beats: "
     "a still moment. Few words on screen; at most one equation figure in the whole film, built up slowly. Keep "
     "every image_brief simple: the guide in one pose in the plan's setting, nothing more. Never ask an image for "
     "brackets, dashed lines, arrows, labels, numbers, counted steps or measured gaps: an image model cannot draw them "
@@ -144,15 +149,41 @@ def key_idea_script_errors(script, evidence):
     return errors
 
 
+# Molecular-models key idea (2026-10-21): coded beats asked to animate "friends" and "hand-holds" drew grey circles
+# that were neither the analogy's world nor a real molecule. Animation beats carry the real thing; the analogy's
+# world is drawn by the image and motion beats.
+ANALOGY_WORLD = re.compile(r"\b(guide|robot|friends?|characters?|cartoon|people|person|kids?|children|hand-?holds?|"
+                           r"holding hands|playground)\b", re.I)
+
+
+def key_idea_animation_errors(scenes):
+    """Key-idea animation beats: each names the real thing it shows and draws no analogy character or setting."""
+    out = []
+    for scene in scenes or []:
+        if scene.get('kind') != 'animation' or not isinstance(scene.get('animation'), dict):
+            continue
+        spec = scene['animation']
+        if not isinstance(spec.get('real'), str) or len(spec['real'].split()) < 2:
+            out.append(f'{scene.get("id")}: say in animation.real which real thing this animation shows (a molecule, '
+                       'atoms, energy levels, a quantity); the analogy belongs to image and motion beats')
+        words = ' '.join(str(spec.get(k, '')) for k in ('title', 'objective', 'visual', 'real'))
+        hit = ANALOGY_WORLD.search(words)
+        if hit:
+            out.append(f'{scene.get("id")}: an animation beat draws the real thing, not the analogy ("{hit.group(0)}"); '
+                       'show the molecule or quantity it stands for, or make this an image or motion beat')
+    return out
+
+
 def key_idea_beat_errors(storyboard, evidence):
-    """Key-idea films: at most KEY_IDEA_FIGURES equation figures on screen."""
+    """Key-idea films: at most KEY_IDEA_FIGURES equation figures on screen; animation beats show the real thing."""
     if not is_key_idea(evidence.get('curriculum')):
         return []
+    out = key_idea_animation_errors(storyboard.get('scenes'))
     figures = [s.get('id') for s in storyboard.get('scenes') or [] if s.get('kind') == 'figure']
     if len(figures) > KEY_IDEA_FIGURES:
-        return [f'{", ".join(figures)}: {len(figures)} figure beats; a key-idea film may show at most '
-                f'{KEY_IDEA_FIGURES}. Show the idea through the analogy and animation instead']
-    return []
+        out.append(f'{", ".join(figures)}: {len(figures)} figure beats; a key-idea film may show at most '
+                   f'{KEY_IDEA_FIGURES}. Show the idea through the analogy and animation instead')
+    return out
 
 
 # ------------------------------------------------------------------ does the idea land?

@@ -331,7 +331,7 @@ def batched_beats(models, film, evidence, task, context, figures, experimental):
     """Key-idea films: scenes planned a few points at a time, each batch with the film's plan and the scenes just
     before it, so every batch gets the planner's full attention. Batches are validated as small films; the joined
     storyboard is validated as a whole and its beats numbered S01... in order."""
-    from .curriculum import KEY_IDEA_FIGURES, key_idea_beat_errors
+    from .curriculum import KEY_IDEA_FIGURES, key_idea_animation_errors, key_idea_beat_errors
     script, timing = film["script"], film["timing"]
     rows = context["narration_points"]
     starts = [p["start"] for p in timing["points"]]
@@ -356,7 +356,7 @@ def batched_beats(models, film, evidence, task, context, figures, experimental):
 
         def validate(x, part_script=part_script, part_timing=part_timing, figures_left=figures_left):
             extra = [s.get("id") for s in x.get("scenes") or [] if isinstance(s, dict) and s.get("kind") == "figure"]
-            return beat_errors(x, part_script, part_timing, figures) + (
+            return beat_errors(x, part_script, part_timing, figures) + key_idea_animation_errors(x.get("scenes")) + (
                 [f"{', '.join(map(str, extra))}: only {figures_left} figure beats are left for this batch"]
                 if len(extra) > figures_left else [])
         part = models.loop(f"visual-beats-{film['requested_seconds']}-b{first // BATCH_POINTS + 1}", part_task,

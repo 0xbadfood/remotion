@@ -211,8 +211,10 @@ def render(store, films, figures, evidence, brief=None, log=print, workers=None)
         clock = cues(scene, start, end, words)
         spec = scene["animation"]
         work = folder / key(scene, clock, seconds)
+        visual = spec["visual"] + (f" The real thing on screen: {spec['real']} (draw molecules with the molecule kit)."
+                                   if spec.get("real") else "")
         chapter = {"id": "a" + re.sub(r"\W", "", scene["id"]).lower(), "title": spec["title"],
-                   "objective": spec["objective"], "complexity": spec["complexity"], "visual": spec["visual"],
+                   "objective": spec["objective"], "complexity": spec["complexity"], "visual": visual,
                    "demonstrations": [c["show"] for c in clock]}
         plan = {"title": film["script"]["title"], "big_idea": spec["objective"], "theme": {"background": background},
                 "colours": "nucleus red, electrons cyan; light in the colour of its wavelength (chem_kit)"}
