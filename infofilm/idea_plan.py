@@ -11,8 +11,8 @@ import re
 
 TASK = (
     "Plan a short simplified film that makes ONE idea land for students who find science hard, before any narration "
-    "is written. Idea: {idea}. The book's statement of it (often at the book's level): {understanding} The learner "
-    "usually struggles because: {why} First write the takeaway: what the learner will be able to say after the film, "
+    "is written. Idea: {idea}. The book's statement of it (often at the book's level): {understanding} Background only: "
+    "students often stumble here because {why} (this film need not resolve all of that). First write the takeaway: what the learner will be able to say after the film, "
     "in the everyday words of a 15-year-old who finds science hard, with no symbols, formulas or numbers. Translate "
     "the book's statement and drop what a first understanding does not need: the takeaway, not the book's statement, "
     "decides what this film must teach, and the film need not cover the rest. "
@@ -35,9 +35,22 @@ TASK = (
     "mapping:[{{analogy:'part of the picture', real:'what it stands for'}}], "
     "world:{{guide:'exact look of the guide character', setting:'the analogy setting', style:'drawing style'}}, "
     "beats:[{{id:'B1', teaches:'one thing', analogy_moment:'what happens in the analogy, or empty', "
-    "real_link:'the real thing it maps to, or empty'}}]}}.")
+    "real_link:'the real thing it maps to, or empty'}}]}}. "
+    "Reviewing this plan (the reviewer plays a struggling learner, not an examiner): a major issue is only a wrong "
+    "fact or number, an analogy or picture that says something false about the real thing or contradicts the plan's "
+    "own beats, or a step a struggling learner could not follow. Do not ask for content beyond the takeaway (extra "
+    "rules, conventions, special cases or the rest of the book's statement), and do not make word choice or beat order "
+    "a major issue: the script and a learner check that follow handle those.")
 
 FEWEST, MOST = 6, 14
+# I4 v3 (2026-10-20/21) failed the plan twice in 4-5 rounds at 66-79: majors asked to add the sign convention and
+# frequency back from the book's statement, policed technical words and beat order, and flip-flopped. Those are
+# completeness and preference, which the user ruled out for key ideas; they stay as minor (advice) findings.
+ADVICE = re.compile(r"\b(?:never (?:clearly )?(?:teach|connect|mention|explain|say|state|link|make)s?|does not (?:teach|"
+                    r"connect|mention|explain|say|state|link|make|cover)|skips?|omit\w*|missing|leaves? (?:out|unresolved)|"
+                    r"left out|add (?:a|an)\b|technical (?:term|word)s?|book_terms|vocabulary|before (?:the )?(?:aha|analogy)|"
+                    r"(?:teaching )?order|sequence)\b", re.I)
+WRONG = re.compile(r"\b(?:false|incorrect|wrong|contradict\w*|misrepresent\w*|inaccurate|untrue)\b", re.I)
 TERMS = 3                         # book terms a key-idea film may introduce
 TECHNICAL = re.compile(r"\d|[=^±√∆ΔΣλνπ]|\b(delta|lambda|nu|squared)\b", re.I)
 
@@ -85,6 +98,18 @@ def errors(value, equations):
     return out
 
 
+def screen(review, candidate):
+    """Completeness, vocabulary and order findings are advice for a key-idea plan; a wrong or contradictory picture
+    stays major."""
+    for issue in (review or {}).get("issues") or []:
+        if not isinstance(issue, dict) or issue.get("severity") not in {"blocker", "major"}:
+            continue
+        problem = str(issue.get("problem", ""))
+        if ADVICE.search(problem) and not WRONG.search(problem):
+            issue.update(severity="minor", downgraded="key-idea plans are not held to completeness, word choice or order")
+    return review
+
+
 def make_idea_plan(models, evidence, experimental=True):
     from .curriculum import KEY_IDEA_EQUATIONS
     idea = evidence['curriculum'].get('idea') or {}
@@ -92,4 +117,4 @@ def make_idea_plan(models, evidence, experimental=True):
                        why=idea.get('why', ''), fewest=FEWEST, most=MOST, equations=KEY_IDEA_EQUATIONS, terms=TERMS)
     context = {'evidence': {k: v for k, v in evidence.items() if k != 'idea_plan'}}
     return models.loop('idea-plan', task, context, lambda x: errors(x, KEY_IDEA_EQUATIONS),
-                       experimental=experimental)
+                       experimental=experimental, screen=screen)

@@ -191,6 +191,17 @@ class IdeaPlanAndMotionTests(unittest.TestCase):
             self.assertIn('no symbols, formulas or numbers', ' '.join(idea_plan.errors(self.plan(takeaway=takeaway), 1)))
         self.assertIn('book_terms: at most 3', ' '.join(idea_plan.errors(self.plan(book_terms=['a', 'b', 'c', 'd']), 1)))
 
+    def test_the_plan_review_does_not_force_completeness(self):
+        # I4 v3: majors asking for the sign convention or policing words failed the plan twice.
+        from infofilm import idea_plan
+        review = {'score': 78, 'pass': False, 'issues': [
+            {'severity': 'major', 'problem': 'The film never connects a downward jump to a negative energy change.'},
+            {'severity': 'major', 'problem': 'The mapping uses technical terms not in book_terms, such as absorption.'},
+            {'severity': 'major', 'problem': 'The real-world mapping starts before the analogy has played out.'},
+            {'severity': 'major', 'problem': 'Evenly spaced landings contradict B6, where different drops differ.'}]}
+        severities = [i['severity'] for i in idea_plan.screen(review, {})['issues']]
+        self.assertEqual(severities, ['minor', 'minor', 'minor', 'major'])
+
     def test_action_beats_are_image_beats_of_3_to_10_seconds(self):
         from infofilm.creative import beat_errors
         from test_creative import example
