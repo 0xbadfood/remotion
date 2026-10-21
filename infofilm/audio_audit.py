@@ -267,6 +267,22 @@ def spoken_numeric_text(text):
     return _NUMBER.sub(expand, value).replace("%", " percent ")
 
 
+# Words that join or sign a number but are not one: "Br minus" (Br-) and "plus or minus" are not quantities.
+_CONNECTIVES = {"point", "percent", "minus", "plus"}
+
+
+def quantity(words, start, end):
+    """Whether words[start:end] holds a quantity: a numeral word, or a connective (minus, point...) next to one. The
+    alkenes film failed its whole-narration check when "the bromide ion Br minus" was heard as "bcar"."""
+    region = words[start:end]
+    if _NUMBER_WORDS.difference(_CONNECTIVES).intersection(region):
+        return True
+    if not _CONNECTIVES.intersection(region):
+        return False
+    numerals = _NUMBER_WORDS - _CONNECTIVES
+    return any(0 <= n < len(words) and words[n] in numerals for n in (start - 1, end))
+
+
 def score_english_transcript(*, expected_text, transcript_text,
                              audio_duration_seconds, speech_span_seconds, config=None):
     from quiz_harness.audio_audit import score_transcript
@@ -284,7 +300,7 @@ def score_english_transcript(*, expected_text, transcript_text,
     for tag, i, j, k, l in SequenceMatcher(None, expected, actual, autojunk=False).get_opcodes():
         # A word split ('firsthand' / 'first hand') or the same value written another way ('the second' / 'ii')
         # is not a changed quantity.
-        if (tag != "equal" and _NUMBER_WORDS.intersection(expected[i:j] + actual[k:l])
+        if (tag != "equal" and (quantity(expected, i, j) or quantity(actual, k, l))
                 and "".join(expected[i:j]) != "".join(actual[k:l])
                 and not same_number({"expected": " ".join(expected[i:j]), "observed": " ".join(actual[k:l])})):
             if "numeric_mismatch" not in result["reasons"]:

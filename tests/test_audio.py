@@ -82,6 +82,14 @@ class NumericAuditTests(unittest.TestCase):
         self.assertGreater(point_coverage([{"id": "P09", "narration": expected}], observed)[0]["coverage"], .9)
         self.assertEqual(spoken_numeric_text("a thousand"), "a thousand")
 
+    def test_a_charge_is_not_a_quantity(self):
+        # Alkenes film: "the bromide ion Br minus" heard as "bcar" failed the whole narration as a changed number.
+        expected = "The bromide ion, Br minus, then attacks the carbocation and the alkyl halide forms quickly."
+        result = self.score(expected, expected.replace("Br minus", "bcar"))
+        self.assertNotIn("numeric_mismatch", result["reasons"])
+        changed = self.score("It melts at minus four degrees.", "It melts at four degrees.")
+        self.assertIn("numeric_mismatch", changed["reasons"])                    # a sign on a number still counts
+
     def test_new_omni_manifest_uses_the_same_numeric_wording_as_mfa(self):
         from infofilm.omni_media import _batch
         from infofilm.media import mfa_numeric_text
