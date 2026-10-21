@@ -1,6 +1,6 @@
 """Exact figures in curriculum films: chemistry equations, structures (with a functional group highlighted), organic
-reactions, resonance structures and atom models drawn by code, and diagrams from the figure library (Wikimedia
-Commons, public domain / CC0 / CC BY, credited on screen).
+reactions, resonance structures, curly-arrow mechanisms, Newman/sawhorse projections, chairs and atom models drawn
+by code, and diagrams from the figure library (Wikimedia Commons, public domain / CC0 / CC BY, credited on screen).
 
 Only films whose curriculum record carries "figures" get the figure beat kind (Chemistry Studio sets it); every other
 film plans and renders exactly as before. The record's figures object:
@@ -27,7 +27,17 @@ FIGURE_TASK = (
     "condition over the arrow, at most 40 characters',below:'optional text under it',balanced:true when every atom "
     "is shown on both sides (code checks)} for an organic reaction drawn as structures; {type:'resonance',"
     "structures:['2-4 SMILES with the same atoms in the same order, only double bonds and charges moved']} for "
-    "resonance structures (benzene, carboxylate, an inductive or resonance effect); {type:'bohr',element:'Na'}; {type:'orbital_boxes',element:'N',"
+    "resonance structures (benzene, carboxylate, an inductive or resonance effect); {type:'mechanism',stages:[{species:"
+    "['SMILES with every atom the arrows touch numbered, e.g. [OH-:1] and [CH3:2][Br:3]; write an H that moves as "
+    "[H:4]'],arrows:[{from:[1] (a lone pair on atom 1) or [2,3] (the bond 2-3),to:[1,2] (a new or stronger bond) or "
+    "[3] (a lone pair on atom 3)}],label:'optional, over the arrow into this stage, e.g. slow'}]} with 2-4 stages "
+    "for a curly-arrow mechanism; the last stage is the products, with no arrows; keep the same atom numbers from "
+    "stage to stage and every species, spectator ions too (code pushes the electrons and checks each stage makes "
+    "the next); {type:'newman' or 'sawhorse',front:['3 groups on the front carbon, e.g. CH3, H, H'],back:['3 "
+    "groups'],dihedral:degrees between the first front and first back group,conformation:'optional: staggered, "
+    "eclipsed, anti, gauche or fully eclipsed (code checks it against the angle and names it if left out)'}; "
+    "{type:'chair',substituents:[{carbon:1-6,position:'axial' or 'equatorial',group:'CH3'}],flip:true to show the "
+    "ring flip, which code draws}; {type:'bohr',element:'Na'}; {type:'orbital_boxes',element:'N',"
     "valence_only:false} or {type:'orbital_boxes',config:'1s2 2s2 2p3'}; {type:'energy_levels',transitions:[[3,2],"
     "[4,2]]} (hydrogen: code computes the energies and wavelengths); {type:'orbital',orbital:'s'|'px'|'py'|'pz'|'dxy'|"
     "'dxz'|'dyz'|'dx2-y2'|'dz2'}; {type:'spectrum',kind:'electromagnetic'|'hydrogen'|'continuous'}; "
