@@ -134,6 +134,7 @@ def resume_narration(args):
     from .media import audit_audio, align_audio
     from .vibe_media import render_vibevoice, align_vibevoice
     from .omni_media import render_omnivoice
+    from .lux_media import render_luxtts
     from .creative import beat_errors, visual_metrics
     from .figures import options as figure_options
     from .video import compile_timeline, render
@@ -168,8 +169,8 @@ def resume_narration(args):
         store.event("pipeline:narration", "running", {"engine": engine, "point_clips": True, "batch_size": config.get("vibe_batch_size", 4)})
         for duration, film in films.items():
             points = film["script"]["points"]
-            audio, info = (render_vibevoice(config, store, points, f"narration-{duration}-recovery")
-                           if engine == "vibevoice" else
+            audio, info = (render_vibevoice(config, store, points, f"narration-{duration}-recovery") if engine == "vibevoice" else
+                           render_luxtts(config, store, points, f"narration-{duration}-recovery") if engine == "luxtts" else
                            render_omnivoice(config, store, points, f"narration-{duration}-recovery"))
             audit = audit_audio(config, store, audio, script_text(film["script"]), points=points)
             if audit["status"] != "passed":

@@ -37,7 +37,7 @@ def main():
     parser.add_argument("--reference-audio", type=Path)
     parser.add_argument("--narrator", help="Configured narrator ID, for example default or kane")
     parser.add_argument("--reference-transcript", help="Exact reference recording transcript required for OmniVoice")
-    parser.add_argument("--tts-engine", choices=["vibevoice", "omnivoice"], default="vibevoice")
+    parser.add_argument("--tts-engine", choices=["vibevoice", "omnivoice", "luxtts"], default="vibevoice")
     parser.add_argument("--omni-speed", type=float, help="Native Omni speed, default 0.8; does not affect VibeVoice")
     parser.add_argument("--mood", choices=list(MOODS), default="auto")
     parser.add_argument("--mood-intensity", choices=list(INTENSITIES), default="restrained")

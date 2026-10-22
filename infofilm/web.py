@@ -103,7 +103,7 @@ class FilmRequest(BaseModel):
     premium_rescue: bool = Field(default=False, strict=True)
     voice_id: str = "default"
     llm_configuration: str | None = Field(default=None, max_length=60)
-    tts_engine: Literal["vibevoice", "omnivoice"] = "vibevoice"
+    tts_engine: Literal["vibevoice", "omnivoice", "luxtts"] = "vibevoice"
     omni_speed: float = Field(default=.8, ge=.5, le=2)
     mood: Literal["auto", "professional", "warm", "funny", "curious", "serious", "reflective", "inspiring"] = "auto"
     mood_intensity: Literal["restrained", "standard", "strong"] = "restrained"
@@ -192,6 +192,9 @@ def readiness(config, llm_root=None):
                       and (Path(config.get("omni_model", "")) / "config.json").is_file())
     services.append({"id": "omnivoice", "label": "OmniVoice · on demand", "ready": omni_installed,
                      "busy": False, "detail": "Installed" if omni_installed else "Runtime or model missing"})
+    from .lux_media import lux_installed
+    services.append({"id": "luxtts", "label": "LuxTTS · CPU, on demand", "ready": lux_installed(config),
+                     "busy": False, "detail": "Installed" if lux_installed(config) else "Runtime missing"})
     music_installed = (Path(config.get("acestep_python", "")).is_file() and
         (Path(config.get("acestep_root", "")) / "checkpoints" / config.get("acestep_model", "acestep-v15-turbo") / "config.json").is_file())
     services.append({"id": "acestep", "label": "ACE-Step · optional score", "ready": music_installed,
@@ -380,7 +383,8 @@ def create_app(config_path=ROOT / "config.json", directory=ROOT / "artifacts/int
                 "default_mood": "auto", "default_omni_speed": .8, "default_image_review": True,
                 **{key: [{"id": k, "label": v} for k, v in values.items()] for key, values in
                    [("moods", MOODS), ("mood_intensities", INTENSITIES), ("visual_balances", BALANCES), ("music_engines", MUSIC)]},
-                "tts_engines": [{"id": "vibevoice", "label": "VibeVoice"}, {"id": "omnivoice", "label": "OmniVoice"}]}
+                "tts_engines": [{"id": "vibevoice", "label": "VibeVoice"}, {"id": "omnivoice", "label": "OmniVoice"},
+                                {"id": "luxtts", "label": "LuxTTS · 48 kHz, CPU"}]}
 
     def llm_registry():
         from .llm_settings import Registry
@@ -501,6 +505,10 @@ def create_app(config_path=ROOT / "config.json", directory=ROOT / "artifacts/int
             if not Path(config.get("acestep_python", "")).is_file() or not (
                 Path(config.get("acestep_root", "")) / "checkpoints" / config.get("acestep_model", "acestep-v15-turbo") / "config.json").is_file():
                 raise HTTPException(422, "ACE-Step runtime or model is not installed")
+        if body.tts_engine == "luxtts":
+            from .lux_media import lux_installed
+            if not lux_installed(config):
+                raise HTTPException(422, "LuxTTS runtime is not installed")
         if body.tts_engine == "omnivoice":
             if not Path(config.get("omni_python", "")).is_file() or not (Path(config.get("omni_model", "")) / "config.json").is_file():
                 raise HTTPException(422, "OmniVoice runtime or model is not installed")

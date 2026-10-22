@@ -8,6 +8,7 @@ from pathlib import Path
 from .core import ROOT, Store, configuration, digest, read, write, resource_slot
 from .llm import Models
 from .media import align_audio, audit_audio, generate_images, render_audio
+from .lux_media import lux_settings, render_luxtts
 from .omni_media import render_omnivoice
 from .vibe_media import render_vibevoice, align_vibevoice
 from .audio_audit import AUDIT_POLICY, DEFAULT_FALLBACK_MODELS
@@ -72,15 +73,18 @@ def voice_calibration(config, store):
     calibration = store.root / "voice_calibration.json"
     ref_hash = digest(Path(config["reference_audio"]).read_bytes())
     calibration_key = digest({"reference_audio_sha256": ref_hash, "tts_engine": config["tts_engine"],
-                              "reference_transcript": config.get("reference_transcript") if config["tts_engine"] == "omnivoice" else None,
-                              **({"omni_speed": config.get("omni_speed", .8)} if config["tts_engine"] == "omnivoice" else {})})
+                              "reference_transcript": config.get("reference_transcript") if config["tts_engine"] in {"omnivoice", "luxtts"} else None,
+                              **({"omni_speed": config.get("omni_speed", .8)} if config["tts_engine"] == "omnivoice" else {}),
+                              **({"lux": lux_settings(config)} if config["tts_engine"] == "luxtts" else {})})
     existing_calibration = read(calibration) if calibration.exists() else {}
     legacy_vibe_calibration = (config["tts_engine"] == "vibevoice" and not existing_calibration.get("calibration_key")
                                and existing_calibration.get("reference_audio_sha256") == ref_hash)
     if existing_calibration.get("calibration_key") != calibration_key and not legacy_vibe_calibration:
         text = "A clear explanation starts with the main idea. We then explore how it works, why it matters, and which details need care. Each step should connect naturally, giving the listener enough time to understand."
-        audio, info = (render_omnivoice(config, store, [{"id": "calibration", "narration": text}], "voice-calibration")
-                       if config["tts_engine"] == "omnivoice" else render_audio(config, store, text, "voice-calibration"))
+        engine = config["tts_engine"]
+        audio, info = (render_omnivoice(config, store, [{"id": "calibration", "narration": text}], "voice-calibration") if engine == "omnivoice"
+                       else render_luxtts(config, store, [{"id": "calibration", "narration": text}], "voice-calibration") if engine == "luxtts"
+                       else render_audio(config, store, text, "voice-calibration"))
         write(calibration, {"audio": str(audio), **info, "calibration_key": calibration_key})
     return read(calibration)["observed_words_per_minute"]
 
@@ -89,7 +93,9 @@ def prepare_audio(config, store, models, evidence, duration, rate, experimental,
     selected = store.root / f"film-{duration}" / "audio-selection.json"
     dependency_hash = digest({"evidence": evidence, "duration": duration,
         "reference_audio_sha256": digest(Path(config["reference_audio"]).read_bytes()), "language": config["language"],
-        "provider": config["omni_url"] if config.get("tts_engine") == "omnivoice" else config["tts_url"],
+        "provider": (config["omni_url"] if config.get("tts_engine") == "omnivoice" else
+                     "luxtts" if config.get("tts_engine") == "luxtts" else config["tts_url"]),
+        "lux": lux_settings(config) if config.get("tts_engine") == "luxtts" else None,
         "tts_engine": config.get("tts_engine", "vibevoice"),
         "audio_policy": "point-batches-v1", "audit_policy": AUDIT_POLICY,
         "audio_audit_fallback_models": config.get("audio_audit_fallback_models", list(DEFAULT_FALLBACK_MODELS)),
@@ -97,7 +103,7 @@ def prepare_audio(config, store, models, evidence, duration, rate, experimental,
         "silence_cleanup": (silence_settings(config)
                             if config.get('tts_engine', 'vibevoice') == 'vibevoice' else None),
         "vibe_pause_seconds": config.get("vibe_pause_seconds", .18),
-        "reference_transcript": config.get("reference_transcript") if config.get("tts_engine") == "omnivoice" else None,
+        "reference_transcript": config.get("reference_transcript") if config.get("tts_engine") in {"omnivoice", "luxtts"} else None,
         "omni_speed": config.get("omni_speed", .8) if config.get("tts_engine") == "omnivoice" else None,
         "narration_direction": ({k: creative_brief.get(k) for k in ["resolved_mood", "requested_mood", "intensity", "narration_direction"]} if creative_brief else None),
         "duration_policy": "advisory", "experimental": experimental,
@@ -126,10 +132,12 @@ def prepare_audio(config, store, models, evidence, duration, rate, experimental,
     def render(current_config, label):
         if current_config.get("tts_engine") == "omnivoice":
             return render_omnivoice(current_config, store, script["points"], label)
+        if current_config.get("tts_engine") == "luxtts":
+            return render_luxtts(current_config, store, script["points"], label)
         return render_vibevoice(current_config, store, script["points"], label)
     from .speech import apply as speech_apply, lexicon as speech_lexicon
     entries = (speech_lexicon(config, store, script["points"])
-               if config.get("speech_conditioning", True) and config.get("tts_engine") != "omnivoice" else {})
+               if config.get("speech_conditioning", True) and config.get("tts_engine") not in {"omnivoice", "luxtts"} else {})
     audited = {**script, "points": [{**p, "narration": speech_apply(p["narration"], entries, audit=True)}
                                     for p in script["points"]]}
     for attempt in range(2):
