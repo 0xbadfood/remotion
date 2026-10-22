@@ -130,6 +130,31 @@ def _same(a, b):
     return a.startswith(b) or b.startswith(a)      # "tax" / "taxes", "refusi" / "refusa" do not match; "boycot" does
 
 
+def figure_reveals(labels, words, start, end, fps):
+    """Frame offsets (from the scene start) at which each label of a layered figure appears: when the narration in
+    the scene first says the part's name (or an alias), a moment early, matching first on the words only that label
+    has ("sino-atrial node" vs "atrio-ventricular node"). A label never said comes in at the cut, staggered. All are
+    shown by 85% of the scene."""
+    length = end - start
+    latest, lead, stagger = max(0, int(length * .85)), round(.25 * fps), round(.3 * fps)
+    spoken = [(round(w["start"] * fps) - start, _stems(w["word"])) for w in words if start <= round(w["start"] * fps) < end]
+    names = [_stems(" ".join([label["text"], *label.get("aliases", [])])) for label in labels]
+    out, unsaid = [], 0
+    for i, stems in enumerate(names):
+        own = stems - set().union(*(n for k, n in enumerate(names) if k != i))
+        hit = None
+        for wanted in (own, stems):
+            hit = next((f for f, said in spoken if wanted and any(_same(a, b) for a in said for b in wanted)), None)
+            if hit is not None:
+                break
+        if hit is None:
+            out.append(min(latest, 10 + unsaid * stagger))
+            unsaid += 1
+        else:
+            out.append(min(latest, max(0, hit - lead)))
+    return out
+
+
 def label_reveals(labels, details, words, start, end, fps):
     """Frame offsets (from the scene start) at which each diagram card appears. The first card is there at the cut;
     each later one appears when the narration first names it (a moment early), in card order, matching first on the
@@ -260,6 +285,20 @@ def compile_timeline(config, store, script, timing, storyboard, images, evidence
             target_path = media / (scene["figure_sha256"][:20] + "-figure.png")
             shutil.copyfile(scene["figure_file"], target_path)
             value["src"] = str(target_path.relative_to(public))
+            if scene.get("figure_layers"):          # labels appear as they are named; the lit part pulses then
+                layers = scene["figure_layers"]
+                def staged(layer):
+                    if digest(Path(layer["file"]).read_bytes()) != layer["sha256"]:
+                        raise ValueError(f"Figure layer changed after it was drawn: {scene['id']}")
+                    path = media / (layer["sha256"][:20] + "-layer.png")
+                    shutil.copyfile(layer["file"], path)
+                    return str(path.relative_to(public))
+                times = figure_reveals(layers["labels"], timing["words"], start, end, fps)
+                lit = next((t for t, label in zip(times, layers["labels"]) if label.get("lit")), 10)
+                value["layers"] = {"base": staged(layers["base"]),
+                                   "highlight": staged(layers["highlight"]) if layers.get("highlight") else None,
+                                   "highlightAt": lit,
+                                   "labels": [{"src": staged(label), "at": t} for label, t in zip(layers["labels"], times)]}
         if scene["kind"] == "animation":
             if digest(Path(scene["animation_file"]).read_bytes()) != scene["animation_sha256"]:
                 raise ValueError("Animation changed after it was reviewed")

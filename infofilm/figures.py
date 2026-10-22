@@ -133,6 +133,16 @@ def library_png(svg_path, out, box=LIBRARY_BOX, pad=36):
     card.save(out)
 
 
+def biology_layers(figures, spec, level, prefix):
+    """The biology figure's layers (cached beside its PNG), each with its file and hash."""
+    def sha(path):
+        return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+    made = biology(figures).layers(spec, prefix, level)
+    return {'base': {'file': made['base'], 'sha256': sha(made['base'])},
+            'highlight': made['highlight'] and {'file': made['highlight'], 'sha256': sha(made['highlight'])},
+            'labels': [{**label, 'sha256': sha(label['file'])} for label in made['labels']]}
+
+
 def render(store, films, figures):
     """Draw every figure beat to a PNG under the project (cached by its spec) and note file, hash and credit on the
     scene. Raises with every bad figure at once."""
@@ -163,6 +173,12 @@ def render(store, films, figures):
                 continue
             scene['figure_file'] = str(out)
             scene['figure_sha256'] = hashlib.sha256(out.read_bytes()).hexdigest()
+            if spec['type'] == 'biology':                # layers: labels appear as they are named, the lit part pulses
+                try:
+                    scene['figure_layers'] = biology_layers(figures, spec, level, folder / out.stem)
+                except Exception as exc:                 # noqa: BLE001 - the whole picture still shows
+                    scene.pop('figure_layers', None)
+                    scene['figure_layers_error'] = f'{type(exc).__name__}: {exc}'[:300]
             if spec['type'] == 'library':
                 scene['credit'] = library[spec['id']].get('credit', '')
     if errors:

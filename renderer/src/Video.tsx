@@ -3,7 +3,8 @@ import {AbsoluteFill, Img, OffthreadVideo, Sequence, staticFile, useCurrentFrame
 import {DepthImage} from './DepthImage';
 
 export type Scene = {id:string; point_id:string; from:number; duration:number; kind:'image'|'flow'|'compare'|'cycle'|'figure'|'animation'; src?:string; credit?:string; depth?:string; clip?:string; clipSeconds?:number; backdrop?:string;
-  heading:string; summary:string; labels:string[]; details:string[]; banner?:string; needs_review?:boolean; review_tag?:string; copy_density?:'minimal'|'standard'; motion:'push'|'pull'|'drift'|'hold'; index:number; source_ids:string[]; reveals?:number[]};
+  heading:string; summary:string; labels:string[]; details:string[]; banner?:string; needs_review?:boolean; review_tag?:string; copy_density?:'minimal'|'standard'; motion:'push'|'pull'|'drift'|'hold'; index:number; source_ids:string[]; reveals?:number[];
+  layers?:{base:string; highlight?:string|null; highlightAt:number; labels:{src:string; at:number}[]}};
 export type FilmData = {title:string;subject:string;width:number;height:number;fps:number;durationInFrames:number;transitionFrames?:number;depthStrength?:number;
   creativeBrief?:{resolved_mood:string;intensity:string;theme:{background:string;accent:string;text:string}};
   scenes:Scene[]; captions:{start:number;end:number;text:string}[];credits?:string[];sources:{id:string;url:string;title:string}[]};
@@ -43,9 +44,23 @@ const Diagram:React.FC<{scene:Scene;progress:number;frame:number}> = ({scene,pro
 // An exact figure (equation, structure, atom model, or a credited library diagram) where diagram cards would sit,
 // shown at its drawn size up to the area, easing in and settling slowly.
 const Figure:React.FC<{scene:Scene;progress:number;frame:number}> = ({scene,progress,frame}) => {
-  const {width,height}=useVideoConfig();
+  const {width,height,fps}=useVideoConfig();
   const portrait=height>width;
   const show=interpolate(frame,[0,14],[0,1],clamp);
+  const layers=scene.layers;
+  if (layers) {
+    // A layered diagram (biology): each label fades in as the narration names its part; the lit part pulses three
+    // times with a glow when it is named, then stays lit. The layers share one size, so they stack exactly.
+    const t=frame-layers.highlightAt, period=fps*.6, pulses=3;
+    const pulse=t<0?0:t<period*pulses?.5-.5*Math.cos(2*Math.PI*t/period):1;
+    const glow=t>=0&&t<period*pulses?pulse:0;
+    const layer={position:'absolute' as const,inset:0,width:'100%',height:'100%',objectFit:'contain' as const};
+    return <div style={{position:'absolute',left:portrait?'8%':'40%',right:portrait?'8%':'3%',top:portrait?'41%':'16%',bottom:portrait?'17%':'14%',opacity:show,transform:`scale(${(.97+.03*show)*(1+.02*progress)})`}}>
+      <Img data-measure="figure" src={staticFile(layers.base)} style={layer}/>
+      {layers.highlight && <Img src={staticFile(layers.highlight)} style={{...layer,opacity:pulse,filter:glow?`drop-shadow(0 0 ${4+10*glow}px #f3b85e)`:'none'}}/>}
+      {layers.labels.map((label,i)=><Img key={i} src={staticFile(label.src)} style={{...layer,opacity:interpolate(frame,[label.at,label.at+10],[0,1],clamp)}}/>)}
+    </div>;
+  }
   return <div style={{position:'absolute',left:portrait?'8%':'45%',right:portrait?'8%':'5.5%',top:portrait?'41%':'22%',bottom:portrait?'17%':'22%',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center'}}>
     {scene.src && <Img data-measure="figure" src={staticFile(scene.src)} style={{maxWidth:'100%',maxHeight:scene.credit?'90%':'100%',objectFit:'contain',opacity:show,transform:`scale(${(.97+.03*show)*(1+.025*progress)})`}}/>}
     {scene.credit && <div data-measure="figure-credit" style={{marginTop:14,fontSize:portrait?18:17,lineHeight:1.3,color:'#9ebebc',opacity:show,textAlign:'center',maxWidth:'100%'}}>{scene.credit}</div>}

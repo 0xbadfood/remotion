@@ -98,6 +98,20 @@ class BiologyFigureTests(unittest.TestCase):
             scene = storyboard['scenes'][1]
             self.assertTrue(Path(scene['figure_file']).exists())
             self.assertNotIn('credit', scene)                    # original art: no credit line
+            layers = scene['figure_layers']                      # labels timed to the narration, the lit part pulsing
+            self.assertTrue(Path(layers['base']['file']).exists() and Path(layers['highlight']['file']).exists())
+            self.assertEqual([(l['text'], l['lit']) for l in layers['labels']], [('Aorta', False), ('Left ventricle', True)])
+
+    def test_labels_appear_when_the_narration_names_them(self):
+        from infofilm.video import figure_reveals
+        words = [{'word': w, 'start': t} for w, t in (('The', 10.0), ('sino-atrial', 10.4), ('node', 10.9),
+                                                     ('fires', 11.2), ('then', 12.0), ('the', 12.2),
+                                                     ('atrio-ventricular', 12.5), ('node', 13.1))]
+        labels = [{'text': 'Sino-atrial node'}, {'text': 'Atrio-ventricular node'}, {'text': 'Purkinje fibres'}]
+        fps, start = 30, 300                                     # the scene starts at 10 s
+        sa, av, pk = figure_reveals(labels, words, start, start + 150, fps)
+        self.assertEqual((sa, av), (12 - 8, 75 - 8))            # each at its own name, not at the shared "node"
+        self.assertEqual(pk, 10)                                 # never said: at the cut
 
 
 if __name__ == '__main__':
