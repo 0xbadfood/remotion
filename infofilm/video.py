@@ -340,11 +340,13 @@ def render(config, store, root, timeline):
         shutil.copytree(renderer / folder, snapshot / folder, dirs_exist_ok=True)
     data = read(timeline)["data"]
     for scene in data["scenes"]:
-        for key in ("src", "depth", "clip", "backdrop"):
-            if scene.get(key):
-                target = snapshot / "public" / scene[key]
-                target.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copyfile(renderer / "public" / scene[key], target)
+        layers = scene.get("layers") or {}                 # a layered diagram's files, beside its picture
+        files = [scene.get(key) for key in ("src", "depth", "clip", "backdrop")] + [
+            layers.get("base"), layers.get("highlight"), *(label["src"] for label in layers.get("labels", []))]
+        for name in filter(None, files):
+            target = snapshot / "public" / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(renderer / "public" / name, target)
     modules = snapshot / "node_modules"
     if not modules.exists():
         modules.symlink_to((renderer / "node_modules").resolve(), target_is_directory=True)
