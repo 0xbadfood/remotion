@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -61,7 +62,8 @@ BIOLOGY_TASK = (
     "mind; code draws it at the film's class level and places the labels. An equation the passage states may be "
     "{type:'equation',latex:'\\\\ce{6CO2 + 6H2O -> C6H12O6 + 6O2}'}. Keep image beats for people, places, "
     "everyday scenes, organisms and the feel of an experiment; image briefs carry no labels, and never ask an image "
-    "to draw a structure the library has.")
+    "to draw a structure the library has: a brief that names a part a library diagram draws (a kinetochore, sister "
+    "chromatids, a valve) is rejected by code, since painting gets counts, attachments and orientation wrong.")
 
 
 def task_for(figures):
@@ -111,6 +113,50 @@ def scene_errors(scene, figures):
         known = {f['id'] for f in figures.get('library', [])}
         return [] if spec.get('id') in known else [f'{sid}: library id must be one of figure_options.library']
     return [f'{sid}: {e}' for e in chem(figures).figure_errors(spec)]
+
+
+GENERIC_WORDS = {'cell', 'heart', 'body', 'blood', 'plant', 'leaf', 'organism', 'tissue', 'animal'}
+HEAD_STOP = {'energy', 'gradient', 'protein', 'pump', 'side', 'layer', 'region', 'space', 'wall', 'water', 'cells'}
+
+
+def _singular(word):
+    return word[:-1] if word.endswith('s') and not word.endswith('ss') and len(word) > 4 else word
+
+
+def drawn_parts(figures):
+    """The part names the film's library diagrams draw exactly (whole diagrams and every stage), in the singular,
+    with the head noun of a short name ("spindle fibres" -> "fibre"); names made only of words a scene can say
+    without asking for structure ("an animal cell under a microscope") are left out."""
+    names = set()
+    for f in figures.get('library', []):
+        names |= set((f.get('parts') or {}).values())
+        for stage in f.get('stages') or []:
+            names |= set((stage.get('parts') or {}).values())
+    out = set()
+    for name in names:
+        words = [_singular(w) for w in re.findall(r'[a-z]+', str(name).lower())]
+        if not words or all(w in GENERIC_WORDS or len(w) < 3 for w in words):
+            continue
+        out.add(' '.join(words))
+        if 2 <= len(words) <= 3 and len(words[-1]) >= 5 and words[-1] not in HEAD_STOP | GENERIC_WORDS:
+            out.add(words[-1])
+    return out
+
+
+def image_errors(scene, figures):
+    """A biology film's image brief must not ask a painting model for structure a library diagram draws exactly.
+    The mitosis film (2026-10-22) asked images for four chromosomes, a fibre on a kinetochore, sister chromatids at
+    a centromere and an anaphase split, and every one came out wrong; the library draws them. Such a beat is a figure
+    beat; an image keeps to what painting does well (the scene, scale, the feel of the subject)."""
+    if figures.get('subject') != 'biology':
+        return []
+    brief = str(scene.get('image_brief', '')).lower()
+    asked = sorted(n for n in drawn_parts(figures)
+                   if re.search(r'\b' + r'\s+'.join(map(re.escape, n.split())) + r'(s|es)?\b', brief))
+    if not asked:
+        return []
+    return [f"{scene.get('id')}: the image brief asks a painting for {', '.join(asked)}, which figure_options.library "
+            "draws exactly: make this a figure beat of that diagram, or keep the image to the scene and its feel"]
 
 
 def key(spec):

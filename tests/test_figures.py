@@ -114,5 +114,28 @@ class BiologyFigureTests(unittest.TestCase):
         self.assertEqual(pk, 10)                                 # never said: at the cut
 
 
+
+class BiologyImageRuleTests(unittest.TestCase):
+    """Mitosis film (2026-10-22): images asked for chromosome counts and fibres on kinetochores came out wrong."""
+    OPTIONS = {'subject': 'biology', 'library': [{'id': 'mitosis-stages', 'parts': {'part-cell': 'Cell'}, 'stages': [
+        {'id': 'stage-metaphase', 'parts': {'part-chromosomes': 'Four replicated chromosomes',
+                                            'part-spindle': 'Spindle fibres', 'part-centrioles': 'Centrioles'}}]},
+        {'id': 'animal-cell', 'parts': {'part-cell': 'Animal cell'}, 'stages': []}]}
+
+    def brief(self, text):
+        return figures.image_errors({'id': 'S15', 'kind': 'image', 'image_brief': text}, self.OPTIONS)
+
+    def test_a_brief_asking_for_drawn_structure_is_sent_back(self):
+        problem = ' '.join(self.brief('Close-up of a single gold chromosome waist, with thin pale fibres reaching it'))
+        self.assertIn('chromosome', problem)
+        self.assertIn('fibre', problem)                                   # the head noun of "Spindle fibres"
+        self.assertTrue(self.brief('two centrioles glowing'))
+
+    def test_a_scene_and_its_feel_are_fine(self):
+        self.assertEqual(self.brief('A student at a microscope in a sunlit lab, looking at an animal cell slide'), [])
+        self.assertEqual(self.brief('A relaxed wrist with two fingers feeling the pulse'), [])
+        self.assertEqual(figures.image_errors({'id': 'S1', 'image_brief': 'chromosomes'}, {'library': []}), [])
+
+
 if __name__ == '__main__':
     unittest.main()

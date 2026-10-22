@@ -147,6 +147,9 @@ def beat_errors(value, script, timing, figures=None):
         if kind == "image":
             if not isinstance(scene.get("image_brief"), str) or not 1 <= len(scene["image_brief"]) <= 1800:
                 errors.append(f"{sid}: image beats need a subject-aware image_brief")
+            elif figures:
+                from .figures import image_errors
+                errors.extend(image_errors(scene, figures))
         elif kind in {"flow", "compare", "cycle"}:
             n = 2 if kind == "compare" else 3
             labels, details = scene.get("labels"), scene.get("details")
