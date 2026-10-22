@@ -49,6 +49,33 @@ FIGURE_TASK = (
     "still carry no formulas, symbols or labels.")
 
 
+BIOLOGY_TASK = (
+    " This film teaches biology, and its structures must be shown exactly. Use kind:'figure' for a beat whose passage "
+    "names or explains a structure, organ, cell part or process that figure_options.library draws: a figure beat has "
+    "a heading and summary like other beats, empty labels/details/image_brief, and a 'figure' object {type:'biology',"
+    "id:'an id from figure_options.library',stage:'optional: one of that diagram\'s stages, the one the passage "
+    "describes',highlight:'optional: the one part id the passage is about (the rest dims)',labels:['at most 5 part "
+    "ids of that diagram that the narration names around this beat, in the order it names them']}. Use the same "
+    "diagram again with another highlight or stage as the narration moves on, so the student keeps one picture in "
+    "mind; code draws it at the film's class level and places the labels. An equation the passage states may be "
+    "{type:'equation',latex:'\\\\ce{6CO2 + 6H2O -> C6H12O6 + 6O2}'}. Keep image beats for people, places, "
+    "everyday scenes, organisms and the feel of an experiment; image briefs carry no labels, and never ask an image "
+    "to draw a structure the library has.")
+
+
+def task_for(figures):
+    """The figure instructions of a film's beat planner: biology diagrams or chemistry's code-drawn figures."""
+    return BIOLOGY_TASK if (figures or {}).get('subject') == 'biology' else FIGURE_TASK
+
+
+def biology(figures):
+    root = str(Path(figures.get('code_root') or '/home/nitin/manim'))
+    if root not in sys.path:
+        sys.path.insert(0, root)
+    from figure_library import biology as module
+    return module
+
+
 def options(evidence):
     """The figure options of a film, or None (films without them never see the figure kind)."""
     return ((evidence or {}).get('curriculum') or {}).get('figures') or None
@@ -64,7 +91,8 @@ def chem(figures):
 
 def planner_options(figures):
     """What the visual-beat planner sees: the library figures it may use (paths stay out of the prompt)."""
-    return {'library': [{k: f.get(k) for k in ('id', 'name', 'description', 'labels')} for f in figures.get('library', [])]}
+    keys = ('id', 'name', 'description', 'labels', 'parts', 'stages')
+    return {'library': [{k: f[k] for k in keys if k in f} for f in figures.get('library', [])]}
 
 
 def scene_errors(scene, figures):
@@ -73,6 +101,11 @@ def scene_errors(scene, figures):
         return [f'{sid}: unsupported visual beat kind']
     if not isinstance(spec, dict):
         return [f'{sid}: figure beats need a "figure" object']
+    if figures.get('subject') == 'biology':
+        if spec.get('type') == 'biology':
+            return [f'{sid}: {e}' for e in biology(figures).figure_errors(spec, figures.get('level', 3))]
+        if spec.get('type') != 'equation':
+            return [f'{sid}: a biology film\'s figure is type biology or equation']
     if spec.get('type') == 'library':
         known = {f['id'] for f in figures.get('library', [])}
         return [] if spec.get('id') in known else [f'{sid}: library id must be one of figure_options.library']
@@ -112,10 +145,13 @@ def render(store, films, figures):
             if scene.get('kind') != 'figure':
                 continue
             spec = scene['figure']
-            out = folder / f'{key(spec)}.png'
+            level = figures.get('level', 3)
+            out = folder / f'{key({**spec, "level": level} if spec["type"] == "biology" else spec)}.png'
             try:
                 if not out.exists():
-                    if spec['type'] == 'library':
+                    if spec['type'] == 'biology':
+                        biology(figures).png(spec, out, level)
+                    elif spec['type'] == 'library':
                         library_png(Path(figures['library_root']) / f'{spec["id"]}.svg', out)
                     else:
                         module = chem(figures)

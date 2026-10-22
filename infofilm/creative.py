@@ -284,13 +284,13 @@ def make_visual_beats(models, film, evidence, brief, *, experimental=True):
         "heading:'<=7 words',summary:'<=12 words or empty',labels:[],details:[],motion:'push'|'pull'|'drift'|'hold', "
         "copy_density:'minimal'|'standard',rationale,image_brief:'for images, else empty'}]}."
     )
-    from .figures import FIGURE_TASK, options, planner_options
+    from .figures import options, planner_options, task_for
     figures = options(evidence)
-    if figures:                                       # chemistry films: exact figures as a beat kind
+    if figures:                                       # chemistry and biology films: exact figures as a beat kind
         from .animations import ANIMATION_TASK, options as animation_options
         kinds = "'figure'|'animation'" if animation_options(figures) else "'figure'"
         task = task.replace("kind:'image'|'flow'|'compare'|'cycle'", "kind:'image'|'flow'|'compare'|'cycle'|" + kinds)
-        task += FIGURE_TASK + (ANIMATION_TASK if animation_options(figures) else "")
+        task += task_for(figures) + (ANIMATION_TASK if animation_options(figures) else "")
     if (evidence.get("curriculum") or {}).get("kind") == "key_idea":
         from .curriculum import KEY_IDEA_BEATS_TASK
         task += KEY_IDEA_BEATS_TASK

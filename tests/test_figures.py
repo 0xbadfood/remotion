@@ -71,5 +71,34 @@ class FigureRenderTests(unittest.TestCase):
                 figures.render(SimpleNamespace(root=Path(directory)), [{'storyboard': storyboard}], chemistry())
 
 
+
+class BiologyFigureTests(unittest.TestCase):
+    """Biology Studio (2026-10-22): diagrams from the ~/biology library, at the film's class level."""
+    HEART = {'type': 'biology', 'id': 'heart-section', 'highlight': 'part-left-ventricle',
+             'labels': ['part-aorta', 'part-left-ventricle']}
+
+    def options(self):
+        return {'subject': 'biology', 'code_root': '/home/nitin/manim', 'level': 3,
+                'library': [{'id': 'heart-section', 'name': 'Section of the human heart', 'parts': {}, 'stages': []}]}
+
+    def test_biology_films_get_diagram_beats_checked_by_code(self):
+        script, timing, storyboard = with_figure(self.HEART)
+        self.assertEqual(beat_errors(storyboard, script, timing, self.options()), [])
+        for spec, words in (({**self.HEART, 'labels': ['part-nope']}, 'not labelled parts'),
+                            ({'type': 'molecule', 'smiles': 'O', 'formula': 'H2O'}, 'type biology or equation')):
+            script, timing, storyboard = with_figure(spec)
+            self.assertTrue(any(words in e for e in beat_errors(storyboard, script, timing, self.options())), spec)
+        self.assertIn("type:'biology'", figures.task_for(self.options()))
+        self.assertNotIn("type:'biology'", figures.task_for(chemistry()))
+
+    def test_a_biology_diagram_is_drawn(self):
+        with tempfile.TemporaryDirectory() as directory:
+            _, _, storyboard = with_figure(self.HEART)
+            figures.render(SimpleNamespace(root=Path(directory)), [{'storyboard': storyboard}], self.options())
+            scene = storyboard['scenes'][1]
+            self.assertTrue(Path(scene['figure_file']).exists())
+            self.assertNotIn('credit', scene)                    # original art: no credit line
+
+
 if __name__ == '__main__':
     unittest.main()
