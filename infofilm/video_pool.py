@@ -30,9 +30,19 @@ def worker_configs(settings):
     return [{"id": "video", "kind": "ltx_comfy", "url": settings["url"], "mode_switch": settings.get("mode_switch")}]
 
 
+MODE_KEY = Path.home() / ".config/gpu-mode/api-key"   # the amdserver's mode switch needs it for a POST (2026-10-22)
+
+
+def mode_headers():
+    headers = {"X-Caller": "infofilm"}
+    if MODE_KEY.exists():
+        headers["Authorization"] = "Bearer " + MODE_KEY.read_text().strip()
+    return headers
+
+
 def switch_mode(url, mode, timeout, wait=True):
     """Ask the amdserver mode switch for `mode`; with wait, return once it is ready."""
-    with httpx.Client(timeout=30) as client:
+    with httpx.Client(timeout=30, headers=mode_headers()) as client:
         state = client.get(url + "/status").json()
         if state.get("mode") == mode and state.get("phase") == "ready":
             return
