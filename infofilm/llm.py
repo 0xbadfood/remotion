@@ -442,9 +442,13 @@ class Models:
             passing, decision = review_decision(review, errors, experimental, self.config)
             history.append({"attempt": attempt, "candidate_hash": digest(current), "errors": errors, "review": review,
                             "decision": decision, "writer": writer})
+            # Rotation suits small plans the incoming writer can hold whole (an idea plan, a script, a key-idea batch);
+            # in a big single pass (a 35-beat concept film) a writer arriving mid-repair broke its format (user,
+            # 2026-10-25: "with the big plans switching will not work"); big plans are to be planned in stages.
+            small = len(ru.units(current, units)) <= self.config.get("rotate_max_units", 15) if units else True
             if not passing:                               # a failed review or a failed code check alike
                 failed_reviews += 1
-                if rotate and failed_reviews % rotate == 0 and attempt + 1 < rounds:
+                if rotate and small and failed_reviews % rotate == 0 and attempt + 1 < rounds:
                     writer, judge = judge, writer
                     self.store.event(stage, "rotated", {"attempt": attempt + 1, "writer": writer, "judge": judge,
                                                         "model": endpoint(self.config, writer).get("model")})

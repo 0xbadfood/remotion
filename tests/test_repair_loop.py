@@ -238,3 +238,16 @@ class RotationTests(unittest.TestCase):
         rotated = store.db.execute("select detail from events where stage = 'script-60' and state = 'rotated'").fetchall()
         self.assertEqual(len(rotated), 1)
         self.assertEqual(json.loads(rotated[0][0])["writer"], "reviewer")
+
+
+class BigPlanTests(unittest.TestCase):
+    def test_a_big_plan_keeps_its_writer(self):
+        folder = tempfile.TemporaryDirectory(); self.addCleanup(folder.cleanup)
+        store = Store(folder.name); self.addCleanup(store.db.close)
+        models = Models({"planner_url": "p", "reviewer_url": "r", "max_repairs": 3, "rotate_max_units": 2}, store)
+        stage_issue = lambda n: {"pass": False, "score": 70 + n, "issues": [{"field": "stage", "severity": "major", "problem": f"objection {n}"}]}
+        models.call = Mock(side_effect=[script("One.", "Two.", "Three."), stage_issue(1), script("One.", "Two.", "Three!"), stage_issue(2),
+                                        script("One!", "Two.", "Three!"), passing(), {"preferred": "A", "reasons": [], "regressions": []}])
+        models.loop("script-60", "Task", {}, lambda x: [], experimental=True, units=UNITS)
+        writers = [c.args[0] for c in models.call.call_args_list if "-draft-" in c.args[1]]
+        self.assertEqual(writers, ["planner", "planner", "planner"])
