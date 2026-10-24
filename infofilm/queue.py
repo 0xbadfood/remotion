@@ -291,6 +291,28 @@ class Queue:
         self.wake.set()
         return self.get(job_id)
 
+    def replan_scenes(self, job_id):
+        """Plan the film's scenes again from its saved narration and word timing (user, 2026-10-24: "we are going to use
+        it often"): the planner is asked for a fresh plan (its earlier answer is not reused); images whose prompts come
+        out the same are reused; music and narration are kept."""
+        from .resume import images_checkpoint
+        job = self.get(job_id)
+        if job["status"] not in {"succeeded", "failed", "cancelled", "interrupted"}:
+            raise ValueError("Only a finished or stopped run can re-plan its scenes")
+        if job["request"].get("generation_mode") == "long":
+            raise ValueError("Long films re-plan per chapter; this is for single films")
+        images_checkpoint(job["project"])              # narration, its audit and word timing must be intact
+        payload = {**job["request"], "until": "video", "production_target": "video", "resume_from": "scenes",
+                   "scene_replan": int(job["request"].get("scene_replan", 0)) + 1}
+        with self.connection() as db:
+            changed = db.execute("UPDATE jobs SET request=?,status='queued',error=NULL,updated=? WHERE id=? AND request=?",
+                (json.dumps(payload), time.time(), job_id, json.dumps(job["request"]))).rowcount
+        if not changed:
+            raise ValueError("This run changed meanwhile; try again")
+        write(Path(job["project"]) / "web-request.json", payload)
+        self.wake.set()
+        return self.get(job_id)
+
     def revise_music(self, job_id, engine="acestep"):
         from .resume import music_checkpoint
         job = self.get(job_id)
@@ -501,6 +523,8 @@ class Queue:
                                       and (project / "creative-brief.json").is_file())
         result["can_revise_narration"] = result["can_revise_music"] and (project / "image_manifest.json").is_file()
         result['can_continue_video'] = audio_first and job['status'] == 'succeeded' and (project / 'audio-delivery.json').is_file()
+        result['can_replan_scenes'] = (not long and job['status'] in {'succeeded', 'failed', 'cancelled', 'interrupted'}
+                                       and any(project.glob('film-*/timing.json')))
         if (project / "creative-brief.json").exists():
             result["creative_brief"] = read(project / "creative-brief.json")
         result["latest_event"] = events[0] if events else None

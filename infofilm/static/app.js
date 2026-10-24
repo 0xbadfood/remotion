@@ -204,6 +204,7 @@ async function refreshSelected() {
   $('revise-music').hidden = !job.can_revise_music;
   $('revise-narration').hidden = !job.can_revise_narration;
   $('continue-video').hidden = !job.can_continue_video;
+  $('replan-scenes').hidden = !job.can_replan_scenes;
   const audioSignature = JSON.stringify([job.id, job.audio_deliveries]);
   if (state.signatures.audioDeliveries !== audioSignature) {
     state.signatures.audioDeliveries = audioSignature;
@@ -402,6 +403,13 @@ $('discard').addEventListener('click', async event => {
     await post(`/api/jobs/${encodeURIComponent(state.selected)}/discard`, {});
     state.selected = null; history.replaceState(null, '', window.location.pathname); await refresh();
   } catch (error) { $('run-error-text').textContent = error.message; }
+  finally { event.target.disabled = false; }
+});
+$('replan-scenes-button').addEventListener('click', async event => {
+  if (!confirm('Plan the scenes of this film again? Narration is kept; the scenes, pictures and video are made again.')) return;
+  event.target.disabled = true; $('replan-scenes-error').textContent = '';
+  try { await post(`/api/jobs/${encodeURIComponent(state.selected)}/replan-scenes`); await refresh(); }
+  catch (error) { $('replan-scenes-error').textContent = error.message; }
   finally { event.target.disabled = false; }
 });
 $('continue-video-button').addEventListener('click', async event => {

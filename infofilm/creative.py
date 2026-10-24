@@ -115,9 +115,10 @@ def resolved_scenes(storyboard, script, timing):
     return result
 
 
-def beat_errors(value, script, timing, figures=None):
+def beat_errors(value, script, timing, figures=None, linkwork=None):
     """Validate coverage and references, never impose creative image-count quotas. `figures`: the film's figure
-    options (figures.options); without them a figure beat is not allowed."""
+    options (figures.options); without them a figure beat is not allowed. `linkwork`: {config, cards} when the film
+    may use Linkwork beats (linkwork_beats.py)."""
     scenes = value.get("scenes", [])
     if not isinstance(scenes, list) or not scenes or len(scenes) > 120:
         return ["Need 1–120 executable visual beats"]
@@ -165,6 +166,8 @@ def beat_errors(value, script, timing, figures=None):
             errors.extend(scene_errors(scene, figures))
         elif kind == "animation":
             pass                                      # checked with its words below (animations.scene_errors)
+        elif kind == "linkwork" and linkwork:
+            pass                                      # compiled and checked with its beat's duration below
         else:
             errors.append(f"{sid}: unsupported visual beat kind")
         for key, limit in [("heading", 7), ("summary", 12)]:
@@ -192,6 +195,9 @@ def beat_errors(value, script, timing, figures=None):
     if not errors:
         if any(s["end"] <= s["start"] for s in resolved_scenes(value, script, timing)):
             errors.append("Visual beat intervals must have positive duration")
+    if not errors and linkwork and any(s.get("kind") == "linkwork" for s in scenes):
+        from .linkwork_beats import beat_errors as linkwork_errors
+        errors.extend(linkwork_errors(linkwork["config"], resolved_scenes(value, script, timing), linkwork["cards"]))
     return errors
 
 
@@ -294,6 +300,11 @@ def make_visual_beats(models, film, evidence, brief, *, experimental=True):
         kinds = "'figure'|'animation'" if animation_options(figures) else "'figure'"
         task = task.replace("kind:'image'|'flow'|'compare'|'cycle'", "kind:'image'|'flow'|'compare'|'cycle'|" + kinds)
         task += task_for(figures) + (ANIMATION_TASK if animation_options(figures) else "")
+    linkwork = linkwork_for(getattr(models, "config", None) or {}, evidence)
+    if linkwork:                                      # physics and maths films: exact code-drawn scenes as a beat kind
+        from .linkwork_beats import TASK as LINKWORK_TASK
+        task = task.replace("kind:'image'|'flow'|'compare'|'cycle'", "kind:'image'|'flow'|'compare'|'cycle'|'linkwork'")
+        task += LINKWORK_TASK
     if (evidence.get("curriculum") or {}).get("kind") == "key_idea":
         from .curriculum import KEY_IDEA_BEATS_TASK
         task += KEY_IDEA_BEATS_TASK
@@ -311,10 +322,16 @@ def make_visual_beats(models, film, evidence, brief, *, experimental=True):
                     for p,start,end in zip(aligned,starts,ends)]}
     if figures:
         context["figure_options"] = planner_options(figures)
+    replan = (getattr(models, "config", None) or {}).get("scene_replan")
+    if replan:                                        # asked to plan again: a new request, so not the cached plan
+        context["replan"] = {"number": replan, "note": "A fresh scene plan was asked for."}
+    if linkwork:
+        from .linkwork_beats import planner_options as linkwork_options
+        context["linkwork_options"] = linkwork_options(linkwork["cards"])
     if (evidence.get("curriculum") or {}).get("kind") == "key_idea":
-        return batched_beats(models, film, evidence, task, context, figures, experimental)
+        return batched_beats(models, film, evidence, task, context, figures, experimental, linkwork)
     return models.loop(f"visual-beats-{film['requested_seconds']}", task, context,
-                      lambda x: beat_errors(x, film["script"], film["timing"], figures)
+                      lambda x: beat_errors(x, film["script"], film["timing"], figures, linkwork)
                       + key_idea_beat_errors(x, evidence), experimental=experimental,
                       metrics=lambda x: visual_metrics(x, film["script"], film["timing"]), units=BEAT_UNITS)
 
@@ -330,7 +347,17 @@ def batch_timing(timing, points, start, end):
             "audio_info": {**timing["audio_info"], "duration_seconds": end}}
 
 
-def batched_beats(models, film, evidence, task, context, figures, experimental):
+def linkwork_for(config, evidence):
+    """{config, cards} for a film that may use Linkwork beats (the shortlisted verb cards), else None."""
+    from .linkwork_beats import options, shortlist
+    opts = options(evidence)
+    if not opts:
+        return None
+    cards = shortlist(config, evidence, opts)
+    return {"config": config, "cards": cards} if cards else None
+
+
+def batched_beats(models, film, evidence, task, context, figures, experimental, linkwork=None):
     """Key-idea films: scenes planned a few points at a time, each batch with the film's plan and the scenes just
     before it, so every batch gets the planner's full attention. Batches are validated as small films; the joined
     storyboard is validated as a whole and its beats numbered S01... in order."""
@@ -359,7 +386,7 @@ def batched_beats(models, film, evidence, task, context, figures, experimental):
 
         def validate(x, part_script=part_script, part_timing=part_timing, figures_left=figures_left):
             extra = [s.get("id") for s in x.get("scenes") or [] if isinstance(s, dict) and s.get("kind") == "figure"]
-            return beat_errors(x, part_script, part_timing, figures) + key_idea_animation_errors(x.get("scenes")) + (
+            return beat_errors(x, part_script, part_timing, figures, linkwork) + key_idea_animation_errors(x.get("scenes")) + (
                 [f"{', '.join(map(str, extra))}: only {figures_left} figure beats are left for this batch"]
                 if len(extra) > figures_left else [])
         part = models.loop(f"visual-beats-{film['requested_seconds']}-b{first // BATCH_POINTS + 1}", part_task,
@@ -368,7 +395,7 @@ def batched_beats(models, film, evidence, task, context, figures, experimental):
     for n, scene in enumerate(scenes, 1):
         scene["id"] = f"S{n:02d}"
     storyboard = {"scenes": scenes}
-    errors = beat_errors(storyboard, script, timing, figures) + key_idea_beat_errors(storyboard, evidence)
+    errors = beat_errors(storyboard, script, timing, figures, linkwork) + key_idea_beat_errors(storyboard, evidence)
     if errors:
         raise ValueError(f"Joined visual beats fail validation: {errors}")
     return storyboard

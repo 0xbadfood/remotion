@@ -331,15 +331,22 @@ def finish_visuals(args, config, store, models, evidence, sources, brief, films,
         raise ValueError(f"Invalid visual library: {errors}")
     write(store.root / "visual-library.json", library)
     from .figures import options as figure_options, render as render_figures
+    from .creative import linkwork_for
     figures = figure_options(evidence)
+    linkwork = linkwork_for(config, evidence)
     for film in films:
         duration = film["requested_seconds"]
-        errors = (beat_errors(film["storyboard"], film["script"], film["timing"], figures)
+        errors = (beat_errors(film["storyboard"], film["script"], film["timing"], figures, linkwork)
                   if any(s.get("start_word_id") for s in film["storyboard"]["scenes"])
                   else storyboard_errors(film["storyboard"], film["script"], library))
         if errors:
             raise ValueError(f"Invalid storyboard: {errors}")
         write(store.root / f"film-{duration}" / "storyboard.json", film["storyboard"])
+    if linkwork and any(s.get("kind") == "linkwork" for film in films for s in film["storyboard"]["scenes"]):
+        from .linkwork_beats import render as render_linkwork
+        render_linkwork(config, store, films)          # each scene compiled and checked once more, then saved
+        for film in films:
+            write(store.root / f"film-{film['requested_seconds']}" / "storyboard.json", film["storyboard"])
     if figures and any(s.get("kind") == "figure" for film in films for s in film["storyboard"]["scenes"]):
         render_figures(store, films, figures)     # drawn by code before any image is made: a bad one fails fast
         for film in films:

@@ -1,8 +1,10 @@
 import React, {useEffect, useState} from 'react';
 import {AbsoluteFill, Img, OffthreadVideo, Sequence, staticFile, useCurrentFrame, useVideoConfig, delayRender, continueRender, cancelRender, interpolate} from 'remotion';
 import {DepthImage} from './DepthImage';
+import {LinkworkScene} from './Linkwork';
+import type {Scene as LinkworkData} from './linkwork/index.ts';
 
-export type Scene = {id:string; point_id:string; from:number; duration:number; kind:'image'|'flow'|'compare'|'cycle'|'figure'|'animation'; src?:string; credit?:string; depth?:string; clip?:string; clipSeconds?:number; backdrop?:string;
+export type Scene = {id:string; point_id:string; from:number; duration:number; kind:'image'|'flow'|'compare'|'cycle'|'figure'|'animation'|'linkwork'; linkwork?:LinkworkData; src?:string; credit?:string; depth?:string; clip?:string; clipSeconds?:number; backdrop?:string;
   heading:string; summary:string; labels:string[]; details:string[]; banner?:string; needs_review?:boolean; review_tag?:string; copy_density?:'minimal'|'standard'; motion:'push'|'pull'|'drift'|'hold'; index:number; source_ids:string[]; reveals?:number[];
   layers?:{base:string; highlight?:string|null; highlightAt:number; labels:{src:string; at:number}[]}};
 export type FilmData = {title:string;subject:string;width:number;height:number;fps:number;durationInFrames:number;transitionFrames?:number;depthStrength?:number;
@@ -91,6 +93,11 @@ const SceneView:React.FC<{scene:Scene;lead:number;brief?:FilmData['creativeBrief
   const y=scene.motion==='drift'?(zoom-1)*height*.2*(scene.index%2?1:-1)*(ease-.5):0;
   // An animated beat: a Manim clip coded for this beat, timed to the narration from the cut and drawn on the film's
   // background, with its own heading; it fills the frame and the film's captions sit over its free bottom band.
+  // A Linkwork beat: an exact scene drawn by code from its checked data, frame by frame, on the film's background; its
+  // times count from the cut (the lead keeps it in step with the narration, as for animations).
+  if (scene.kind==='linkwork' && scene.linkwork) return <AbsoluteFill style={{background:teal,overflow:'hidden',opacity:fade}}>
+    <Sequence from={lead}><LinkworkScene scene={scene.linkwork} transparent/></Sequence>
+  </AbsoluteFill>;
   if (scene.kind==='animation') return <AbsoluteFill style={{background:teal,overflow:'hidden',opacity:fade}}>
     {scene.src && <Sequence from={lead}><OffthreadVideo data-measure="animation" src={staticFile(scene.src)} muted
       style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',objectFit:'contain'}}/></Sequence>}

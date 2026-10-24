@@ -299,6 +299,8 @@ def compile_timeline(config, store, script, timing, storyboard, images, evidence
                                    "highlight": staged(layers["highlight"]) if layers.get("highlight") else None,
                                    "highlightAt": lit,
                                    "labels": [{"src": staged(label), "at": t} for label, t in zip(layers["labels"], times)]}
+        if scene["kind"] == "linkwork":                # drawn frame by frame in the renderer from its checked scene
+            value["linkwork"] = read(scene["linkwork_file"])
         if scene["kind"] == "animation":
             if digest(Path(scene["animation_file"]).read_bytes()) != scene["animation_sha256"]:
                 raise ValueError("Animation changed after it was reviewed")

@@ -589,6 +589,16 @@ def create_app(config_path=ROOT / "config.json", directory=ROOT / "artifacts/int
         except ValueError as exc:
             raise HTTPException(409, str(exc))
 
+    @app.post('/api/jobs/{job_id}/replan-scenes', status_code=202)
+    def replan_scenes(job_id: str):
+        try:
+            queue.replan_scenes(job_id)
+            return queue.public(job_id, details=True)
+        except KeyError:
+            raise HTTPException(404, 'Run not found')
+        except ValueError as exc:
+            raise HTTPException(409, str(exc))
+
     youtube_states = {}
 
     @app.get("/api/youtube")

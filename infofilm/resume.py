@@ -186,7 +186,9 @@ def resume_narration(args):
                               if engine == "vibevoice" else
                               align_audio(config, store, film["audio"], film["script"], f"alignment-{duration}-recovery",
                                           spoken_points=film["audio_info"].get("spoken_points")))
-            errors = beat_errors(film["storyboard"], film["script"], film["timing"], figure_options(evidence))
+            from .creative import linkwork_for
+            errors = beat_errors(film["storyboard"], film["script"], film["timing"], figure_options(evidence),
+                                 linkwork_for(config, evidence))
             if errors:
                 raise ValueError(f"Saved visual anchors no longer match repaired narration: {errors}")
         store.event("pipeline:timing", "succeeded", {"point_alignment": True})
@@ -263,6 +265,7 @@ def resume_images(args):
     args.subject = record["subject"]
     config = configuration(args.config)
     config["tts_engine"] = record.get("tts_engine", "vibevoice")
+    config["scene_replan"] = int(getattr(args, "scene_replan", 0) or 0)   # a fresh plan, not the cached one
     store = Store(args.project)
     try:
         resume_stage = getattr(args, 'resume_from', None) or 'images'
