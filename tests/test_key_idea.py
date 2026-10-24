@@ -109,7 +109,11 @@ class KeyIdeaTests(unittest.TestCase):
         self.assertEqual(key_idea_script_errors({'points': maths[:1] + story}, evidence), [])
         self.assertEqual(key_idea_script_errors({'points': maths}, {'curriculum': {'kind': 'textbook_concept'}}), [])
         board = {'scenes': [{'id': 'S1', 'kind': 'figure'}, {'id': 'S2', 'kind': 'figure'}, {'id': 'S3', 'kind': 'animation'}]}
-        self.assertIn('S1, S2: 2 figure beats', ' '.join(key_idea_beat_errors(board, evidence)))
+        self.assertIn('S1, S2: 2 equation figures', ' '.join(key_idea_beat_errors(board, evidence)))
+        # the cap is on equations: the book's own figure beside one equation is fine (physics, 2026-10-24)
+        book = {'scenes': [{'id': 'S1', 'kind': 'figure', 'figure': {'type': 'equation', 'latex': 'v = dx/dt'}},
+                           {'id': 'S2', 'kind': 'figure', 'figure': {'type': 'library', 'id': 'Fig-2-1'}}]}
+        self.assertNotIn('equation figures', ' '.join(key_idea_beat_errors(book, evidence)))
         self.assertIn('at most 1 point may speak an equation', script_task(IDEA))
         numbers = [{'id': 'P1', 'narration': 'Its frequency is about 6.91 hertz.', 'uses_analogy': True}]
         self.assertIn('P01, P1', ' '.join(key_idea_script_errors({'points': maths[:1] + numbers + story}, evidence)))
@@ -144,7 +148,7 @@ class KeyIdeaTests(unittest.TestCase):
         self.assertEqual(key_idea_script_errors({'points': maths[:1] + story}, evidence), [])
         self.assertEqual(key_idea_script_errors({'points': maths}, {'curriculum': {'kind': 'textbook_concept'}}), [])
         board = {'scenes': [{'id': 'S1', 'kind': 'figure'}, {'id': 'S2', 'kind': 'figure'}, {'id': 'S3', 'kind': 'animation'}]}
-        self.assertIn('S1, S2: 2 figure beats', ' '.join(key_idea_beat_errors(board, evidence)))
+        self.assertIn('S1, S2: 2 equation figures', ' '.join(key_idea_beat_errors(board, evidence)))
         self.assertIn('at most 1 point may speak an equation', script_task(IDEA))
         numbers = [{'id': 'P1', 'narration': 'Its frequency is about 6.91 hertz.', 'uses_analogy': True}]
         self.assertIn('P01, P1', ' '.join(key_idea_script_errors({'points': maths[:1] + numbers + story}, evidence)))

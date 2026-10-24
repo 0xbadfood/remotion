@@ -66,9 +66,26 @@ BIOLOGY_TASK = (
     "chromatids, a valve) is rejected by code, since painting gets counts, attachments and orientation wrong.")
 
 
+BOOK_TASK = (
+    " Formulas and the book's own figures are shown exactly, as figure beats (kind:'figure', a heading and summary "
+    "like other beats, empty labels/details/image_brief). A beat whose passage states, defines or derives a formula "
+    "or works a step of a calculation is {type:'equation',latex:'v = \\\\lim_{\\\\Delta t \\\\to 0} \\\\frac{\\\\Delta x}{\\\\Delta t} "
+    "= \\\\frac{dx}{dt}'} (LaTeX maths, at most 400 characters; one idea per beat, and a derivation is a few "
+    "equation beats in a row, each adding its step); never an image with the formula in its heading or summary, and "
+    "never an image of a board, a notebook or a hand writing. A beat whose passage describes a figure in "
+    "figure_options.library (the book's own numbered figures, with what each shows) is {type:'library',id:'its id'} "
+    "when that figure shows what the narration says; prefer a Linkwork beat when a verb can draw the same thing "
+    "moving. Reviewing: report as major a formula the narration states that no beat shows as an equation, and an "
+    "image standing in for a formula or for a book figure the library has.")
+
+
 def task_for(figures):
-    """The figure instructions of a film's beat planner: biology diagrams or chemistry's code-drawn figures."""
-    return BIOLOGY_TASK if (figures or {}).get('subject') == 'biology' else FIGURE_TASK
+    """The figure instructions of a film's beat planner: biology diagrams, the book's figures and LaTeX equations
+    (physics and maths), or chemistry's code-drawn figures."""
+    figures = figures or {}
+    if figures.get('book'):
+        return BOOK_TASK
+    return BIOLOGY_TASK if figures.get('subject') == 'biology' else FIGURE_TASK
 
 
 def biology(figures):
@@ -104,6 +121,11 @@ def scene_errors(scene, figures):
         return [f'{sid}: unsupported visual beat kind']
     if not isinstance(spec, dict):
         return [f'{sid}: figure beats need a "figure" object']
+    if figures.get('book') and spec.get('type') not in ('equation', 'library'):
+        return [f"{sid}: this film's figure is type equation or library (a book figure)"]
+    if spec.get('type') == 'equation':
+        problems = chem(figures).figure_errors(spec)
+        return [f'{sid}: {e}' for e in problems] if problems else [f'{sid}: {e}' for e in equation_compiles(figures, spec)]
     if figures.get('subject') == 'biology':
         if spec.get('type') == 'biology':
             return [f'{sid}: {e}' for e in biology(figures).figure_errors(spec, figures.get('level', 3))]
@@ -113,6 +135,22 @@ def scene_errors(scene, figures):
         known = {f['id'] for f in figures.get('library', [])}
         return [] if spec.get('id') in known else [f'{sid}: library id must be one of figure_options.library']
     return [f'{sid}: {e}' for e in chem(figures).figure_errors(spec)]
+
+
+_COMPILED: dict[str, list] = {}
+
+
+def equation_compiles(figures, spec):
+    """LaTeX errors of an equation, found while planning (so the planner fixes them) rather than at render time."""
+    k = key(spec)
+    if k not in _COMPILED:
+        try:
+            chem(figures).draw(spec)
+            _COMPILED[k] = []
+        except Exception as exc:                                    # noqa: BLE001 - LaTeX's own message goes back
+            _COMPILED[k] = [f'the LaTeX does not compile ({str(exc)[:160]}); write plain maths: \\frac, \\lim_{{}}, '
+                            '\\Delta, ^{}, _{}, \\text{}']
+    return _COMPILED[k]
 
 
 GENERIC_WORDS = {'cell', 'heart', 'body', 'blood', 'plant', 'leaf', 'organism', 'tissue', 'animal'}
@@ -180,6 +218,20 @@ def library_png(svg_path, out, box=LIBRARY_BOX, pad=36):
     card.save(out)
 
 
+def book_png(path, out, box=LIBRARY_BOX, pad=36):
+    """A book figure on a light card: its exact SVG, or the PNG crop of a photograph."""
+    if path.suffix == '.svg':
+        library_png(path, out, box, pad)
+        return
+    from PIL import Image, ImageDraw
+    raw = Image.open(path).convert('RGBA')
+    raw.thumbnail((box[0] - 2 * pad, box[1] - 2 * pad), Image.LANCZOS)
+    card = Image.new('RGBA', (raw.width + 2 * pad, raw.height + 2 * pad), (0, 0, 0, 0))
+    ImageDraw.Draw(card).rounded_rectangle((0, 0, card.width - 1, card.height - 1), radius=18, fill='#f7f3e9')
+    card.alpha_composite(raw, (pad, pad))
+    card.save(out)
+
+
 def biology_layers(figures, spec, level, prefix):
     """The biology figure's layers (cached beside its PNG), each with its file and hash."""
     def sha(path):
@@ -209,7 +261,11 @@ def render(store, films, figures):
                     if spec['type'] == 'biology':
                         biology(figures).png(spec, out, level)
                     elif spec['type'] == 'library':
-                        library_png(Path(figures['library_root']) / f'{spec["id"]}.svg', out)
+                        entry = library[spec['id']]
+                        if entry.get('file'):            # a book figure: its own SVG (or the PNG crop of a photo)
+                            book_png(Path(entry['file']), out)
+                        else:
+                            library_png(Path(figures['library_root']) / f'{spec["id"]}.svg', out)
                     else:
                         module = chem(figures)
                         import cairosvg

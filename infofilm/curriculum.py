@@ -229,9 +229,11 @@ def key_idea_beat_errors(storyboard, evidence):
     if not is_key_idea(evidence.get('curriculum')):
         return []
     out = key_idea_animation_errors(storyboard.get('scenes'))
-    figures = [s.get('id') for s in storyboard.get('scenes') or [] if s.get('kind') == 'figure']
+    # The cap is on equations (keep the maths light); a book figure the idea rests on is not maths on screen.
+    figures = [s.get('id') for s in storyboard.get('scenes') or []
+               if s.get('kind') == 'figure' and (s.get('figure') or {}).get('type', 'equation') != 'library']
     if len(figures) > KEY_IDEA_FIGURES:
-        out.append(f'{", ".join(figures)}: {len(figures)} figure beats; a key-idea film may show at most '
+        out.append(f'{", ".join(figures)}: {len(figures)} equation figures; a key-idea film may show at most '
                    f'{KEY_IDEA_FIGURES}. Show the idea through the analogy and animation instead')
     return out
 
