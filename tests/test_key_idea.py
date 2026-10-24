@@ -347,3 +347,16 @@ class KeyIdeaStillTests(unittest.TestCase):
         script, timing, storyboard, brief = example()
         self.assertNotIn('Draw exactly', library_from_beats([{'script': script, 'storyboard': storyboard}], brief)
                          ['assets'][0]['prompt'])                       # other films: unchanged
+
+
+class BestRoundTests(unittest.TestCase):
+    def test_when_no_round_lands_the_best_round_is_kept(self):
+        verdicts = [{'understood': 96, 'simple': 58, 'wrong_beliefs': [], 'fixes': []},
+                    {'understood': 94, 'simple': 72, 'wrong_beliefs': ['x'], 'fixes': []},
+                    {'understood': 94, 'simple': 64, 'wrong_beliefs': [], 'fixes': []}]
+        with tempfile.TemporaryDirectory() as root:
+            models = FakeModels(root, verdicts)
+            script = planning.make_script(models, {'title': 'L', 'facts': [{'id': 'F01'}], 'curriculum': IDEA}, 240, 120)
+            record = read(Path(root) / 'learner-check-240.json')
+            self.assertEqual(record['chosen_round'], 1)
+            self.assertIn('Version 2', script['points'][0]['narration'])

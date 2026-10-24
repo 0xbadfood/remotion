@@ -281,6 +281,27 @@ JUDGE_TASK = (
 
 LANDING = {'understood': 75, 'simple': 70, 'confusing': 2}     # what "the idea landed" means
 
+DIAGNOSE_TASK = (
+    "You are the struggling {audience_short} who just watched this short film and did not fully get its idea. Your own "
+    "explanation, answers and confusions are below, and so is a teacher's verdict. The idea you were meant to get: "
+    "{understanding} Now step back and say, honestly and in your own words: why did it not click for you? Where "
+    "exactly did the film lose you, which word or step did you need and not get, and what picture, comparison or "
+    "order of steps would have made it click for a student like you? Then say how you would explain it to a friend "
+    "who is like you. Return {{why_it_did_not_click:[string], needed:[string], would_click:[string], "
+    "how_i_would_explain_it:string}}.")
+
+
+def diagnose(models, script, curriculum, check, name):
+    """The learner who missed the idea says why it did not click and how it would explain it (user, 2026-10-24: the
+    learner plans the next round). `models` is the learner's model."""
+    idea = curriculum.get('idea') or {}
+    narration = '\n'.join(f'{p["id"]}: {p["narration"]}' for p in script['points'])
+    return models.call('planner', f'{name}-diagnosis', DIAGNOSE_TASK.format(
+        audience_short=str(curriculum.get('audience', 'student')).split(' in ')[0].rstrip('s').lower() or 'student',
+        understanding=idea.get('understanding', ''))
+        + '\nNARRATION:\n' + narration + '\nYOU (THE LEARNER):\n' + json.dumps(check['learner'], ensure_ascii=False)
+        + '\nTEACHER\'S VERDICT:\n' + json.dumps(check['verdict'], ensure_ascii=False), max_tokens=3000)
+
 
 def learner_check(models, script, curriculum, name):
     """The learner's explanation and the judge's verdict on whether the key idea landed."""

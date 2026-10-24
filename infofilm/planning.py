@@ -301,34 +301,74 @@ def make_script(models, evidence, duration, rate=135, experimental=True, suffix=
 LANDING_ROUNDS = 2
 
 
+def swapped(models):
+    """The same models with the planner and reviewer connections exchanged."""
+    from .llm import Models
+    if not isinstance(models, Models):                # test doubles play every role themselves
+        return models
+    config = {**models.config, "planner_url": models.config["reviewer_url"], "reviewer_url": models.config["planner_url"]}
+    return Models(config, models.store)
+
+
+def solo(models, role):
+    """The same models with both roles on one connection (the learner reads and is judged by the model that did not
+    write the script)."""
+    from .llm import Models
+    if not isinstance(models, Models):
+        return models
+    url = models.config[role + "_url"]
+    return Models({**models.config, "planner_url": url, "reviewer_url": url}, models.store)
+
+
 def land_idea(models, evidence, duration, suffix, task, context, validate, script, experimental):
     """Key-idea films: a learner who knows nothing of the subject explains the idea back from the narration; while it
-    does not land (or leaves a wrong belief), the script is rewritten with the judge's fixes, up to LANDING_ROUNDS
-    times. The rounds are kept in learner-check-<duration>.json; a film whose idea never landed still goes on, with
-    the verdict on record (the measure the user will calibrate against)."""
-    from .curriculum import learner_check, student_review
+    does not land (or leaves a wrong belief), the script is rewritten, up to LANDING_ROUNDS times. The rounds are kept
+    in learner-check-<duration>.json; a film whose idea never landed still goes on, with the verdict on record.
+
+    The writer and the learner rotate (user, 2026-10-24): the learner is always the model that did not write the
+    script; when it misses the idea, it first says why it did not click and how it would explain it, and then it
+    writes the next round itself (the other model reviews it and becomes the next learner)."""
+    from .curriculum import diagnose, learner_check, student_review
     from .idea_plan import screen as idea_screen
-    rounds = []
+    rounds, scripts, writer = [], [], models          # round 0 was written by the planner model
     for n in range(LANDING_ROUNDS + 1):
-        check = learner_check(models, script, evidence["curriculum"], f"learner-{duration}{suffix}-{n}")
-        rounds.append({"round": n, **check})
+        scripts.append(script)
+        reader = solo(writer, "reviewer")             # the model that did not write this script
+        check = learner_check(reader, script, evidence["curriculum"], f"learner-{duration}{suffix}-{n}")
+        rounds.append({"round": n, "writer": getattr(writer, "config", {}).get("planner_url"),
+                       "learner": getattr(reader, "config", {}).get("planner_url"), **check})
         models.store.event("learner-check", "landed" if check["landed"] else "missed",
                            {"round": n, "score": check["verdict"].get("score")})
         if check["landed"] or n == LANDING_ROUNDS:
             break
-        feedback = {"learner_explanation": check["learner"].get("explanation"),
-                    "learner_lost_at": check["learner"].get("lost_at"),
-                    "learner_confused_by": check["learner"].get("confusing"),
+        diagnosis = diagnose(reader, script, evidence["curriculum"], check, f"learner-{duration}{suffix}-{n}")
+        rounds[-1]["diagnosis"] = diagnosis
+        feedback = {"your_diagnosis": diagnosis,
+                    "your_explanation_as_learner": check["learner"].get("explanation"),
+                    "where_you_got_lost": check["learner"].get("lost_at"),
+                    "what_confused_you": check["learner"].get("confusing"),
                     "scores": {k: check["verdict"].get(k) for k in ("understood", "simple")},
-                    "wrong_beliefs": check["verdict"].get("wrong_beliefs"), "fixes": check["verdict"].get("fixes"),
+                    "wrong_beliefs": check["verdict"].get("wrong_beliefs"), "teacher_fixes": check["verdict"].get("fixes"),
                     "previous_script": script}
-        script = models.loop(f"script-{duration}{suffix}-land{n + 1}", task + (
-            " learner_feedback shows how a learner understood the previous script: rewrite it so the idea lands. "
-            "Apply every fix (when a fix says to drop or leave something out, leave it out), remove every cause of "
-            "a wrong belief, and simplify where the learner got lost or was confused; keep what worked."), {**context, "learner_feedback": feedback}, validate, experimental=experimental,
-            units=SCRIPT_UNITS, review_as=student_review, screen=idea_screen)
-    write(models.store.root / f"learner-check-{duration}.json", {"landed": rounds[-1]["landed"], "rounds": rounds})
-    return script
+        writer = swapped(writer)                      # the learner who missed it writes the next round
+        script = writer.loop(f"script-{duration}{suffix}-land{n + 1}", task + (
+            " You watched the previous script as a struggling student and did not fully get the idea; "
+            "learner_feedback holds your own diagnosis of why, what you needed, and how you would explain it to a "
+            "friend like you. Now write the next script yourself so a student like you gets it: build it on your own "
+            "explanation and the picture or comparison that would have made it click, apply the teacher's fixes, "
+            "remove every cause of a wrong belief, and keep what worked."), {**context, "learner_feedback": feedback},
+            validate, experimental=experimental, units=SCRIPT_UNITS, review_as=student_review, screen=idea_screen)
+    # A round that landed is used; otherwise the best round, not the last (user, 2026-10-24: round 1 scored 94/72
+    # with 8 confusions, the last 94/64 with 11): the higher of understood and simple's lower score, then fewer
+    # confusions.
+    def rank(r):
+        return (r["landed"], r["verdict"].get("score") or 0, -len(r["learner"].get("confusing") or []))
+    best = max(range(len(rounds)), key=lambda i: rank(rounds[i]))
+    write(models.store.root / f"learner-check-{duration}.json",
+          {"landed": rounds[best]["landed"], "chosen_round": best, "rounds": rounds})
+    if best != len(rounds) - 1:
+        models.store.event("learner-check", "best_round_kept", {"round": best, "score": rounds[best]["verdict"].get("score")})
+    return scripts[best]
 
 
 def make_library(models, evidence, scripts, experimental=True):
