@@ -59,7 +59,7 @@ def _run_remote(config, store, manifest, name):
                     raise TimeoutError(f"LuxTTS job {job['id']} still running after an hour")
                 time.sleep(1)
                 job = client.get(f"{url}/api/jobs/{job['id']}").json()
-                seen = _recorded(store, name, manifest, job.get("clips") or [], seen)
+                seen = _recorded(store, name, manifest, [c["id"] if isinstance(c, dict) else c for c in job.get("clips") or []], seen)
             if job["status"] == "error":
                 raise RuntimeError(f"Media factory LuxTTS job failed: {job.get('message')}")
             for task in tasks:

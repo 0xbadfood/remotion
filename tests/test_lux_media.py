@@ -117,3 +117,31 @@ class RemoteFallbackTests(unittest.TestCase):
                         "tasks": [{"id": "P1", "index": 0, "text": "Hello.", "out": str(Path(folder) / "P1.wav")}]}
             self.assertFalse(_run_remote(config, store, manifest, "narration"))
             self.assertEqual(remote_mms_align(config, store, "alignment", reference, ["hello"]), (None, None))
+
+    def test_remote_job_reports_each_clip_as_it_arrives(self):
+        # The media factory lists finished clips as {id, seconds, ...} (2026-10-24: ids were assumed, and a film crashed)
+        import httpx
+        from infofilm.lux_media import _run_remote
+        polls = iter([{"id": "J", "status": "running", "clips": [{"id": "P1", "seconds": 1.0}]},
+                      {"id": "J", "status": "complete", "clips": [{"id": "P1", "seconds": 1.0}, {"id": "P2", "seconds": 1.2}]}])
+
+        def handler(request):
+            if request.url.path == "/api/tts":
+                return httpx.Response(202, json={"id": "J", "status": "queued", "clips": []})
+            if request.url.path == "/api/jobs/J":
+                return httpx.Response(200, json=next(polls))
+            return httpx.Response(200, content=b"RIFF")
+        real = httpx.Client
+        with tempfile.TemporaryDirectory() as folder, \
+                patch("httpx.Client", lambda **kw: real(transport=httpx.MockTransport(handler), base_url="http://f")), \
+                patch("infofilm.lux_media.time.sleep"):
+            store, reference = Store(Path(folder)), Path(folder) / "ref.wav"
+            reference.write_bytes(b"RIFF")
+            manifest = {"model": "m", "speed": .75, "num_steps": 4, "t_shift": .5, "seed": 0, "reference_text": None,
+                        "reference": str(reference),
+                        "tasks": [{"id": p, "index": i, "text": "Hello.", "out": str(Path(folder) / f"{p}.wav")} for i, p in enumerate(["P1", "P2"])]}
+            self.assertTrue(_run_remote({"lux_url": "http://f"}, store, manifest, "narration"))
+            recorded = [json.loads(d)["point"] for (d,) in store.db.execute(
+                "select detail from events where state = 'point_recorded' order by id")]
+            self.assertEqual(recorded, ["P1", "P2"])
+            store.db.close()
