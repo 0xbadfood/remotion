@@ -89,7 +89,9 @@ PROPS_TASK = (
     "image retries, so build the analogy, the guide and the setting from props whenever one can carry the idea as "
     "well (a car or a walker on a marked road rather than a bird; a ball, a block, a train, a pulley; a person thinking "
     "as a bulb lights for the moment of insight, a stopwatch for time, a speedometer for speed), and name the "
-    "props the plan uses in world.props:[names]. Use a world that only a generated picture can show only when no prop "
+    "props the plan uses in world.props:[names]. A guide that is the figure prop is Linkwork's plain stick figure, "
+    "exactly as drawn (it stands, walks, thinks, points, cheers and shrugs; a bulb can light over its head): give it "
+    "no clothes, hats, scarves or colours it cannot have, and every beat with the guide is then drawn by code. Use a world that only a generated picture can show only when no prop "
     "can carry the analogy. Reviewing: report as major a guide character, setting or analogy object that is not a "
     "prop when a listed prop could play the same part just as well, naming the prop.")
 

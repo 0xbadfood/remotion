@@ -224,11 +224,32 @@ def key_idea_animation_errors(scenes):
     return out
 
 
+GUIDE_WORDS = re.compile(r"\b(stick figure|guide|walker|figure|character)\b", re.I)
+
+
+def guide_image_errors(storyboard, evidence):
+    """When the plan's guide is Linkwork's figure (world.props names it), the guide is drawn by code, never painted:
+    an image beat showing the guide is a stage beat with that figure (user, 2026-10-24: three images of the guide by
+    the marker were the only images left in a 22-beat film)."""
+    world = (evidence.get("idea_plan") or {}).get("world") or {}
+    if "figure" not in (world.get("props") or []) or not (evidence.get("curriculum") or {}).get("linkwork"):
+        return []
+    painted = [s.get("id") for s in storyboard.get("scenes") or []
+               if s.get("kind") == "image" and GUIDE_WORDS.search(str(s.get("image_brief", "")))]
+    if not painted:
+        return []
+    return [f"{', '.join(painted)}: the guide is the figure prop (idea_plan.world.props), drawn by code: make "
+            "each a linkwork beat with verb stage, the guide as an item {object:'figure', pose: stand | think | point "
+            "| cheer | shrug} and the world's props around it (road, marker, signpost, stopwatch, bulb over the head "
+            "for the insight); keep image beats for what no prop can show"]
+
+
 def key_idea_beat_errors(storyboard, evidence):
     """Key-idea films: at most KEY_IDEA_FIGURES equation figures on screen; animation beats show the real thing."""
     if not is_key_idea(evidence.get('curriculum')):
         return []
     out = key_idea_animation_errors(storyboard.get('scenes'))
+    out += guide_image_errors(storyboard, evidence)
     # The cap is on equations (keep the maths light); a book figure the idea rests on is not maths on screen.
     figures = [s.get('id') for s in storyboard.get('scenes') or []
                if s.get('kind') == 'figure' and (s.get('figure') or {}).get('type', 'equation') != 'library']

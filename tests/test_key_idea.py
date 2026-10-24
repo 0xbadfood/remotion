@@ -365,3 +365,17 @@ class BestRoundTests(unittest.TestCase):
             record = read(Path(root) / 'learner-check-240.json')
             self.assertEqual(record['chosen_round'], 1)
             self.assertIn('Version 2', script['points'][0]['narration'])
+
+
+class GuideIsAPropTests(unittest.TestCase):
+    def test_an_image_of_a_prop_guide_must_be_a_stage_beat(self):
+        from infofilm.curriculum import key_idea_beat_errors
+        evidence = {'curriculum': {'kind': 'key_idea', 'linkwork': {'subject': 'physics'}},
+                    'idea_plan': {'world': {'guide': 'a stick figure', 'props': ['figure', 'road', 'marker']}}}
+        board = {'scenes': [{'id': 'S03', 'kind': 'image', 'image_brief': 'A friendly stick figure beside a flagged marker.'},
+                            {'id': 'S04', 'kind': 'image', 'image_brief': 'A busy railway station at dawn.'}]}
+        errors = ' '.join(key_idea_beat_errors(board, evidence))
+        self.assertIn('S03: the guide is the figure prop', errors)
+        self.assertNotIn('S04', errors)
+        painted_guide = {**evidence, 'idea_plan': {'world': {'guide': 'a fox in a hat', 'props': ['road']}}}
+        self.assertNotIn('figure prop', ' '.join(key_idea_beat_errors(board, painted_guide)))
