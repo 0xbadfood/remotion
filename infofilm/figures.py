@@ -67,16 +67,19 @@ BIOLOGY_TASK = (
 
 
 BOOK_TASK = (
-    " Formulas and the book's own figures are shown exactly, as figure beats (kind:'figure', a heading and summary "
-    "like other beats, empty labels/details/image_brief). A beat whose passage states, defines or derives a formula "
-    "or works a step of a calculation is {type:'equation',latex:'v = \\\\lim_{\\\\Delta t \\\\to 0} \\\\frac{\\\\Delta x}{\\\\Delta t} "
-    "= \\\\frac{dx}{dt}'} (LaTeX maths, at most 400 characters; one idea per beat, and a derivation is a few "
-    "equation beats in a row, each adding its step); never an image with the formula in its heading or summary, and "
-    "never an image of a board, a notebook or a hand writing. A beat whose passage describes a figure in "
-    "figure_options.library (the book's own numbered figures, with what each shows) is {type:'library',id:'its id'} "
-    "when that figure shows what the narration says; prefer a Linkwork beat when a verb can draw the same thing "
-    "moving. Reviewing: report as major a formula the narration states that no beat shows as an equation, and an "
-    "image standing in for a formula or for a book figure the library has.")
+    " Formulas and the book's own figures are shown exactly, as figure beats: kind:'figure', with its own beat id "
+    "(S07) like every beat, a heading and summary, empty labels/details/image_brief, and a 'figure' OBJECT holding "
+    "the figure's spec (never its fields on the beat itself). A beat whose passage states, defines or derives a "
+    "formula or works a step of a calculation is {id:'S07', kind:'figure', ..., figure:{type:'equation', "
+    "latex:'v = \\\\lim_{\\\\Delta t \\\\to 0} \\\\frac{\\\\Delta x}{\\\\Delta t} = \\\\frac{dx}{dt}'}} (LaTeX maths, at "
+    "most 400 characters; one idea per beat, and a derivation is a few equation beats in a row, each adding its "
+    "step); never an image with the formula in its heading or summary, and never an image of a board, a notebook or "
+    "a hand writing. A beat whose passage describes a figure in figure_options.library (the book's own numbered "
+    "figures, with what each shows) is {id:'S12', kind:'figure', ..., figure:{type:'library', id:'Fig-2-1'}} when "
+    "that figure shows what the narration says: the library id goes inside figure, the beat keeps its S id; prefer "
+    "a Linkwork beat when a verb can draw the same thing moving. Reviewing: report as major a formula the narration "
+    "states that no beat shows as an equation, and an image standing in for a formula or for a book figure the "
+    "library has.")
 
 
 def task_for(figures):
