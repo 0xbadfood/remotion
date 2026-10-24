@@ -1,6 +1,7 @@
-"""Checkpointed LuxTTS narration (Apache-2.0, 48 kHz voice cloning). It runs on the CPU by default, so it needs no
-GPU lease and can run while the image model holds the GPU. Each point is a clip; every clip passes the audio audit,
-and failed points are retaken with a new seed (2026-10-23: chosen over VibeVoice in a blind test of the heart film)."""
+"""Checkpointed LuxTTS narration (Apache-2.0, 48 kHz voice cloning). Each point is a clip; every clip passes the audio
+audit, and failed points are retaken with a new seed (2026-10-23: chosen over VibeVoice in a blind test of the heart
+film). With `lux_url` set the clips are made by the amdserver's media factory on its GPU (user, 2026-10-24); if it
+cannot be reached, the same manifest runs on the local CPU, with the same seeds."""
 from __future__ import annotations
 
 import json
@@ -31,7 +32,44 @@ def lux_settings(config):
 
 
 def lux_installed(config):
-    return Path(config.get("lux_python", "")).is_file() and (Path(config.get("lux_root", "")) / "zipvoice" / "luxvoice.py").is_file()
+    return bool(config.get("lux_url")) or (Path(config.get("lux_python", "")).is_file()
+                                          and (Path(config.get("lux_root", "")) / "zipvoice" / "luxvoice.py").is_file())
+
+
+def _run_remote(config, store, manifest, name):
+    """The manifest's missing clips from the media factory; False when it cannot be reached (the caller runs locally)."""
+    import httpx
+    tasks = [t for t in manifest["tasks"] if not Path(t["out"]).is_file()]
+    if not tasks:
+        return True
+    body = {**{k: manifest[k] for k in ["model", "speed", "num_steps", "t_shift", "seed", "reference_text"]},
+            "tasks": [{"id": t["id"], "index": t["index"], "text": t["text"]} for t in tasks]}
+    url = config["lux_url"].rstrip("/")
+    try:
+        with httpx.Client(timeout=60) as client:
+            with open(manifest["reference"], "rb") as reference:
+                job = client.post(url + "/api/tts", data={"manifest": json.dumps(body)},
+                                  files={"reference": ("reference.wav", reference, "audio/wav")})
+            job.raise_for_status()
+            job, started = job.json(), time.monotonic()
+            store.event(name, "remote_job", {"url": url, "job": job["id"], "points": [t["id"] for t in tasks]})
+            while job["status"] not in ("complete", "error"):
+                if time.monotonic() - started > 3600:
+                    raise TimeoutError(f"LuxTTS job {job['id']} still running after an hour")
+                time.sleep(1)
+                job = client.get(f"{url}/api/jobs/{job['id']}").json()
+            if job["status"] == "error":
+                raise RuntimeError(f"Media factory LuxTTS job failed: {job.get('message')}")
+            for task in tasks:
+                out = Path(task["out"])
+                out.parent.mkdir(parents=True, exist_ok=True)
+                part = out.with_name(out.name + ".part")
+                part.write_bytes(client.get(f"{url}/outputs/{job['id']}/{task['id']}.wav").raise_for_status().content)
+                part.replace(out)
+    except (httpx.TransportError, httpx.HTTPStatusError) as exc:
+        store.event(name, "remote_unavailable", {"url": url, "error": str(exc)[:200]})
+        return False
+    return True
 
 
 def _run(config, store, root, settings, reference, reference_text, tasks, attempt, name):
@@ -48,6 +86,9 @@ def _run(config, store, root, settings, reference, reference_text, tasks, attemp
         known = {t["id"] for t in saved["tasks"]}
         manifest["tasks"] = [*saved["tasks"], *[t for t in manifest["tasks"] if t["id"] not in known]]
     write(manifest_path, manifest)
+    if config.get("lux_url") and _run_remote(config, store, manifest, name):
+        store.event(name, "worker_done", {"attempt": attempt + 1, "points": [p["id"] for p in tasks], "remote": True})
+        return
     log_path = root / "worker.log"
     env = {**os.environ, "PYTHONUNBUFFERED": "1", "PYTHONDONTWRITEBYTECODE": "1"}
     with log_path.open("ab", buffering=0) as log:

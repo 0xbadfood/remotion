@@ -97,3 +97,18 @@ class DefaultEngineTests(unittest.TestCase):
             FilmRequest(subject='Why volcanoes erupt', submission_id='submission-test-01', generation_mode='long', durations=[600],
                         animation_chapters=True, tts_engine='luxtts')
         self.assertEqual(lux_settings({})['speed'], .75)
+
+
+class RemoteFallbackTests(unittest.TestCase):
+    def test_unreachable_media_factory_falls_back_to_local(self):
+        from infofilm.lux_media import _run_remote
+        from infofilm.media import remote_mms_align
+        with tempfile.TemporaryDirectory() as folder:
+            store, reference = Store(Path(folder)), Path(folder) / "ref.wav"
+            reference.write_bytes(b"RIFF")
+            config = {"lux_url": "http://127.0.0.1:9", "aligner_url": "http://127.0.0.1:9"}
+            manifest = {"model": "m", "speed": .75, "num_steps": 4, "t_shift": .5, "seed": 0, "reference_text": None,
+                        "reference": str(reference),
+                        "tasks": [{"id": "P1", "index": 0, "text": "Hello.", "out": str(Path(folder) / "P1.wav")}]}
+            self.assertFalse(_run_remote(config, store, manifest, "narration"))
+            self.assertEqual(remote_mms_align(config, store, "alignment", reference, ["hello"]), (None, None))

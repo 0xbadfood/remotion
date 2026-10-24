@@ -217,6 +217,21 @@ def _mfa_adapter(config):
     return module, module_path
 
 
+def remote_mms_align(config, store, name, audio, words):
+    """MMS alignment on the media factory; (None, None) when it cannot be reached, so the caller aligns locally."""
+    url = config["aligner_url"].rstrip("/")
+    try:
+        with httpx.Client(timeout=600) as client, open(audio, "rb") as handle:
+            response = client.post(url + "/api/align", data={"words": json.dumps(words)},
+                                   files={"audio": ("audio.wav", handle, "audio/wav")})
+            response.raise_for_status()
+            value = response.json()
+        return value["payload"], {**value["metadata"], "remote": url}
+    except (httpx.TransportError, httpx.HTTPStatusError) as exc:
+        store.event(name, "remote_unavailable", {"url": url, "error": str(exc)[:200]})
+        return None, None
+
+
 def align_audio(config, store, audio, script, name, *, spoken_points=None):
     from .audio_audit import spoken_numeric_text
 
@@ -305,10 +320,16 @@ def align_audio(config, store, audio, script, name, *, spoken_points=None):
                 # share a fixed number of alignment slots (a queue), instead of oversubscribing the cores.
                 with resource_slot("mfa", config.get("mfa_slots", max(2, (os.cpu_count() or 8) // 8))):
                     if config.get("aligner", "mfa") == "mms":
-                        # MMS forced alignment (GPU, any architecture); same output shape and tokenizer as MFA.
-                        from .mms_align import align as mms_align
-                        payload, metadata = mms_align(Path(audio), candidate["text"], tokenize=module.tokenize,
-                                                      device=config.get("aligner_device"))
+                        # MMS forced alignment (GPU, any architecture); same output shape and tokenizer as MFA. With
+                        # `aligner_url` the amdserver's media factory runs it (the words are tokenised here).
+                        payload = metadata = None
+                        if config.get("aligner_url"):
+                            payload, metadata = remote_mms_align(config, store, name, audio,
+                                                                 module.tokenize(candidate["text"]))
+                        if payload is None:
+                            from .mms_align import align as mms_align
+                            payload, metadata = mms_align(Path(audio), candidate["text"], tokenize=module.tokenize,
+                                                          device=config.get("aligner_device"))
                     else:
                         payload, _, metadata = module.run_mfa_alignment(
                             module.DEFAULT_MFA_BIN, module.DEFAULT_MAMBA_BIN, module.DEFAULT_MFA_ROOT, Path(audio), candidate["text"],
