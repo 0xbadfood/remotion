@@ -180,6 +180,16 @@ class CameraChoiceTests(unittest.TestCase):
         self.assertEqual(len(camera_errors(bad)), 3)
         # with motion video switched off (the default), a motion beat is sent back as a still
         self.assertEqual(len(camera_errors(ok, motion=False)), 1)
+        # planners write action:'' on beats without one (2026-10-24 film: every beat sent back each round): that is no action
+        blank = {'scenes': [{'id': 'S1', 'kind': 'image', 'camera': 'still', 'action': ''},
+                            {'id': 'S2', 'kind': 'linkwork', 'camera': '', 'action': ' '}]}
+        self.assertEqual(camera_errors(blank, motion=False), [])
+        from infofilm.creative import action_errors, has_action
+        self.assertFalse(has_action(blank['scenes'][1]))
+        script, timing, storyboard, brief = example()
+        for scene in storyboard['scenes']:
+            scene['action'] = ''
+        self.assertEqual(action_errors(storyboard, script, timing), [])
         from infofilm.creative import motion_on
         self.assertFalse(motion_on({}))
         self.assertTrue(motion_on({'motion_beats': True}))

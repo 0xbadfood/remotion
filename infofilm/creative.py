@@ -148,9 +148,9 @@ def camera_errors(value, motion=True):
         camera = s.get("camera")
         if camera not in ("still", "motion"):
             out.append(f"{s.get('id')}: an image beat chooses camera:'still' (depth camera) or camera:'motion' (video)")
-        elif camera == "motion" and not s.get("action"):
+        elif camera == "motion" and not has_action(s):
             out.append(f"{s.get('id')}: a motion beat needs its action: what visibly happens")
-        elif camera == "still" and s.get("action"):
+        elif camera == "still" and has_action(s):
             out.append(f"{s.get('id')}: a still beat has no action; choose camera:'motion' if something must move")
         elif camera == "motion" and not motion:
             out.append(f"{s.get('id')}: motion video is switched off for this film: make it camera:'still' with no action")
@@ -221,7 +221,7 @@ def beat_errors(value, script, timing, figures=None, linkwork=None):
             errors.append(f"{sid}: set copy_density to minimal or standard")
         if not scene.get("rationale"):
             errors.append(f"{sid}: explain the visual purpose of the beat")
-    if any(s.get("action") is not None for s in scenes) and not errors:
+    if any(has_action(s) for s in scenes) and not errors:
         errors.extend(action_errors(value, script, timing))
     if any(s.get("kind") == "animation" for s in scenes) and not errors:
         from .animations import scene_errors as animation_errors
@@ -243,6 +243,12 @@ def beat_errors(value, script, timing, figures=None, linkwork=None):
     return errors
 
 
+def has_action(scene):
+    """A beat's action, if it has one: planners write action:'' (or null) on beats without one, which means none."""
+    action = scene.get("action")
+    return not (action is None or (isinstance(action, str) and not action.strip()))
+
+
 ACTION_SECONDS = (3.0, 10.0)      # a motion (LTX) clip runs about as long as its beat: 3-10 s keeps it lively
 
 
@@ -251,7 +257,7 @@ def action_errors(value, script, timing):
     errors = []
     for scene in resolved_scenes(value, script, timing):
         action = scene.get("action")
-        if action is None:
+        if not has_action(scene):
             continue
         sid = scene.get("id")
         if scene.get("kind") != "image":
@@ -471,7 +477,7 @@ def library_from_beats(films, brief):
                 asset = next(a for a in assets if a["id"] == shared[key])
                 asset["fact_ids"] = sorted(set(asset["fact_ids"]) | set(points[scene["point_id"]]["fact_ids"]))
             scene["asset_id"] = shared[key]
-            if scene.get("action"):                   # the still is the first frame of a short video
+            if has_action(scene):                     # the still is the first frame of a short video
                 asset = next(a for a in assets if a["id"] == shared[key])
                 asset["purpose"] += f" First frame of a short animation in which: {scene['action']}"
                 asset["acceptance"] = asset["acceptance"] + [
