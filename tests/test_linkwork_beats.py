@@ -52,3 +52,13 @@ class VectorFirstTests(unittest.TestCase):
             self.assertIn(prop, options["props"])
         self.assertIn("VECTOR FIRST", linkwork_beats.TASK)
         self.assertIn("a car on a road is a prop doing physics", linkwork_beats.TASK)
+
+
+class IllustrativeTests(unittest.TestCase):
+    def test_a_passage_with_no_numbers_is_drawn_illustrative_not_painted(self):
+        self.assertIn("set illustrative:true", linkwork_beats.TASK)
+        self.assertIn("never report them", linkwork_beats.TASK)
+        spec = {"verb": "motion_on_line", "axis": {"range": [0, 20]}, "object": "car", "illustrative": True,
+                "formula": {"expr": "0.5*t^2", "t": [0, 6]}, "readouts": ["t", "x", "v"]}
+        result = linkwork_beats.check_specs({}, [spec])[linkwork_beats._key(spec)]
+        self.assertEqual((result["errors"], result["facts"]), ([], []))

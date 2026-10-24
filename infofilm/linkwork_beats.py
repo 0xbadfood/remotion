@@ -35,11 +35,17 @@ TASK = (
     "a 'linkwork' object that is the verb's spec, written as its card's fields and example show (start from the "
     "example). Times in the spec are seconds from the start of the beat, and its motion must end within the beat's "
     "own duration (the sentence timings show how long it lasts). Use only numbers the narration states or that follow "
-    "from them: the numbers it draws are computed from the spec and shown on screen. When the narration sets the same "
+    "from them: the numbers it draws are computed from the spec and shown on screen. When the passage states no "
+    "numbers (a definition, a shape, a direction, a comparison: a car speeding up, a curve bending upwards, a body "
+    "slowing down), draw it anyway with simple values that give the right shape and set illustrative:true in the "
+    "spec: the scene keeps its motion, shapes and arrows and hides every number, so nothing on screen claims a value "
+    "(a passage with no numbers is never a reason for an image). When the narration sets the same "
     "thing in two situations (a train beside a platform, then on a long route; a bus on its route, then in a parking "
     "bay), show both in ONE beat as the verb's cases, so the contrast is on screen together, and draw each as the "
     "narration names it (the case's setting). Code checks every spec and returns its errors. Reviewing: report as "
-    "major an image beat that a listed verb with the listed props could have drawn, naming the verb and props.")
+    "major an image beat that a listed verb with the listed props could have drawn, naming the verb and props. A "
+    "spec with illustrative:true shows no numbers: its values only shape the picture and are not claims, so never "
+    "report them; report only a shape or direction that contradicts the narration.")
 
 LINKWORK = Path.home() / "linkwork"
 NODE = Path.home() / ".local/node-v24.4.0/bin/node"
