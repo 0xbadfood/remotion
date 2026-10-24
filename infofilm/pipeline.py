@@ -444,7 +444,12 @@ def finish_visuals(args, config, store, models, evidence, sources, brief, films,
             if digest(Path(value["file"]).read_bytes()) != value["sha256"]:
                 raise ValueError(f"Image manifest hash mismatch: {asset_id}")
     from .depth import depth_maps
-    depth_maps(config, store, images)           # 2.5D camera; advisory, cached by image hash
+    # 2.5D camera; advisory, cached by image hash. A still shown only as a motion beat's video never uses its depth
+    # (the renderer plays the clip instead), so only stills that some beat shows as a still get one (user, 2026-10-24).
+    still = {sc.get("asset_id") for film in films for sc in film["storyboard"]["scenes"]
+             if sc.get("kind") == "image" and not sc.get("action")}
+    depth_maps(config, store, {k: v for k, v in images.items() if k in still or k not in
+                               {sc.get("asset_id") for film in films for sc in film["storyboard"]["scenes"]}})
     if not chapter_context:                     # short films: slowed LTX clips from the accepted stills (advisory)
         from .clips import make_clips
         make_clips(config, store, models, images, prompts)
