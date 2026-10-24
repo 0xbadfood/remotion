@@ -28,8 +28,11 @@ TASK = (
     "object that is the verb's spec, written as its card's fields and example show (start from the example). Times "
     "in the spec are seconds from the start of the beat, and its motion must end within the beat's own duration "
     "(the sentence timings show how long it lasts). Use only numbers the narration states or that follow from them: "
-    "the numbers it draws are computed from the spec and shown on screen. Code checks every spec and returns its "
-    "errors.")
+    "the numbers it draws are computed from the spec and shown on screen. When the narration sets the same thing in "
+    "two situations (a train beside a platform, then on a long route; a bus on its route, then in a parking bay), show "
+    "both in ONE beat as the verb's cases, so the contrast is on screen together, and draw each as the narration names "
+    "it (the case's setting). Every passage whose use_when fits is a Linkwork beat, not an image of the same thing. "
+    "Code checks every spec and returns its errors.")
 
 LINKWORK = Path.home() / "linkwork"
 NODE = Path.home() / ".local/node-v24.4.0/bin/node"
