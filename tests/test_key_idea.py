@@ -239,7 +239,8 @@ class IdeaPlanAndMotionTests(unittest.TestCase):
         class Models:
             def loop(self, stage, task, context, validator, **kwargs):
                 points = [r['point_id'] for r in context['narration_points']]
-                scenes = [dict(s, id='X' + s['id']) for s in storyboard['scenes'] if s['point_id'] in points]
+                scenes = [dict(s, id='X' + s['id'], **({'camera': 'still'} if s['kind'] == 'image' else {}))
+                          for s in storyboard['scenes'] if s['point_id'] in points]
                 seen.append((stage, points, context['batch'], [s['id'] for s in context['previous_scenes']]))
                 self.errors = validator({'scenes': scenes})
                 assert not self.errors, self.errors

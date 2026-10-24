@@ -73,7 +73,7 @@ KEY_IDEA_CREATIVE_TASK = (
 KEY_IDEA_BEATS_TASK = (
     " This film simplifies one key idea (evidence.idea_plan): show the analogy happening, then the real thing, "
     "ideally side by side or one turning into the other. Choose each beat's medium for what it must show. Motion: "
-    "an image beat may carry action:'what visibly happens during the beat, in one or two plain sentences' (a video "
+    "an image beat with camera:'motion' carries action:'what visibly happens during the beat, in one or two plain sentences' (a video "
     "model animates the still from its first frame for the length of the beat, so image_brief describes the moment "
     "before the action, in the light, uncluttered world of evidence.idea_plan.world, with the guide character "
     "exactly as described there); use motion for the analogy's world: climbing, jumping, throwing, glowing. An "

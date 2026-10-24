@@ -115,6 +115,34 @@ def resolved_scenes(storyboard, script, timing):
     return result
 
 
+CAMERA_TASK = (
+    " Every image beat chooses its camera: camera:'still' or camera:'motion'. A still gets a gentle 2.5D depth camera "
+    "over the picture; it is the better choice for a pose, a place, an object, a sign or arrangement that must stay "
+    "exactly as drawn, a thoughtful or establishing moment, a close-up of hands or faces, or anything a video model "
+    "might warp; it is not a lesser option. Choose motion only when the point of the beat is something visibly "
+    "happening that a still cannot show (a walk from one place to another, a throw, a climb, a jump, water pouring): "
+    "then action:'what visibly happens during the beat, in one or two plain sentences', and image_brief describes "
+    "the moment before it; a video model animates the still for the beat, which lasts 3-10 seconds of narration. "
+    "Decide beat by beat; a film whose every image is motion has chosen badly.")
+
+
+def camera_errors(value):
+    """The planner's still-or-motion choice for each image beat (user, 2026-10-24, concept and key-idea films). Checked
+    while planning only: storyboards saved before the choice existed stay valid (no action means a still)."""
+    out = []
+    for s in value.get("scenes") or []:
+        if not isinstance(s, dict) or s.get("kind") != "image":
+            continue
+        camera = s.get("camera")
+        if camera not in ("still", "motion"):
+            out.append(f"{s.get('id')}: an image beat chooses camera:'still' (depth camera) or camera:'motion' (video)")
+        elif camera == "motion" and not s.get("action"):
+            out.append(f"{s.get('id')}: a motion beat needs its action: what visibly happens")
+        elif camera == "still" and s.get("action"):
+            out.append(f"{s.get('id')}: a still beat has no action; choose camera:'motion' if something must move")
+    return out
+
+
 def beat_errors(value, script, timing, figures=None, linkwork=None):
     """Validate coverage and references, never impose creative image-count quotas. `figures`: the film's figure
     options (figures.options); without them a figure beat is not allowed. `linkwork`: {config, cards} when the film
@@ -291,7 +319,8 @@ def make_visual_beats(models, film, evidence, brief, *, experimental=True):
         "Do not invent scientific/historical details. Preserve source qualifications. Never force narration compression for visual pacing. "
         "Return {scenes:[{id:'S01',point_id:'P01',start_word_id:'exact word ID',kind:'image'|'flow'|'compare'|'cycle', "
         "heading:'<=7 words',summary:'<=12 words or empty',labels:[],details:[],motion:'push'|'pull'|'drift'|'hold', "
-        "copy_density:'minimal'|'standard',rationale,image_brief:'for images, else empty'}]}."
+        "copy_density:'minimal'|'standard',rationale,image_brief:'for images, else empty',camera:'still'|'motion' "
+        "(image beats only),action:'for motion beats only'}]}."
     )
     from .figures import options, planner_options, task_for
     figures = options(evidence)
@@ -300,6 +329,7 @@ def make_visual_beats(models, film, evidence, brief, *, experimental=True):
         kinds = "'figure'|'animation'" if animation_options(figures) else "'figure'"
         task = task.replace("kind:'image'|'flow'|'compare'|'cycle'", "kind:'image'|'flow'|'compare'|'cycle'|" + kinds)
         task += task_for(figures) + (ANIMATION_TASK if animation_options(figures) else "")
+    task += CAMERA_TASK
     linkwork = linkwork_for(getattr(models, "config", None) or {}, evidence)
     if linkwork:                                      # physics and maths films: exact code-drawn scenes as a beat kind
         from .linkwork_beats import TASK as LINKWORK_TASK
@@ -332,7 +362,7 @@ def make_visual_beats(models, film, evidence, brief, *, experimental=True):
         return batched_beats(models, film, evidence, task, context, figures, experimental, linkwork)
     return models.loop(f"visual-beats-{film['requested_seconds']}", task, context,
                       lambda x: beat_errors(x, film["script"], film["timing"], figures, linkwork)
-                      + key_idea_beat_errors(x, evidence), experimental=experimental,
+                      + camera_errors(x) + key_idea_beat_errors(x, evidence), experimental=experimental,
                       metrics=lambda x: visual_metrics(x, film["script"], film["timing"]), units=BEAT_UNITS)
 
 
@@ -386,7 +416,7 @@ def batched_beats(models, film, evidence, task, context, figures, experimental, 
 
         def validate(x, part_script=part_script, part_timing=part_timing, figures_left=figures_left):
             extra = [s.get("id") for s in x.get("scenes") or [] if isinstance(s, dict) and s.get("kind") == "figure"]
-            return beat_errors(x, part_script, part_timing, figures, linkwork) + key_idea_animation_errors(x.get("scenes")) + (
+            return beat_errors(x, part_script, part_timing, figures, linkwork) + camera_errors(x) + key_idea_animation_errors(x.get("scenes")) + (
                 [f"{', '.join(map(str, extra))}: only {figures_left} figure beats are left for this batch"]
                 if len(extra) > figures_left else [])
         part = models.loop(f"visual-beats-{film['requested_seconds']}-b{first // BATCH_POINTS + 1}", part_task,
