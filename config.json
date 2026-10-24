@@ -106,5 +106,7 @@
         "service": "ltx25-api"
       }
     ]
-  }
+  },
+  "image_rescue_model": "hidream",
+  "image_rescue_from_attempt": 3
 }

@@ -376,8 +376,16 @@ def run_message_loop(config, store, root, case, models, settings, progress):
                   "guidance": "0", "seed": str(int(root.name[:7], 16) + ordinal), "output_format": "png"}
         from .person_references import bind_reference_params
         params = bind_reference_params(params, case['library']['assets'][0])
-        request_contract = {"visual_message": message, "scene": scene, "provider": settings["provider"], "params": params}
+        # After two failed reviews the factory's second model draws the remaining takes (user, 2026-10-24: klein
+        # first, HiDream-O1 for takes 3-4; the best of all takes wins). A take saved before this rule keeps its params.
+        rescue = config.get("image_rescue_model")
         contract_path = take_root / "request-contract.json"
+        if contract_path.exists():
+            if "model" in read(contract_path).get("params", {}):
+                params["model"] = read(contract_path)["params"]["model"]
+        elif rescue and ordinal + 1 >= config.get("image_rescue_from_attempt", 3):
+            params["model"] = rescue
+        request_contract = {"visual_message": message, "scene": scene, "provider": settings["provider"], "params": params}
         if contract_path.exists() and read(contract_path) != request_contract:
             raise ValueError("Saved submission contract changed")
         write(contract_path, request_contract)

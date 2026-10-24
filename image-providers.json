@@ -62,6 +62,7 @@
   "pools": {
     "qwen_local": {
       "size": "auto",
+      "spare": 2,
       "max_in_flight": 4
     },
     "flux_dev_local": {

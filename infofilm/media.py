@@ -645,6 +645,11 @@ def generate_images_single(config, store, library, models, *, on_progress=None):
                         from .person_references import bind_reference_params, reference_addendum
                         params['prompt'] += reference_addendum(asset)
                         params = bind_reference_params(params, asset)
+                        # After two failed reviews the factory's second model draws the remaining takes (user,
+                        # 2026-10-24: klein first, HiDream-O1 for takes 3-4, the best of all takes wins).
+                        rescue = config.get("image_rescue_model")
+                        if rescue and not studio and attempt + 1 >= config.get("image_rescue_from_attempt", 3):
+                            params["model"] = rescue
                         if studio:
                             # Match initial seeds across engines, irrespective of provider identity.
                             params["seed"] = str(int(digest({"asset": asset, "style": library["style"]})[:7], 16) + attempt)
