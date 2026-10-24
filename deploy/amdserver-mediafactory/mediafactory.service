@@ -1,0 +1,16 @@
+[Unit]
+Description=Media factory: LuxTTS narration and MMS word alignment on GPU 1 (shared with HiDream), port 8078
+PartOf=imagefactory.service
+
+[Service]
+WorkingDirectory=%h/mediafactory
+EnvironmentFile=%h/imagefactory/worker-1.env
+Environment=PYTHONUNBUFFERED=1
+Environment=HF_HUB_OFFLINE=1
+ExecStart=%h/mediafactory/.venv/bin/python -m uvicorn app:app --host 0.0.0.0 --port 8078
+ExecStartPost=/bin/sh -c "sleep 8; curl -s -X POST localhost:8078/api/load >/dev/null || true"
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=imagefactory.service
