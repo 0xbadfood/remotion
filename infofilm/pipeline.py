@@ -446,14 +446,15 @@ def finish_visuals(args, config, store, models, evidence, sources, brief, films,
     from .depth import depth_maps
     # 2.5D camera; advisory, cached by image hash. A still shown only as a motion beat's video never uses its depth
     # (the renderer plays the clip instead), so only stills that some beat shows as a still get one (user, 2026-10-24).
+    from .creative import motion_on
     still = {sc.get("asset_id") for film in films for sc in film["storyboard"]["scenes"]
-             if sc.get("kind") == "image" and not sc.get("action")}
+             if sc.get("kind") == "image" and not (sc.get("action") and motion_on(config))}
     depth_maps(config, store, {k: v for k, v in images.items() if k in still or k not in
                                {sc.get("asset_id") for film in films for sc in film["storyboard"]["scenes"]}})
     if not chapter_context:                     # short films: slowed LTX clips from the accepted stills (advisory)
         from .clips import make_clips
         make_clips(config, store, models, images, prompts)
-    if any(sc.get("action") for film in films for sc in film["storyboard"]["scenes"]):
+    if motion_on(config) and any(sc.get("action") for film in films for sc in film["storyboard"]["scenes"]):
         # Key-idea films: motion beats become short LTX videos from their accepted stills (action_clips.py).
         from .action_clips import make_action_clips
         make_action_clips(config, store, films, images)

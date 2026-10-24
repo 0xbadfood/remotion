@@ -178,3 +178,8 @@ class CameraChoiceTests(unittest.TestCase):
         bad = {'scenes': [{'id': 'S1', 'kind': 'image'}, {'id': 'S2', 'kind': 'image', 'camera': 'motion'},
                           {'id': 'S3', 'kind': 'image', 'camera': 'still', 'action': 'It moves.'}]}
         self.assertEqual(len(camera_errors(bad)), 3)
+        # with motion video switched off (the default), a motion beat is sent back as a still
+        self.assertEqual(len(camera_errors(ok, motion=False)), 1)
+        from infofilm.creative import motion_on
+        self.assertFalse(motion_on({}))
+        self.assertTrue(motion_on({'motion_beats': True}))

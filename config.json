@@ -110,5 +110,6 @@
   "image_rescue_model": "hidream",
   "image_rescue_from_attempt": 3,
   "lux_url": "http://10.8.0.8:8078",
-  "aligner_url": "http://10.8.0.8:8078"
+  "aligner_url": "http://10.8.0.8:8078",
+  "motion_beats": false
 }
