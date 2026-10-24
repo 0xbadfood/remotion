@@ -105,6 +105,8 @@ def screen(review, candidate):
         if not isinstance(issue, dict) or issue.get("severity") not in {"blocker", "major"}:
             continue
         problem = str(issue.get("problem", ""))
+        if re.search(r"\bprops?\b", problem, re.I):   # a world a listed prop could carry stays a major finding
+            continue
         if ADVICE.search(problem) and not WRONG.search(problem):
             issue.update(severity="minor", downgraded="key-idea plans are not held to completeness, word choice or order")
     return review
@@ -116,5 +118,9 @@ def make_idea_plan(models, evidence, experimental=True):
     task = TASK.format(idea=idea.get('title', ''), understanding=idea.get('understanding', ''),
                        why=idea.get('why', ''), fewest=FEWEST, most=MOST, equations=KEY_IDEA_EQUATIONS, terms=TERMS)
     context = {'evidence': {k: v for k, v in evidence.items() if k != 'idea_plan'}}
+    from .linkwork_beats import PROPS_TASK, options as linkwork_options, props
+    if linkwork_options(evidence):                  # physics and maths: build the world from exact, drawable props
+        context['props'] = props(getattr(models, 'config', None) or {})
+        task += PROPS_TASK
     return models.loop('idea-plan', task, context, lambda x: errors(x, KEY_IDEA_EQUATIONS),
                        experimental=experimental, screen=screen)

@@ -71,6 +71,21 @@ def shortlist(config, evidence, linkwork):
     return json.loads(out or "[]")
 
 
+def props(config):
+    """{name: what it is} for every prop Linkwork draws exactly (objects and the walking figure)."""
+    return json.loads(_node(config, "objects", "--json") or "{}")
+
+
+PROPS_TASK = (
+    " This film can draw some things exactly, in code, instead of as generated pictures: context.props lists them "
+    "(name: what it is and does). A world built from them is drawn exactly, plays as light vector scenes and needs no "
+    "image retries, so build the analogy, the guide and the setting from props whenever one can carry the idea as "
+    "well (a car or a walker on a marked road rather than a bird; a ball, a block, a train, a pulley), and name the "
+    "props the plan uses in world.props:[names]. Use a world that only a generated picture can show only when no prop "
+    "can carry the analogy. Reviewing: report as major a guide character, setting or analogy object that is not a "
+    "prop when a listed prop could play the same part just as well, naming the prop.")
+
+
 def planner_options(cards):
     keys = ("name", "about", "use_when", "not_when", "fields", "example")
     return {"verbs": [{k: c[k] for k in keys if k in c} for c in cards]}
