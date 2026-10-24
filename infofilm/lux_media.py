@@ -53,11 +53,13 @@ def _run_remote(config, store, manifest, name):
             job.raise_for_status()
             job, started = job.json(), time.monotonic()
             store.event(name, "remote_job", {"url": url, "job": job["id"], "points": [t["id"] for t in tasks]})
+            seen = set()
             while job["status"] not in ("complete", "error"):
                 if time.monotonic() - started > 3600:
                     raise TimeoutError(f"LuxTTS job {job['id']} still running after an hour")
                 time.sleep(1)
                 job = client.get(f"{url}/api/jobs/{job['id']}").json()
+                seen = _recorded(store, name, manifest, job.get("clips") or [], seen)
             if job["status"] == "error":
                 raise RuntimeError(f"Media factory LuxTTS job failed: {job.get('message')}")
             for task in tasks:
@@ -70,6 +72,13 @@ def _run_remote(config, store, manifest, name):
         store.event(name, "remote_unavailable", {"url": url, "error": str(exc)[:200]})
         return False
     return True
+
+
+def _recorded(store, name, manifest, done, seen):
+    """An event for each clip newly recorded, so the studio can show narration progress while the worker runs."""
+    for point in [p for p in done if p not in seen]:
+        store.event(name, "point_recorded", {"point": point, "attempt": manifest["seed"] + 1, "of": len(manifest["tasks"])})
+    return seen | set(done)
 
 
 def _run(config, store, root, settings, reference, reference_text, tasks, attempt, name):
@@ -91,10 +100,18 @@ def _run(config, store, root, settings, reference, reference_text, tasks, attemp
         return
     log_path = root / "worker.log"
     env = {**os.environ, "PYTHONUNBUFFERED": "1", "PYTHONDONTWRITEBYTECODE": "1"}
+    seen, started = {t["id"] for t in manifest["tasks"] if Path(t["out"]).is_file()}, time.monotonic()
     with log_path.open("ab", buffering=0) as log:
         # -I: the worker sits in infofilm/, whose queue.py would otherwise hide the standard library's queue.
-        process = subprocess.run([config["lux_python"], "-I", str(WORKER), str(manifest_path)], cwd=config["lux_root"],
-                                 env=env, stdout=log, stderr=subprocess.STDOUT, timeout=3600)
+        process = subprocess.Popen([config["lux_python"], "-I", str(WORKER), str(manifest_path)], cwd=config["lux_root"],
+                                   env=env, stdout=log, stderr=subprocess.STDOUT)
+        while process.poll() is None:
+            if time.monotonic() - started > 3600:
+                process.kill()
+                raise TimeoutError("LuxTTS worker still running after an hour")
+            time.sleep(1)
+            seen = _recorded(store, name, manifest, [t["id"] for t in manifest["tasks"] if Path(t["out"]).is_file()], seen)
+    _recorded(store, name, manifest, [t["id"] for t in manifest["tasks"] if Path(t["out"]).is_file()], seen)
     if process.returncode:
         tail = log_path.read_text(errors="replace")[-2000:]
         raise RuntimeError(f"LuxTTS worker failed (exit {process.returncode}): {tail}")
@@ -153,6 +170,7 @@ def render_luxtts(config, store, points, name):
             audit = audit_audio(config, store, clip, point["narration"])
             if audit["status"] == "passed":
                 selected[point["id"]] = clip
+                store.event(name, "point_accepted", {"point": point["id"], "attempt": attempt + 1, "score": audit["score"]})
             else:
                 failures.append(point)
                 store.event(name, "point_audit_failed", {"point": point["id"], "attempt": attempt + 1,

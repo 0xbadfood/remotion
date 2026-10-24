@@ -43,13 +43,13 @@ class LuxMediaTests(unittest.TestCase):
         self.runs.append(manifest)
         for task in manifest["tasks"]:
             wav(Path(task["out"]))
-        return type("Done", (), {"returncode": 0})()
+        return type("Done", (), {"returncode": 0, "poll": lambda self: 0, "kill": lambda self: None})()
 
     def test_each_point_is_voiced_audited_and_failed_points_retaken_with_a_new_seed(self):
         def audit(config, store, clip, text, **kwargs):
             first_take_of_p02 = "P02" in str(clip) and "take-0" in str(clip)
             return {"status": "failed" if first_take_of_p02 else "passed", "score": .5, "reasons": ["low_coverage"]}
-        with patch("infofilm.lux_media.subprocess.run", side_effect=self.fake_worker), \
+        with patch("infofilm.lux_media.subprocess.Popen", side_effect=self.fake_worker), \
              patch("infofilm.lux_media.audit_audio", side_effect=audit):
             final, info = render_luxtts(self.config, self.store, self.points, "narration-test")
         self.assertEqual([[t["id"] for t in run["tasks"]] for run in self.runs], [["P01", "P02"], ["P02"]])
@@ -60,17 +60,22 @@ class LuxMediaTests(unittest.TestCase):
         self.assertEqual(first["tasks"][0]["text"], mfa_numeric_text(self.points[0]["narration"]))
         self.assertEqual(info["provider"], "LuxTTS")
         self.assertEqual(info["point_attempts"], {"P01": 1, "P02": 2})
+        # The studio shows progress from these: each clip as it is recorded, each point once it passes its check.
+        states = [(state, json.loads(detail).get("point")) for state, detail in self.store.db.execute(
+            "select state, detail from events where stage = 'narration-test' order by id")]
+        self.assertEqual([p for s, p in states if s == "point_recorded"], ["P01", "P02", "P02"])
+        self.assertEqual([p for s, p in states if s == "point_accepted"], ["P01", "P02"])
         self.assertEqual(info["sample_rate"], 48000)
         with wave.open(str(final)) as joined:
             self.assertEqual(joined.getnframes(), 2 * 4800)
         # A second call is served from the audited cache, with no worker run.
-        with patch("infofilm.lux_media.subprocess.run", side_effect=AssertionError("no rerun")):
+        with patch("infofilm.lux_media.subprocess.Popen", side_effect=AssertionError("no rerun")):
             again, _ = render_luxtts(self.config, self.store, self.points, "narration-test")
         self.assertEqual(again, final)
 
     def test_points_that_never_pass_stop_the_narration(self):
         failed = {"status": "failed", "score": .2, "reasons": ["low_coverage"]}
-        with patch("infofilm.lux_media.subprocess.run", side_effect=self.fake_worker), \
+        with patch("infofilm.lux_media.subprocess.Popen", side_effect=self.fake_worker), \
              patch("infofilm.lux_media.audit_audio", return_value=failed):
             with self.assertRaisesRegex(RuntimeError, "still needs review after 2 attempts: P01, P02"):
                 render_luxtts({**self.config, "lux_max_attempts": 2}, self.store, self.points, "narration-test")
