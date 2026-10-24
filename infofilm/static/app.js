@@ -145,7 +145,7 @@ async function refreshSelected() {
   $('run').hidden = false;
   $('run-title').textContent = job.subject;
   const mood = job.creative_brief?.resolved_mood || job.settings.mood || 'auto';
-  $('run-meta').textContent = `${generationLabel(job)} advisory · ${job.settings.orientation} · ${job.settings.tts_engine === 'omnivoice' ? 'OmniVoice' : 'VibeVoice'} · ${mood} · ${job.settings.music_engine === 'acestep' ? 'ACE-Step score' : 'no score'}`;
+  $('run-meta').textContent = `${generationLabel(job)} advisory · ${job.settings.orientation} · ${{omnivoice: 'OmniVoice', luxtts: 'LuxTTS'}[job.settings.tts_engine] || 'VibeVoice'} · ${mood} · ${job.settings.music_engine === 'acestep' ? 'ACE-Step score' : 'no score'}`;
   if (job.settings.generation_mode === 'long') $('run-meta').textContent += ` · subject graph ${job.settings.subject_graph ? 'on' : 'off'}`;
   if (job.settings.animation_chapters) $('run-meta').textContent += ' · animation chapters enabled';
   $('run-meta').textContent += ` · image review ${job.settings.image_review === false ? 'off' : 'on'}${job.settings.premium_rescue ? ' · premium rescue' : ''}`;

@@ -137,7 +137,8 @@ class WebTests(unittest.TestCase):
 
     def submit(self, **overrides):
         value = {'subject':'Why volcanoes erupt','durations':[60],'orientation':'both','review_mode':'off',
-                 'voice_id':'default','submission_id':'submission-test-01'} | overrides
+                 'voice_id':'default','submission_id':'submission-test-01',
+                 'tts_engine':'vibevoice'} | overrides          # the fixture has no LuxTTS runtime; luxtts is the default
         return self.client.post('/api/jobs', json=value)
 
     def test_llm_settings_page_saves_connections_roles_and_freezes_a_run(self):

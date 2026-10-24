@@ -84,3 +84,16 @@ class LuxMediaTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DefaultEngineTests(unittest.TestCase):
+    def test_luxtts_is_the_default_and_yields_to_vibevoice_for_animation_chapters(self):
+        from infofilm.web import FilmRequest
+        self.assertEqual(FilmRequest(subject='Why volcanoes erupt', submission_id='submission-test-01').tts_engine, 'luxtts')
+        animated = FilmRequest(subject='Why volcanoes erupt', submission_id='submission-test-01', generation_mode='long', durations=[600],
+                               animation_chapters=True)
+        self.assertEqual(animated.tts_engine, 'vibevoice')
+        with self.assertRaisesRegex(ValueError, 'VibeVoice'):
+            FilmRequest(subject='Why volcanoes erupt', submission_id='submission-test-01', generation_mode='long', durations=[600],
+                        animation_chapters=True, tts_engine='luxtts')
+        self.assertEqual(lux_settings({})['speed'], .75)

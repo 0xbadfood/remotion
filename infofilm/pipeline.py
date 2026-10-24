@@ -191,7 +191,7 @@ def create(args):
             raise ValueError(f"Unknown image provider policy: {args.image_provider_policy}")
     if args.language:
         config["language"] = args.language
-    config["tts_engine"] = getattr(args, "tts_engine", "vibevoice")
+    config["tts_engine"] = getattr(args, "tts_engine", None) or "luxtts"
     config = select_reference(config, narrator=getattr(args, "narrator", None),
                               reference_audio=args.reference_audio,
                               reference_transcript=getattr(args, "reference_transcript", None))

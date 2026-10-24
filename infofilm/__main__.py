@@ -37,7 +37,8 @@ def main():
     parser.add_argument("--reference-audio", type=Path)
     parser.add_argument("--narrator", help="Configured narrator ID, for example default or kane")
     parser.add_argument("--reference-transcript", help="Exact reference recording transcript required for OmniVoice")
-    parser.add_argument("--tts-engine", choices=["vibevoice", "omnivoice", "luxtts"], default="vibevoice")
+    parser.add_argument("--tts-engine", choices=["vibevoice", "omnivoice", "luxtts"],
+                        help="Default luxtts (CPU); vibevoice with --animation-chapters")
     parser.add_argument("--omni-speed", type=float, help="Native Omni speed, default 0.8; does not affect VibeVoice")
     parser.add_argument("--mood", choices=list(MOODS), default="auto")
     parser.add_argument("--mood-intensity", choices=list(INTENSITIES), default="restrained")
@@ -59,6 +60,7 @@ def main():
     args.durations = list(dict.fromkeys(args.durations))
     if args.subject_graph and args.generation_mode != "long":
         parser.error("--subject-graph requires --generation-mode long")
+    args.tts_engine = args.tts_engine or ('vibevoice' if args.animation_chapters else 'luxtts')
     if args.animation_chapters and (args.generation_mode != 'long' or args.tts_engine != 'vibevoice'):
         parser.error('--animation-chapters requires --generation-mode long and --tts-engine vibevoice')
     if args.generation_mode == "long":

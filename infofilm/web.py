@@ -103,7 +103,7 @@ class FilmRequest(BaseModel):
     premium_rescue: bool = Field(default=False, strict=True)
     voice_id: str = "default"
     llm_configuration: str | None = Field(default=None, max_length=60)
-    tts_engine: Literal["vibevoice", "omnivoice", "luxtts"] = "vibevoice"
+    tts_engine: Literal["vibevoice", "omnivoice", "luxtts"] = "luxtts"     # CPU, so films run beside GPU work (user, 2026-10-24)
     omni_speed: float = Field(default=.8, ge=.5, le=2)
     mood: Literal["auto", "professional", "warm", "funny", "curious", "serious", "reflective", "inspiring"] = "auto"
     mood_intensity: Literal["restrained", "standard", "strong"] = "restrained"
@@ -129,6 +129,8 @@ class FilmRequest(BaseModel):
     def generation_limits(self):
         if self.animation_chapters and self.generation_mode != 'long':
             raise ValueError('Animation chapter routing requires long generation')
+        if self.animation_chapters and 'tts_engine' not in self.model_fields_set:
+            self.tts_engine = 'vibevoice'          # the animation speech runner is VibeVoice's; the default yields to it
         if self.animation_chapters and self.tts_engine != 'vibevoice':
             raise ValueError('Animation chapters currently require VibeVoice narration')
         if self.subject_graph and self.generation_mode != "long":

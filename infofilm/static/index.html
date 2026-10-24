@@ -125,7 +125,7 @@
             <select id="voice"><option value="default">Default reference</option></select>
             <div class="upload-row"><label class="upload-label" for="voice-file">＋ Add a reference WAV</label><input id="voice-file" type="file" accept=".wav,audio/wav" hidden><span id="voice-status" class="hint"></span></div>
             <label for="tts-engine">Narration engine</label>
-            <select id="tts-engine"><option value="vibevoice">VibeVoice · current</option><option value="omnivoice">OmniVoice · experimental</option></select>
+            <select id="tts-engine"><option value="luxtts">LuxTTS · 48 kHz, CPU</option><option value="vibevoice">VibeVoice · GPU</option><option value="omnivoice">OmniVoice · experimental</option></select>
             <div id="omni-speed-row" hidden><label for="omni-speed">Omni narration speed</label><input id="omni-speed" type="number" min="0.5" max="2" step="0.05" value="0.8"><p class="hint">0.8 is the default for a more relaxed delivery.</p></div>
             <div id="reference-transcript-row" hidden><label for="reference-transcript">Exact reference recording transcript</label><textarea id="reference-transcript" rows="3" maxlength="5000" placeholder="Type the words spoken in the uploaded reference WAV"></textarea><p class="hint">Required for an uploaded voice with OmniVoice. The default reference already has a verified transcript.</p></div>
             <p class="hint">Indian English narration. A reference recording changes the voice. Whisper and MFA check either engine’s output.</p>
