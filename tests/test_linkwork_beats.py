@@ -25,8 +25,15 @@ class LinkworkBeatTests(unittest.TestCase):
         self.assertTrue(any("not one of" in e for e in linkwork_beats.beat_errors({}, [self.beat({"verb": "pendulum"})], self.cards)))
 
     def test_motion_must_fit_inside_its_beat(self):
-        errors = linkwork_beats.beat_errors({}, [self.beat(self.spec, 10.0, 12.0)], self.cards)
-        self.assertTrue(any("but the beat lasts 2.0 s" in e for e in errors), errors)
+        errors = linkwork_beats.beat_errors({}, [self.beat(self.spec, 10.0, 11.0)], self.cards)
+        self.assertTrue(any("but the beat is only 1.0 s" in e and "join this passage" in e for e in errors), errors)
+
+    def test_a_scene_a_little_long_plays_faster_instead_of_failing(self):
+        # A graph's own drawing pace (6.8 s) in a 4.8 s beat failed nine repairs: nothing in its spec could shorten it.
+        self.assertEqual(linkwork_beats.beat_errors({}, [self.beat(self.spec, 0.0, 2.5)], self.cards), [])
+        self.assertEqual(linkwork_beats.speed_to_fit(6.8, 4.8), 1.104)
+        self.assertEqual(linkwork_beats.speed_to_fit(4.0, 4.8), 1.0)
+        self.assertEqual(linkwork_beats.speed_to_fit(30.0, 4.8), linkwork_beats.FIT)
 
 
 if __name__ == "__main__":

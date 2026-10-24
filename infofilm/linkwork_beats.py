@@ -122,6 +122,17 @@ def check_specs(config, specs):
     return {_key(s): _CHECKED[_key(s)] for s in specs}
 
 
+FIT = 1.6           # a scene up to this much longer than its beat plays faster to fit it (a graph's own pacing)
+TAIL = 1.5          # and every scene may run this far past its beat (its last frame holds; the cut ends it)
+
+
+def speed_to_fit(scene_seconds, beat_seconds):
+    """How much faster a Linkwork scene plays so its motion ends inside its beat: 1 when it fits, at most FIT."""
+    if beat_seconds <= 0 or scene_seconds <= beat_seconds + TAIL:
+        return 1.0
+    return round(min(FIT, (scene_seconds - TAIL) / beat_seconds), 3)
+
+
 def beat_errors(config, scenes, cards):
     """Errors of the linkwork beats among resolved scenes (with start and end seconds)."""
     beats = [s for s in scenes if s.get("kind") == "linkwork"]
@@ -145,9 +156,12 @@ def beat_errors(config, scenes, cards):
         r = results[_key(spec)]
         errors += [f"{s['id']}: {e}" for e in r["errors"][:6]]
         length = s["end"] - s["start"]
-        if not r["errors"] and r["duration"] > length + 1.5:
-            errors.append(f"{s['id']}: its {spec['verb']} lasts {r['duration']:.1f} s but the beat lasts {length:.1f} s: "
-                          f"fit every time in the spec inside 0 to {max(1.0, length - 1.5):.1f} s")
+        # A scene a little long plays faster (speed_to_fit); one far too long cannot, and the planner is told the
+        # levers it really has: a longer beat, or less to show (a graph's own drawing pace has no time to shorten).
+        if not r["errors"] and r["duration"] > FIT * length + TAIL:
+            errors.append(f"{s['id']}: its {spec['verb']} needs about {r['duration'] - TAIL:.1f} s but the beat is only "
+                          f"{length:.1f} s: join this passage with the next sentence for a longer beat, or show less (fewer "
+                          f"steps, cases or events; any times in the spec inside 0 to {max(1.0, FIT * length):.1f} s)")
     return errors
 
 

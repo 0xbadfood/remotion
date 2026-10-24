@@ -300,7 +300,9 @@ def compile_timeline(config, store, script, timing, storyboard, images, evidence
                                    "highlightAt": lit,
                                    "labels": [{"src": staged(label), "at": t} for label, t in zip(layers["labels"], times)]}
         if scene["kind"] == "linkwork":                # drawn frame by frame in the renderer from its checked scene
+            from .linkwork_beats import speed_to_fit
             value["linkwork"] = read(scene["linkwork_file"])
+            value["linkworkSpeed"] = speed_to_fit(value["linkwork"]["duration"], (end - start) / fps)
         if scene["kind"] == "animation":
             if digest(Path(scene["animation_file"]).read_bytes()) != scene["animation_sha256"]:
                 raise ValueError("Animation changed after it was reviewed")

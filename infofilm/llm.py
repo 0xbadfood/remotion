@@ -326,7 +326,7 @@ class Models:
         reviewed, raised = None, set()                  # last reviewed candidate; units ever sent to the planner
         abstract, owned, pending = {}, set(), None      # ladder rung 2 instructions; rung 3 code-owned units
         tokens = max_tokens                             # raised when a draft hits the output limit (escalation)
-        # The writer and the judge rotate (user, 2026-10-24): after every `rotate_after` failed reviews the reviewer's
+        # The writer and the judge rotate (user, 2026-10-24): after every `rotate_after` failed rounds the reviewer's
         # model writes the repair and the planner's model reviews it, so one model's blind spot or one reviewer's
         # moving goalposts cannot exhaust the stage (a key-idea plan scored 70, 76, 78, 76 on four fresh objections).
         writer, judge, failed_reviews = "planner", "reviewer", 0
@@ -442,7 +442,7 @@ class Models:
             passing, decision = review_decision(review, errors, experimental, self.config)
             history.append({"attempt": attempt, "candidate_hash": digest(current), "errors": errors, "review": review,
                             "decision": decision, "writer": writer})
-            if review is not None and not passing:
+            if not passing:                               # a failed review or a failed code check alike
                 failed_reviews += 1
                 if rotate and failed_reviews % rotate == 0 and attempt + 1 < rounds:
                     writer, judge = judge, writer
