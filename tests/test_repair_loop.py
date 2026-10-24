@@ -221,3 +221,20 @@ class MalformedReviewTests(unittest.TestCase):
         models = Models({"planner_url": "p", "reviewer_url": "r", "max_repairs": 2}, store)
         models.call = Mock(side_effect=[script("One."), {"points": []}, passing()])
         self.assertEqual(models.loop("script-60", "Task", {}, lambda x: [], units=UNITS)["points"][0]["narration"], "One.")
+
+
+class RotationTests(unittest.TestCase):
+    def test_after_two_failed_reviews_the_reviewer_writes_and_the_planner_reviews(self):
+        folder = tempfile.TemporaryDirectory(); self.addCleanup(folder.cleanup)
+        store = Store(folder.name); self.addCleanup(store.db.close)
+        models = Models({"planner_url": "p", "reviewer_url": "r", "max_repairs": 3}, store)
+        stage_issue = lambda n: {"pass": False, "score": 70 + n, "issues": [{"field": "stage", "severity": "major", "problem": f"objection {n}"}]}
+        models.call = Mock(side_effect=[script("One."), stage_issue(1), script("One, better."), stage_issue(2),
+                                        script("One, best."), passing(), {"preferred": "A", "reasons": [], "regressions": []}])
+        models.loop("script-60", "Task", {}, lambda x: [], experimental=True, units=UNITS)
+        roles = [(c.args[0], c.args[1].split("-")[2]) for c in models.call.call_args_list][:6]
+        self.assertEqual(roles, [("planner", "draft"), ("reviewer", "review"), ("planner", "draft"), ("reviewer", "review"),
+                                 ("reviewer", "draft"), ("planner", "review")])
+        rotated = store.db.execute("select detail from events where stage = 'script-60' and state = 'rotated'").fetchall()
+        self.assertEqual(len(rotated), 1)
+        self.assertEqual(json.loads(rotated[0][0])["writer"], "reviewer")

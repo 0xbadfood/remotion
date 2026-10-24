@@ -326,6 +326,11 @@ class Models:
         reviewed, raised = None, set()                  # last reviewed candidate; units ever sent to the planner
         abstract, owned, pending = {}, set(), None      # ladder rung 2 instructions; rung 3 code-owned units
         tokens = max_tokens                             # raised when a draft hits the output limit (escalation)
+        # The writer and the judge rotate (user, 2026-10-24): after every `rotate_after` failed reviews the reviewer's
+        # model writes the repair and the planner's model reviews it, so one model's blind spot or one reviewer's
+        # moving goalposts cannot exhaust the stage (a key-idea plan scored 70, 76, 78, 76 on four fresh objections).
+        writer, judge, failed_reviews = "planner", "reviewer", 0
+        rotate = int(self.config.get("rotate_after", 2) or 0)
         attempt = -1
         while attempt + 1 < rounds:
             attempt += 1
@@ -333,7 +338,7 @@ class Models:
                 if pending is not None:     # rung 3 replaced every flagged unit: validate and review without a draft
                     current, pending, prior = pending, None, None
                 else:
-                    current = self.call("planner", f"{stage}-draft-{identity[:8]}-{attempt}", prompt + feedback,
+                    current = self.call(writer, f"{stage}-draft-{identity[:8]}-{attempt}", prompt + feedback,
                                         max_tokens=tokens, escalate=False)
             except ModelOutputError as exc:
                 errors = [str(exc)]
@@ -385,7 +390,7 @@ class Models:
                     deterministic_metrics = {"duration_policy":"advisory; final recording determines duration"}
                 if review_as is not None:
                     review_task, review_context = review_as(context)
-                review = self.call_json("reviewer", f"{stage}-review-{identity[:8]}-{attempt}",
+                review = self.call_json(judge, f"{stage}-review-{identity[:8]}-{attempt}",
                     "Independently review the candidate against the task and source context. Identify concrete factual, causal, narration, pacing or executable-visual problems. "
                     "Do not request cosmetic edits without benefit. Every finding needs a field pointer, evidence and actionable correction. "
                     "Distinguish explicit requirements from artistic preferences. Only demonstrable factual errors, explicit requirement violations or clearly unusable content are major. Speculative generation risks and optional refinements are minor. Do not invent an exclusive palette, require photographs to encode diagrams, or ban ordinary weather features. "
@@ -404,7 +409,7 @@ class Models:
                     self.store.event(stage, "review_malformed", {"attempt": attempt + 1, "keys": sorted(review)[:8]
                                                                  if isinstance(review, dict) else None})
                     try:
-                        review = self.call_json("reviewer", f"{stage}-review-{identity[:8]}-{attempt}-format",
+                        review = self.call_json(judge, f"{stage}-review-{identity[:8]}-{attempt}-format",
                             "Your previous answer was not a review. Review the candidate below and return ONLY "
                             "{pass:boolean, score:0..100, issues:[{field,severity,problem,evidence,correction}], "
                             "strengths:[string]}; do not repeat the candidate.\nTASK:\n" + review_task +
@@ -417,7 +422,7 @@ class Models:
                 if bad_pointers:
                     # Code sits between reviewer and planner: a finding that names no unit goes back to the reviewer.
                     try:
-                        fixed = self.call_json("reviewer", f"{stage}-review-{identity[:8]}-{attempt}-pointers",
+                        fixed = self.call_json(judge, f"{stage}-review-{identity[:8]}-{attempt}-pointers",
                             "Rewrite only the field pointers of this review; keep every finding, severity and score. "
                             + ru.pointer_guide(current, units) + "\nPOINTER ERRORS:\n" + json.dumps(bad_pointers) +
                             "\nREVIEW:\n" + json.dumps(review), max_tokens=4500)
@@ -436,7 +441,13 @@ class Models:
                 write(directory / f"review-{attempt}.json", review)
             passing, decision = review_decision(review, errors, experimental, self.config)
             history.append({"attempt": attempt, "candidate_hash": digest(current), "errors": errors, "review": review,
-                            "decision": decision})
+                            "decision": decision, "writer": writer})
+            if review is not None and not passing:
+                failed_reviews += 1
+                if rotate and failed_reviews % rotate == 0 and attempt + 1 < rounds:
+                    writer, judge = judge, writer
+                    self.store.event(stage, "rotated", {"attempt": attempt + 1, "writer": writer, "judge": judge,
+                                                        "model": endpoint(self.config, writer).get("model")})
             if passing and decision != "clean":
                 self.store.event(stage, "accepted_after_screening", {"attempt": attempt + 1, "decision": decision,
                                                                       "score": (review or {}).get("score")})
