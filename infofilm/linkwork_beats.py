@@ -19,21 +19,27 @@ from pathlib import Path
 from .core import write
 
 TASK = (
-    " This film may draw exact, code-made scenes with Linkwork: use kind:'linkwork' for a beat whose passage describes "
-    "something a verb in linkwork_options.verbs shows, when the verb's use_when fits and its not_when does not "
-    "(an object moving along a line with its position, displacement and velocity; an object's size against the distance "
-    "it moves; a graph of one quantity against another; a mechanics situation acted out with props, such as a ball fired "
-    "from a cannon, a block sliding or a ball rolling down a wedge, two carts colliding). Prefer a Linkwork beat to an image whenever one fits: it is "
-    "exact, light and cheap; keep images for the world (people, places, everyday scenes, the feel of an experiment). A "
-    "linkwork beat has a heading and summary like other beats, empty labels/details/image_brief, and a 'linkwork' "
-    "object that is the verb's spec, written as its card's fields and example show (start from the example). Times "
-    "in the spec are seconds from the start of the beat, and its motion must end within the beat's own duration "
-    "(the sentence timings show how long it lasts). Use only numbers the narration states or that follow from them: "
-    "the numbers it draws are computed from the spec and shown on screen. When the narration sets the same thing in "
-    "two situations (a train beside a platform, then on a long route; a bus on its route, then in a parking bay), show "
-    "both in ONE beat as the verb's cases, so the contrast is on screen together, and draw each as the narration names "
-    "it (the case's setting). Every passage whose use_when fits is a Linkwork beat, not an image of the same thing. "
-    "Code checks every spec and returns its errors.")
+    " This film is drawn VECTOR FIRST: exact, code-made Linkwork scenes (kind:'linkwork') are the default picture, and "
+    "an image is the exception that must earn its place. For every beat, ask first whether a verb in "
+    "linkwork_options.verbs, built from the props in linkwork_options.props, can show what the passage says: an "
+    "object moving along a line with its position, displacement and velocity (a car on a road is a prop doing physics, "
+    "not an everyday scene); a car whose motion follows the book's formula, with a speedometer; path length against "
+    "displacement on a route; an object's size against the distance it moves; a graph of one quantity against "
+    "another; a mechanics situation acted out with props (a ball fired from a cannon, a block sliding or a ball "
+    "rolling down a wedge, two carts colliding); and the general props, which belong in any beat: a person thinking "
+    "as a bulb lights over their head (a question, a new idea), a stopwatch running (time, an interval), a "
+    "speedometer reading a moving car (speed at an instant). If one can, the beat is a Linkwork beat. Use an image "
+    "only for what no prop can be: real people in real places, history, a real laboratory or apparatus, nature, the "
+    "feel of a place; never for a placeholder, an abstract mood, a notebook, a board, a dashboard or a road standing "
+    "in for a graph. A linkwork beat has a heading and summary like other beats, empty labels/details/image_brief, and "
+    "a 'linkwork' object that is the verb's spec, written as its card's fields and example show (start from the "
+    "example). Times in the spec are seconds from the start of the beat, and its motion must end within the beat's "
+    "own duration (the sentence timings show how long it lasts). Use only numbers the narration states or that follow "
+    "from them: the numbers it draws are computed from the spec and shown on screen. When the narration sets the same "
+    "thing in two situations (a train beside a platform, then on a long route; a bus on its route, then in a parking "
+    "bay), show both in ONE beat as the verb's cases, so the contrast is on screen together, and draw each as the "
+    "narration names it (the case's setting). Code checks every spec and returns its errors. Reviewing: report as "
+    "major an image beat that a listed verb with the listed props could have drawn, naming the verb and props.")
 
 LINKWORK = Path.home() / "linkwork"
 NODE = Path.home() / ".local/node-v24.4.0/bin/node"
@@ -81,15 +87,23 @@ PROPS_TASK = (
     " This film can draw some things exactly, in code, instead of as generated pictures: context.props lists them "
     "(name: what it is and does). A world built from them is drawn exactly, plays as light vector scenes and needs no "
     "image retries, so build the analogy, the guide and the setting from props whenever one can carry the idea as "
-    "well (a car or a walker on a marked road rather than a bird; a ball, a block, a train, a pulley), and name the "
+    "well (a car or a walker on a marked road rather than a bird; a ball, a block, a train, a pulley; a person thinking "
+    "as a bulb lights for the moment of insight, a stopwatch for time, a speedometer for speed), and name the "
     "props the plan uses in world.props:[names]. Use a world that only a generated picture can show only when no prop "
     "can carry the analogy. Reviewing: report as major a guide character, setting or analogy object that is not a "
     "prop when a listed prop could play the same part just as well, naming the prop.")
 
 
-def planner_options(cards):
+def planner_options(cards, config=None):
+    """The verbs the planner may use, and the props it can build them from (name: what it is and does)."""
     keys = ("name", "about", "use_when", "not_when", "fields", "example")
-    return {"verbs": [{k: c[k] for k in keys if k in c} for c in cards]}
+    out = {"verbs": [{k: c[k] for k in keys if k in c} for c in cards]}
+    if config is not None:
+        try:
+            out["props"] = props(config)
+        except Exception:                         # noqa: BLE001 - the verbs' own fields still name their props
+            pass
+    return out
 
 
 def _key(spec):

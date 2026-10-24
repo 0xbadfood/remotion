@@ -31,3 +31,17 @@ class LinkworkBeatTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class VectorFirstTests(unittest.TestCase):
+    """2026-10-24: a concept film painted a car on a road, a speedometer and a notebook where props could draw them."""
+
+    def test_every_physics_film_is_offered_the_general_props_and_told_vector_first(self):
+        evidence = {"curriculum": {"concept": "Instantaneous velocity and speed", "linkwork": {"subject": "physics"}}}
+        names = [c["name"] for c in linkwork_beats.shortlist({}, evidence, {"subject": "physics"})]
+        self.assertIn("stage", names)
+        options = linkwork_beats.planner_options([{"name": "stage", "about": "a world of props"}], {})
+        for prop in ("figure", "bulb", "stopwatch", "speedometer", "car"):
+            self.assertIn(prop, options["props"])
+        self.assertIn("VECTOR FIRST", linkwork_beats.TASK)
+        self.assertIn("a car on a road is a prop doing physics", linkwork_beats.TASK)

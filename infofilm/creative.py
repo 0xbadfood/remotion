@@ -378,7 +378,7 @@ def make_visual_beats(models, film, evidence, brief, *, experimental=True):
         context["replan"] = {"number": replan, "note": "A fresh scene plan was asked for."}
     if linkwork:
         from .linkwork_beats import planner_options as linkwork_options
-        context["linkwork_options"] = linkwork_options(linkwork["cards"])
+        context["linkwork_options"] = linkwork_options(linkwork["cards"], linkwork["config"])
     if (evidence.get("curriculum") or {}).get("kind") == "key_idea":
         return batched_beats(models, film, evidence, task, context, figures, experimental, linkwork)
     return models.loop(f"visual-beats-{film['requested_seconds']}", task, context,
