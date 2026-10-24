@@ -157,6 +157,25 @@ def camera_errors(value, motion=True):
     return out
 
 
+def unsupported_kind(scene, sid, figures, linkwork):
+    """Say what a beat of no known kind should have been (2026-10-25: a rotated writer flattened equation figures into
+    the beat, {type:'equation', latex} with no kind, and put a library figure in as a beat of its own; 'unsupported
+    visual beat kind' alone never told it how to fix them)."""
+    kinds = ["image", "flow", "compare", "cycle"] + (["figure"] if figures else []) + (["linkwork"] if linkwork else [])
+    hint = ""
+    if figures and scene.get("type") in {"equation", "library", "biology", "molecule", "reaction"}:
+        hint = (f": a figure beat is kind:'figure' with its spec inside it, figure:{{type:'{scene['type']}', "
+                + ("latex:'...'" if scene["type"] == "equation" else "id:'...'" if scene["type"] in {"library", "biology"} else "...")
+                + "}, not type and its fields on the beat itself")
+    elif linkwork and isinstance(scene.get("verb"), str):
+        hint = ": a Linkwork beat is kind:'linkwork' with its spec inside it, linkwork:{verb:'...', ...}"
+    if not re.fullmatch(r"S\d{2,3}", str(sid)):
+        hint += (f"; beat ids are S01, S02, ...: {sid!r} looks like a library figure's id, which belongs inside a "
+                 "figure beat as figure:{type:'library', id}" if figures and str(sid).startswith("Fig") else
+                 "; beat ids are S01, S02, ...")
+    return f"{sid}: unsupported visual beat kind {scene.get('kind')!r}; use one of {', '.join(kinds)}{hint}"
+
+
 def beat_errors(value, script, timing, figures=None, linkwork=None):
     """Validate coverage and references, never impose creative image-count quotas. `figures`: the film's figure
     options (figures.options); without them a figure beat is not allowed. `linkwork`: {config, cards} when the film
@@ -211,7 +230,7 @@ def beat_errors(value, script, timing, figures=None, linkwork=None):
         elif kind == "linkwork" and linkwork:
             pass                                      # compiled and checked with its beat's duration below
         else:
-            errors.append(f"{sid}: unsupported visual beat kind")
+            errors.append(unsupported_kind(scene, sid, figures, linkwork))
         for key, limit in [("heading", 7), ("summary", 12)]:
             if not isinstance(scene.get(key), str) or len(scene[key].split()) > limit:
                 errors.append(f"{sid}: {key} must be a string of at most {limit} words")

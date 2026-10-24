@@ -193,3 +193,15 @@ class CameraChoiceTests(unittest.TestCase):
         from infofilm.creative import motion_on
         self.assertFalse(motion_on({}))
         self.assertTrue(motion_on({'motion_beats': True}))
+
+
+class UnsupportedKindTests(unittest.TestCase):
+    def test_a_flattened_figure_beat_is_told_its_shape(self):
+        # 2026-10-25: a rotated writer wrote {type:'equation', latex} on the beat and a library figure as a beat
+        from infofilm.creative import unsupported_kind
+        figures = {'book': True, 'library': [{'id': 'Fig-2-2'}]}
+        flat = unsupported_kind({'id': 'S07', 'type': 'equation', 'latex': 'a = dv/dt'}, 'S07', figures, None)
+        self.assertIn("kind:'figure' with its spec inside it, figure:{type:'equation', latex:'...'}", flat)
+        stray = unsupported_kind({'id': 'Fig-2-2', 'type': 'library'}, 'Fig-2-2', figures, None)
+        self.assertIn("looks like a library figure's id", stray)
+        self.assertTrue(flat.startswith('S07: unsupported visual beat kind'))
