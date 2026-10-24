@@ -145,3 +145,13 @@ class RemoteFallbackTests(unittest.TestCase):
                 "select detail from events where state = 'point_recorded' order by id")]
             self.assertEqual(recorded, ["P1", "P2"])
             store.db.close()
+
+
+class SpeakableTests(unittest.TestCase):
+    def test_acronyms_and_unit_letters_are_spelled_for_the_voice(self):
+        # 2026-10-25: LuxTTS said "SI" as a word and every Whisper heard "the C unit of acceleration"
+        from infofilm.lux_media import speakable
+        self.assertEqual(speakable("The SI unit is written m s to the power minus two."),
+                         "The S.I. unit is written m. s. to the power minus two.")
+        self.assertEqual(speakable("DNA in Class XI, as NASA says. I saw a car; 5 N for 2 s."),
+                         "D.N.A. in Class XI, as NASA says. I saw a car; 5 N for 2 s.")

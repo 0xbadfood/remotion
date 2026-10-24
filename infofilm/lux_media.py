@@ -5,6 +5,7 @@ cannot be reached, the same manifest runs on the local CPU, with the same seeds.
 from __future__ import annotations
 
 import json
+import re
 import os
 import subprocess
 import time
@@ -74,6 +75,27 @@ def _run_remote(config, store, manifest, name):
     return True
 
 
+SPEAKABLE = 1       # the version of speakable(): part of a recording's identity, so a change records again
+SAID_AS_WORDS = {"NASA", "ISRO", "LASER", "RADAR", "SONAR", "UNESCO", "UNICEF", "NATO", "SCUBA", "AIDS", "COVID", "OPEC",
+                 "SEBI", "NITI", "ASEAN", "SAARC", "BRICS", "GATT", "FIFA", "OK"}
+ROMAN = re.compile(r"^[IVXLCDM]+$")
+
+
+def speakable(text):
+    """The script as LuxTTS should read it (user, 2026-10-25: "The SI unit" was spoken "the see unit" and every
+    Whisper heard "the C unit"): an acronym is spelled letter by letter (S.I., D.N.A.) unless it is said as a word or
+    is a Roman numeral, and unit letters standing alone are spelled too ("m s to the power minus two" -> "m. s.").
+    Only the voice's input changes; alignment and the audit still compare against the script as written."""
+    def acronym(m):
+        word = m.group(0)
+        if word in SAID_AS_WORDS or ROMAN.match(word):
+            return word
+        return ".".join(word) + "."
+    text = re.sub(r"\b[A-Z]{2,5}\b", acronym, text)
+    # Two or more single letters in a row (not the words a and I) are a unit or a label: spell them.
+    return re.sub(r"\b(?:[b-hj-zB-HJ-Z]\s+)+[b-hj-zB-HJ-Z]\b(?!\.)", lambda m: " ".join(c + "." for c in m.group(0).split()), text)
+
+
 def _recorded(store, name, manifest, done, seen):
     """An event for each clip newly recorded, so the studio can show narration progress while the worker runs."""
     for point in [p for p in done if p not in seen]:
@@ -87,7 +109,7 @@ def _run(config, store, root, settings, reference, reference_text, tasks, attemp
     manifest = {**{k: settings[k] for k in ["model", "device", "threads", "speed", "num_steps", "t_shift"]},
                 "lux_root": str(Path(config["lux_root"]).resolve()), "reference": str(reference),
                 "reference_text": reference_text or None, "seed": attempt,
-                "tasks": [{"id": p["id"], "index": i, "text": mfa_numeric_text(p["narration"]),
+                "tasks": [{"id": p["id"], "index": i, "text": speakable(mfa_numeric_text(p["narration"])),
                            "out": str(root / "points" / p["id"] / f"take-{attempt}" / "narration.wav")}
                           for i, p in enumerate(tasks)]}
     if manifest_path.exists():
@@ -142,6 +164,7 @@ def render_luxtts(config, store, points, name):
     reference_text = " ".join(str(config.get("reference_transcript") or "").split())
     text = "\n\n".join(point["narration"] for point in points)
     identity = digest({"points": points, "reference_sha256": digest(reference.read_bytes()), "reference_text": reference_text,
+                       "speakable": SPEAKABLE,
                        **{k: settings[k] for k in ["model", "speed", "num_steps", "t_shift"]}, "variant": config.get("audio_variant", 0)})
     root = store.root / "audio" / "luxtts" / identity[:20]
     final = root / "narration.wav"
