@@ -37,3 +37,15 @@ class CurriculumTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class TopicFilmTests(unittest.TestCase):
+    def test_a_topic_keeps_every_cited_source_and_speaks_to_its_audience(self):
+        # 2026-10-25: a heart procedure for parents; the NCERT rule "other sources only fill gaps" would drop it all.
+        from infofilm.curriculum import evidence_task, script_task
+        record = {'kind': 'textbook_concept', 'topic': True, 'audience': 'Parents of a newborn',
+                  'concept': 'Balloon aortic valvuloplasty', 'book': 'Beyond the book: heart', 'chapter_no': 1, 'chapter': 'x'}
+        self.assertIn('Every source is a cited reference', evidence_task(record))
+        self.assertNotIn('NCERT', evidence_task(record))
+        self.assertIn('never promise an outcome', script_task(record))
+        self.assertIn('Source S1 is the textbook', evidence_task({**record, 'topic': False}))

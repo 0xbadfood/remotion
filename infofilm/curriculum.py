@@ -102,6 +102,23 @@ KEY_IDEA_IMAGE_TASK = (
 
 
 KEY_IDEA_EQUATIONS = 1           # points that may speak an equation, calculation or measured number
+# Beyond the book (2026-10-25): a topic written from cited sources for a named audience (a heart procedure explained to
+# parents). Every source is authoritative, nothing beyond them is claimed, and the tone suits the audience.
+TOPIC_EVIDENCE_TASK = (
+    " This is a film for {audience} on one topic: {concept} ({book}). curriculum.coverage lists what it must teach: "
+    "every coverage point must be carried by at least one fact, and each fact lists the coverage ids it carries in "
+    "\"coverage\". Every source is a cited reference written for this topic and is authoritative: keep its facts, "
+    "numbers and qualifications exactly (\"about 30 percent\", \"in one hospital's experience\", \"usually\"), and add "
+    "no claim, number or advice that the sources do not state. Up to 30 facts are allowed.")
+
+TOPIC_SCRIPT_TASK = (
+    " This is a film for {audience} on one topic. Narrate every coverage point in evidence.curriculum.coverage, in a "
+    "clear order, through points whose fact_ids carry it, in plain everyday words: say the plain word first and give "
+    "the medical name once (the main artery, the aorta). Keep every qualification the sources give and add no claim, "
+    "number or advice of your own; never promise an outcome. The tone is calm, warm and honest, as a good doctor "
+    "explains to a family: nothing frightening, nothing dismissive. Open with the question these viewers are asking, "
+    "and close by drawing it together and pointing them to their own child's doctors for their child's details.")
+
 KEY_IDEA_ANALOGY_SHARE = .5      # points that must use the analogy
 KEY_IDEA_FIGURES = 1             # equation figures on screen
 SPOKEN_MATHS = re.compile(r"\b(equals|divided by|to the power|times 10|squared|multiplied by|joules?|hertz|"
@@ -126,6 +143,8 @@ def idea_context(curriculum):
 def evidence_task(curriculum):
     if is_key_idea(curriculum):
         return KEY_IDEA_EVIDENCE_TASK.format(**idea_context(curriculum))
+    if curriculum.get('topic'):
+        return TOPIC_EVIDENCE_TASK.format(**context(curriculum))
     return EVIDENCE_TASK.format(**context(curriculum))
 
 
@@ -179,6 +198,8 @@ def heard_errors(script, evidence):
 def script_task(curriculum):
     if is_key_idea(curriculum):
         return KEY_IDEA_SCRIPT_TASK.format(**idea_context(curriculum), equations=KEY_IDEA_EQUATIONS) + HEARD_TASK
+    if curriculum.get('topic'):
+        return TOPIC_SCRIPT_TASK.format(**context(curriculum)) + HEARD_TASK
     return SCRIPT_TASK.format(**context(curriculum)) + HEARD_TASK
 
 
