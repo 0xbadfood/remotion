@@ -19,7 +19,7 @@ def wav(path, seconds, level=1000):
 
 
 class NarrationRoomTests(unittest.TestCase):
-    """2026-10-26: the narration waits for the picture: silence, a fixed phrase or a replay after a beat's last word."""
+    """2026-10-25: the narration waits for the picture: silence, a fixed phrase or a replay after a beat's last word."""
 
     def setUp(self):
         self.dir = tempfile.TemporaryDirectory()
@@ -142,7 +142,7 @@ if __name__ == "__main__":
 
 
 class StagedPlanningTests(unittest.TestCase):
-    """2026-10-26: concept films plan a beat sheet first, then the full beats a batch at a time from it."""
+    """2026-10-25: concept films plan a beat sheet first, then the full beats a batch at a time from it."""
 
     def sheet(self):
         from test_creative import example

@@ -29,7 +29,7 @@ class LinkworkBeatTests(unittest.TestCase):
         self.assertTrue(any("but the beat is only 1.0 s" in e and "join this passage" in e for e in errors), errors)
 
     def test_the_narration_waits_for_a_scene_up_to_its_room(self):
-        # 2026-10-26: the narration waits (narration_room) instead of the scene playing faster or going back.
+        # 2026-10-25: the narration waits (narration_room) instead of the scene playing faster or going back.
         self.assertEqual(linkwork_beats.beat_errors({}, [self.beat(self.spec, 10.0, 11.0)], self.cards), [])
         slow = {**self.spec, "moves": [{"t": 0, "x": 0}, {"t": 30, "x": 6}]}
         errors = linkwork_beats.beat_errors({}, [self.beat(slow, 10.0, 11.0)], self.cards)

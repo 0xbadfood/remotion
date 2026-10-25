@@ -1,4 +1,4 @@
-"""Narration room: the narration waits for the picture (user, 2026-10-26).
+"""Narration room: the narration waits for the picture (user, 2026-10-25).
 
 A Linkwork scene that needs longer than its beat used to be played faster (speed_to_fit) or sent back to the planner,
 and both made concept films feel rushed. The narration is recorded one clip per point and aligned as a whole, so

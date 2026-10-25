@@ -663,7 +663,7 @@ def sheet_batches(rows):
 
 
 def staged_beats(models, film, evidence, task, context, figures, experimental, linkwork=None):
-    """Concept films: planned in two passes (user, 2026-10-26). Pass 1 writes the beat sheet: anchors, kinds, verbs
+    """Concept films: planned in two passes (user, 2026-10-25). Pass 1 writes the beat sheet: anchors, kinds, verbs
     or figures, intent, importance and room; small enough to review whole, so the film's shape is judged once.
     Pass 2 writes the full beats a batch at a time from the sheet, each batch with only the verb cards it uses and its
     neighbours, so repair and rotation work on a few beats. The joined storyboard is validated as a whole; the sheet's
