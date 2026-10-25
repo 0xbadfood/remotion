@@ -156,6 +156,8 @@ class StagedPlanningTests(unittest.TestCase):
         from infofilm.creative import sheet_errors
         script, timing, _, rows = self.sheet()
         self.assertEqual(sheet_errors({"beats": rows}, script, timing), [])
+        rows[0]["intent"] = " ".join(["word"] * 40)                 # the free-fall sheet's intents ran to 31-39 words
+        self.assertEqual(sheet_errors({"beats": rows}, script, timing), [])
         rows[0]["room"] = "hold"
         rows[1].update(room="look")
         rows[2].update(kind="linkwork", verb="stage")
@@ -191,8 +193,10 @@ class StagedPlanningTests(unittest.TestCase):
                 seen.append((stage, context))
                 if stage.startswith("visual-sheet"):
                     assert "PASS 1 OF 2" in task
-                    assert not validator({"beats": rows})
-                    return {"beats": rows}
+                    # A repair that added a beat after S01 named it S01b: valid, and renumbered before pass 2.
+                    repaired = [rows[0], dict(rows[1], id="S01b"), dict(rows[2], id="S02")]
+                    assert not validator({"beats": repaired}), validator({"beats": repaired})
+                    return {"beats": repaired}
                 assert "PASS 2" in task
                 ids = [r["id"] for r in context["beat_sheet"]]
                 scenes = [dict(s, id=f"S0{n}", camera="still") for n, s in enumerate(storyboard["scenes"], 1) if f"S0{n}" in ids]

@@ -384,7 +384,9 @@ SUBJECT_PACING_TASK = (
     "the per-point shot suggestions are a ceiling here, not a target. When one explanation runs across narration "
     "points, keep its Linkwork or figure beat on screen through them: set through_point_id to the last point it "
     "covers (those points then have no beats of their own). Never split one explanation into short shots just to "
-    "change the picture. A scene may take a little longer than its words: the narration waits for it.")
+    "change the picture. A scene may take a little longer than its words: the narration waits for it. Do not carry a "
+    "beat through a point that states an equation: that point needs its own equation figure beat, and the Linkwork "
+    "scene can carry on after it as a new beat.")
 
 
 def make_visual_beats(models, film, evidence, brief, *, experimental=True):
@@ -532,6 +534,7 @@ def batched_beats(models, film, evidence, task, context, figures, experimental, 
 IMPORTANCE = ("core", "support")
 SHEET_UNITS = {"lists": {"beats": "id"}, "anchors": {"beats": ["point_id", "start_word_id"]}, "operations": ["beats"]}
 STAGED_BEATS = 6        # pass 2 writes this many beats per call (whole points only)
+SHEET_INTENT_WORDS = 45 # the free-fall sheet (2026-10-26) lost 4 of 9 attempts to intents of 31-39 words at a cap of 30
 
 SHEET_TASK = (
     " THIS CALL IS PASS 1 OF 2: THE BEAT SHEET. The rules above describe the film's full beats; in this pass decide "
@@ -591,7 +594,7 @@ def sheet_errors(value, script, timing, figures=None, linkwork=None, typical=Non
     library = {f["id"] for f in (figures or {}).get("library", [])}
     for r in rows:
         sid, kind = r.get("id"), r.get("kind")
-        if not re.fullmatch(r"S\d{2,3}", str(sid)):
+        if not re.fullmatch(r"S\d{2,3}[a-z]{0,3}", str(sid)):         # S03b: a beat a repair added; renumbered after
             errors.append(f"{sid!r}: beat ids are S01, S02, ...")
         if kind not in kinds:
             errors.append(unsupported_kind(r, sid, figures, linkwork))
@@ -601,8 +604,8 @@ def sheet_errors(value, script, timing, figures=None, linkwork=None, typical=Non
             errors.append(f"{sid}: figure is 'equation' or a figure_options.library id"
                           + (f" ({', '.join(sorted(library)[:8])})" if library else ""))
         intent = r.get("intent")
-        if not isinstance(intent, str) or not 3 <= len(intent.split()) <= 30:
-            errors.append(f"{sid}: intent is one line (3-30 words) of what the viewer sees and learns")
+        if not isinstance(intent, str) or not 3 <= len(intent.split()) <= SHEET_INTENT_WORDS:
+            errors.append(f"{sid}: intent is one line (3-{SHEET_INTENT_WORDS} words) of what the viewer sees and learns")
         if r.get("importance") not in IMPORTANCE:
             errors.append(f"{sid}: importance is core or support")
         if r.get("room") not in (None, "", *ROOMS):
@@ -679,7 +682,8 @@ def staged_beats(models, film, evidence, task, context, figures, experimental, l
                         sheet_options(context, typical),
                         lambda x: sheet_errors(x, script, timing, figures, linkwork, typical, room),
                         experimental=experimental, units=SHEET_UNITS)
-    rows = sheet["beats"]
+    # A targeted repair that adds a beat names it after its neighbour (S03b): the sheet is renumbered in order.
+    rows = [{**r, "id": f"S{n:02d}"} for n, r in enumerate(sheet["beats"], 1)]
     order = [p["id"] for p in script["points"]]
     starts = [p["start"] for p in timing["points"]]
     ends = starts[1:] + [film["actual_seconds"]]
