@@ -33,8 +33,9 @@ TASK = (
     "feel of a place; never for a placeholder, an abstract mood, a notebook, a board, a dashboard or a road standing "
     "in for a graph. A linkwork beat has a heading and summary like other beats, empty labels/details/image_brief, and "
     "a 'linkwork' object that is the verb's spec, written as its card's fields and example show (start from the "
-    "example). Times in the spec are seconds from the start of the beat, and its motion must end within the beat's "
-    "own duration (the sentence timings show how long it lasts). Use only numbers the narration states or that follow "
+    "example). Times in the spec are seconds from the start of the beat, and its motion should end within the beat "
+    "(the sentence timings show how long it lasts); the narration waits a few seconds for a scene that needs them, "
+    "so never cut what the idea needs to show. Use only numbers the narration states or that follow "
     "from them: the numbers it draws are computed from the spec and shown on screen. When the passage states no "
     "numbers (a definition, a shape, a direction, a comparison: a car speeding up, a curve bending upwards, a body "
     "slowing down), draw it anyway with simple values that give the right shape and set illustrative:true in the "
@@ -157,6 +158,11 @@ def beat_errors(config, scenes, cards):
         else:
             specs.append(spec)
     results = check_specs(config, specs) if specs else {}
+    from .narration_room import settings as room_settings
+    room = room_settings(config)
+    # With narration room (the default) the narration waits for a scene that needs longer than its beat, up to
+    # room_max_beat_seconds, so only a scene longer than that goes back to the planner.
+    grace = room["max_beat_seconds"] if room["enabled"] else 0.0
     for s in beats:
         spec = s.get("linkwork")
         if not isinstance(spec, dict) or _key(spec) not in results:
@@ -166,10 +172,11 @@ def beat_errors(config, scenes, cards):
         length = s["end"] - s["start"]
         # A scene a little long plays faster (speed_to_fit); one far too long cannot, and the planner is told the
         # levers it really has: a longer beat, or less to show (a graph's own drawing pace has no time to shorten).
-        if not r["errors"] and r["duration"] > FIT * length + TAIL:
+        limit = length + grace if grace else FIT * length       # the scene's motion, past which it goes back
+        if not r["errors"] and r["duration"] > limit + TAIL:
             errors.append(f"{s['id']}: its {spec['verb']} needs about {r['duration'] - TAIL:.1f} s but the beat is only "
-                          f"{length:.1f} s: join this passage with the next sentence for a longer beat, or show less (fewer "
-                          f"steps, cases or events; any times in the spec inside 0 to {max(1.0, FIT * length):.1f} s)")
+                          f"{length:.1f} s{f' (and the narration can wait {grace:.0f} s more)' if grace else ''}: join this passage with the next sentence for a longer beat, or show less (fewer "
+                          f"steps, cases or events; any times in the spec inside 0 to {max(1.0, limit):.1f} s)")
     return errors
 
 
@@ -188,3 +195,11 @@ def render(config, store, films):
             path = folder / f"{_key(s['linkwork'])}.json"
             write(path, r["scene"])
             s.update(linkwork_file=str(path), linkwork_facts=r["facts"])
+
+
+def typical_seconds(config, cards):
+    """{verb: seconds its card's example scene runs}: what a beat sheet plans each verb's time from."""
+    examples = [c["example"] for c in cards if isinstance(c.get("example"), dict)]
+    results = check_specs(config, examples) if examples else {}
+    return {c["name"]: round(results[_key(c["example"])]["duration"], 1) for c in cards
+            if isinstance(c.get("example"), dict) and not results[_key(c["example"])]["errors"]}

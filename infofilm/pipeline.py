@@ -347,6 +347,13 @@ def finish_visuals(args, config, store, models, evidence, sources, brief, films,
         render_linkwork(config, store, films)          # each scene compiled and checked once more, then saved
         for film in films:
             write(store.root / f"film-{film['requested_seconds']}" / "storyboard.json", film["storyboard"])
+    # The narration waits for the picture: silence (or a fixed phrase and a replay) after a beat whose scene needs
+    # longer, so nothing plays faster to fit (narration_room.py). Later stages see the extended audio and timing.
+    from .narration_room import apply as give_room
+    give_room(config, store, films)
+    for film in films:
+        if film["timing"].get("room"):
+            write(store.root / f"film-{film['requested_seconds']}" / "storyboard.json", film["storyboard"])
     if figures and any(s.get("kind") == "figure" for film in films for s in film["storyboard"]["scenes"]):
         render_figures(store, films, figures)     # drawn by code before any image is made: a bad one fails fast
         for film in films:

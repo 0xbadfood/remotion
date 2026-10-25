@@ -303,6 +303,8 @@ def compile_timeline(config, store, script, timing, storyboard, images, evidence
             from .linkwork_beats import speed_to_fit
             value["linkwork"] = read(scene["linkwork_file"])
             value["linkworkSpeed"] = speed_to_fit(value["linkwork"]["duration"], (end - start) / fps)
+            if scene.get("linkwork_restart"):          # a replay: the scene plays again from this second of its beat
+                value["linkworkRestart"] = scene["linkwork_restart"]
         if scene["kind"] == "animation":
             if digest(Path(scene["animation_file"]).read_bytes()) != scene["animation_sha256"]:
                 raise ValueError("Animation changed after it was reviewed")

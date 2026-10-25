@@ -82,10 +82,15 @@ def make_creative_brief(models, evidence, mood="auto", intensity="restrained", b
             "narration_strategy": "Mood-aware wording and rhythm with the selected reference voice; direct emotional TTS control is not validated."}
 
 
-def visual_guidance(timing, brief):
+SUBJECT_HOLD = 12.0     # science and maths films: a beat per idea (a scene or figure explained), not a shot per few seconds
+
+
+def visual_guidance(timing, brief, subject=False):
     duration = timing["audio_info"]["duration_seconds"]
     balance = brief["visual_balance"]
     hold = 9.5 if brief["resolved_mood"] == "reflective" else 6.5 if brief["resolved_mood"] == "funny" else 7.0 if balance == "image-led" else 8.0
+    if subject:
+        hold = max(hold, SUBJECT_HOLD)
     beats = max(len(timing["points"]), round(duration / hold))
     low, high = BALANCE_SHARES[balance]
     return {"actual_seconds": duration, "suggested_beats": beats,
@@ -105,13 +110,16 @@ def resolved_scenes(storyboard, script, timing):
     duration = timing["audio_info"]["duration_seconds"]
     starts = [timing.get("start_seconds", 0.0)] + [words[i]["start"] for i in indices[1:]]   # a batch starts later
     ends = starts[1:] + [duration]
+    order = [p["id"] for p in script["points"]]
     result = []
     for i, (scene, start, end, index) in enumerate(zip(scenes, starts, ends, indices)):
         stop = indices[i + 1] if i + 1 < len(indices) else len(words)
         point = points[scene["point_id"]]
+        covered = order[order.index(point["id"]):order.index(scene["through_point_id"]) + 1] if scene.get("through_point_id") in points else [point["id"]]
+        facts = list(dict.fromkeys(f for pid in covered for f in points[pid]["fact_ids"]))
         result.append({**scene, "id": scene.get("id", point["id"]), "start": start, "end": end,
                        "covered_narration": " ".join(w["word"] for w in words[index:stop]),
-                       "fact_ids": point["fact_ids"]})
+                       "fact_ids": facts})
     return result
 
 
@@ -176,20 +184,15 @@ def unsupported_kind(scene, sid, figures, linkwork):
     return f"{sid}: unsupported visual beat kind {scene.get('kind')!r}; use one of {', '.join(kinds)}{hint}"
 
 
-def beat_errors(value, script, timing, figures=None, linkwork=None):
-    """Validate coverage and references, never impose creative image-count quotas. `figures`: the film's figure
-    options (figures.options); without them a figure beat is not allowed. `linkwork`: {config, cards} when the film
-    may use Linkwork beats (linkwork_beats.py)."""
-    scenes = value.get("scenes", [])
-    if not isinstance(scenes, list) or not scenes or len(scenes) > 120:
-        return ["Need 1–120 executable visual beats"]
-    if any(not isinstance(s, dict) for s in scenes):
-        return ["Every visual beat must be an object"]
-    errors = []
+def anchor_errors(scenes, script, timing):
+    """(per-beat errors, order errors) of beats' anchors: ids, aligned start words, points covered in order (a
+    linkwork or figure beat may carry on through later points: through_point_id), strictly increasing cuts. Shared
+    by full beats and the beat sheet's rows."""
+    errors, order = [], []
     point_ids = [p["id"] for p in script["points"]]
     point_words = {p["point_id"]: p["word_ids"] for p in timing["points"]}
     positions = {w["id"]: i for i, w in enumerate(timing["words"])}
-    collapsed, indices = [], []
+    collapsed, indices, spanned = [], [], {}
     ids = [s.get("id") for s in scenes]
     if len(set(ids)) != len(scenes):
         errors.append("Visual beat IDs must be unique; repeated: " + ", ".join(sorted({str(i) for i in ids if ids.count(i) > 1})))
@@ -200,11 +203,54 @@ def beat_errors(value, script, timing, figures=None, linkwork=None):
         if point_id not in point_words or anchor not in point_words.get(point_id, []):
             errors.append(f"{scene.get('id')}: anchor must be an aligned word in its point")
             continue
+        if point_id in spanned:
+            errors.append(f"{scene.get('id')}: {point_id} is carried by {spanned[point_id]} (its through_point_id); "
+                          f"start this beat at a later point, or end {spanned[point_id]}'s through_point_id earlier")
+            continue
         if not collapsed or collapsed[-1] != point_id:
             collapsed.append(point_id)
             if anchor != point_words[point_id][0]:
                 errors.append(f"First beat of {point_id} must start at its first word")
         indices.append(positions[anchor])
+        kind, sid = scene.get("kind"), scene.get("id")
+        through = scene.get("through_point_id")
+        if through is not None and through != point_id:
+            later = point_ids[point_ids.index(point_id) + 1:]
+            if through not in later:
+                errors.append(f"{sid}: through_point_id must be a later narration point ({', '.join(later[:3]) or 'none left'}"
+                              f"{', ...' if len(later) > 3 else ''})")
+            elif kind not in SPANNING:
+                errors.append(f"{sid}: only {' or '.join(SPANNING)} beats carry a passage across points; a {kind} beat "
+                              "ends with its point")
+            else:
+                for pid in later[:later.index(through) + 1]:
+                    spanned[pid] = sid
+                    collapsed.append(pid)
+    if collapsed != point_ids:
+        missing = [p for p in point_ids if p not in collapsed]
+        order.append("Visual beats must cover every narration point in unchanged order; expected " + " ".join(point_ids) +
+                      ", got " + " ".join(collapsed) + (f" (missing {', '.join(missing)})" if missing else ""))
+    if indices != sorted(set(indices)):
+        anchored = [s for s in scenes if s.get("start_word_id") in positions]
+        bad = [b.get("id") for a, b in zip(anchored, anchored[1:]) if positions[b["start_word_id"]] <= positions[a["start_word_id"]]]
+        order.append("Word anchors must increase strictly; no repeats or backward cuts" + (f" (at {', '.join(map(str, bad))})" if bad else ""))
+    return errors, order
+
+
+def beat_errors(value, script, timing, figures=None, linkwork=None):
+    """Validate coverage and references, never impose creative image-count quotas. `figures`: the film's figure
+    options (figures.options); without them a figure beat is not allowed. `linkwork`: {config, cards} when the film
+    may use Linkwork beats (linkwork_beats.py)."""
+    scenes = value.get("scenes", [])
+    if not isinstance(scenes, list) or not scenes or len(scenes) > 120:
+        return ["Need 1–120 executable visual beats"]
+    if any(not isinstance(s, dict) for s in scenes):
+        return ["Every visual beat must be an object"]
+    errors, order = anchor_errors(scenes, script, timing)
+    point_words = {p["point_id"]: p["word_ids"] for p in timing["points"]}
+    for scene in scenes:
+        if scene.get("start_word_id") not in point_words.get(scene.get("point_id"), []):
+            continue
         kind, sid = scene.get("kind"), scene.get("id")
         if kind == "image":
             if not isinstance(scene.get("image_brief"), str) or not 1 <= len(scene["image_brief"]) <= 1800:
@@ -245,14 +291,7 @@ def beat_errors(value, script, timing, figures=None, linkwork=None):
     if any(s.get("kind") == "animation" for s in scenes) and not errors:
         from .animations import scene_errors as animation_errors
         errors.extend(animation_errors(scenes, timing, figures))
-    if collapsed != point_ids:
-        missing = [p for p in point_ids if p not in collapsed]
-        errors.append("Visual beats must cover every narration point in unchanged order; expected " + " ".join(point_ids) +
-                      ", got " + " ".join(collapsed) + (f" (missing {', '.join(missing)})" if missing else ""))
-    if indices != sorted(set(indices)):
-        anchored = [s for s in scenes if s.get("start_word_id") in positions]
-        bad = [b.get("id") for a, b in zip(anchored, anchored[1:]) if positions[b["start_word_id"]] <= positions[a["start_word_id"]]]
-        errors.append("Word anchors must increase strictly; no repeats or backward cuts" + (f" (at {', '.join(map(str, bad))})" if bad else ""))
+    errors += order
     if not errors:
         if any(s["end"] <= s["start"] for s in resolved_scenes(value, script, timing)):
             errors.append("Visual beat intervals must have positive duration")
@@ -260,6 +299,9 @@ def beat_errors(value, script, timing, figures=None, linkwork=None):
         from .linkwork_beats import beat_errors as linkwork_errors
         errors.extend(linkwork_errors(linkwork["config"], resolved_scenes(value, script, timing), linkwork["cards"]))
     return errors
+
+
+SPANNING = ("linkwork", "figure")     # beats that may carry their explanation on through later points
 
 
 def has_action(scene):
@@ -336,6 +378,15 @@ def sentence_timing(point, words, point_end):
     return result
 
 
+SUBJECT_PACING_TASK = (
+    " Pacing: this is a science or maths film whose pictures explain, so plan ONE BEAT PER IDEA, not a new shot every "
+    "few seconds: a Linkwork scene or a figure usually stays on screen 10-20 s while the narration explains it, and "
+    "the per-point shot suggestions are a ceiling here, not a target. When one explanation runs across narration "
+    "points, keep its Linkwork or figure beat on screen through them: set through_point_id to the last point it "
+    "covers (those points then have no beats of their own). Never split one explanation into short shots just to "
+    "change the picture. A scene may take a little longer than its words: the narration waits for it.")
+
+
 def make_visual_beats(models, film, evidence, brief, *, experimental=True):
     from .curriculum import key_idea_beat_errors
     task = (
@@ -359,7 +410,8 @@ def make_visual_beats(models, film, evidence, brief, *, experimental=True):
         "Return {scenes:[{id:'S01',point_id:'P01',start_word_id:'exact word ID',kind:'image'|'flow'|'compare'|'cycle', "
         "heading:'<=7 words',summary:'<=12 words or empty',labels:[],details:[],motion:'push'|'pull'|'drift'|'hold', "
         "copy_density:'minimal'|'standard',rationale,image_brief:'for images, else empty',camera:'still'|'motion' "
-        "(image beats only),action:'for motion beats only'}]}."
+        "(image beats only),action:'for motion beats only',through_point_id:'optional: the last point a linkwork or "
+        "figure beat covers'}]}."
     )
     from .figures import options, planner_options, task_for
     figures = options(evidence)
@@ -378,7 +430,10 @@ def make_visual_beats(models, film, evidence, brief, *, experimental=True):
     if (evidence.get("curriculum") or {}).get("kind") == "key_idea":
         from .curriculum import KEY_IDEA_BEATS_TASK, KEY_IDEA_MOTION
         task += KEY_IDEA_BEATS_TASK.replace("{motion}", KEY_IDEA_MOTION if motion_on(config) else "")
-    guidance = visual_guidance(film["timing"], brief)
+    subject = bool(figures or linkwork) and not motion_on(config)
+    if subject:                                       # science and maths: the picture explains, video is not the medium
+        task += SUBJECT_PACING_TASK
+    guidance = visual_guidance(film["timing"], brief, subject)
     aligned = film["timing"]["points"]
     starts = [p["start"] for p in aligned]
     ends = starts[1:] + [film["actual_seconds"]]
@@ -400,6 +455,8 @@ def make_visual_beats(models, film, evidence, brief, *, experimental=True):
         context["linkwork_options"] = linkwork_options(linkwork["cards"], linkwork["config"])
     if (evidence.get("curriculum") or {}).get("kind") == "key_idea":
         return batched_beats(models, film, evidence, task, context, figures, experimental, linkwork)
+    if config.get("scene_planning", "staged") == "staged" and len(aligned) > BATCH_POINTS:
+        return staged_beats(models, film, evidence, task, context, figures, experimental, linkwork)
     return models.loop(f"visual-beats-{film['requested_seconds']}", task, context,
                       lambda x: beat_errors(x, film["script"], film["timing"], figures, linkwork)
                       + camera_errors(x, motion_on(config)) + key_idea_beat_errors(x, evidence), experimental=experimental,
@@ -467,6 +524,192 @@ def batched_beats(models, film, evidence, task, context, figures, experimental, 
         scene["id"] = f"S{n:02d}"
     storyboard = {"scenes": scenes}
     errors = beat_errors(storyboard, script, timing, figures, linkwork) + key_idea_beat_errors(storyboard, evidence)
+    if errors:
+        raise ValueError(f"Joined visual beats fail validation: {errors}")
+    return storyboard
+
+
+IMPORTANCE = ("core", "support")
+SHEET_UNITS = {"lists": {"beats": "id"}, "anchors": {"beats": ["point_id", "start_word_id"]}, "operations": ["beats"]}
+STAGED_BEATS = 6        # pass 2 writes this many beats per call (whole points only)
+
+SHEET_TASK = (
+    " THIS CALL IS PASS 1 OF 2: THE BEAT SHEET. The rules above describe the film's full beats; in this pass decide "
+    "only the film's shape. The full beats (specs, briefs, labels) are written afterwards from your sheet, a few at "
+    "a time, so here give for every beat: id ('S01', 'S02', ... in order); point_id and start_word_id, as the rules "
+    "above say; through_point_id when a linkwork or figure beat carries one explanation on through later points; "
+    "kind; verb (linkwork beats: one of linkwork_options.verbs, whose typical_seconds says how long its scene "
+    "usually runs); figure (figure beats: 'equation', or the id of a figure_options.library figure); intent (one "
+    "line: what the viewer sees and learns); importance ('core' for the ideas the film exists to teach, 'support' "
+    "for the rest); and, for a core beat that needs time beyond its words, room: 'hold' (a pause to take in an "
+    "equation or figure), 'look' or 'notice' (the narrator adds 'Look carefully.' or 'Notice what changes.' while "
+    "the scene plays on), or 'replay' (a Linkwork scene plays again after 'Watch it once more.'; at most {replays} "
+    "in the film, for the motion that is the heart of the idea). Give the core ideas the time they need: a longer "
+    "beat, a scene carried through the next point, or room; never rush them to fit more beats in. "
+    "Reviewing: judge the film's shape: vector first, one beat per idea, whether every core idea gets the time and "
+    "room it needs, and whether each beat's choice fits its passage. "
+    "Return ONLY {beats:[{id, point_id, start_word_id, through_point_id (optional), kind, verb (linkwork), figure "
+    "(figure), intent, importance, room (optional)}]}; the scene shape above is for pass 2, not this call.")
+
+STAGED_SCENES_TASK = (
+    " THIS CALL IS PASS 2: write the full beats for exactly the rows of context.beat_sheet, one beat per row in the "
+    "same order, keeping each row's id, point_id, start_word_id, through_point_id, kind and its verb (the linkwork "
+    "spec's verb) or figure. The row's intent is what the beat must show: write its heading, summary, rationale and "
+    "its spec or brief for that. Code keeps the rows' importance and room (the narration waits for a core beat's "
+    "room). Continue naturally from context.previous_scenes; context.next_beats come after this batch, so do not "
+    "show their ideas yet. The film's other beats are planned in other calls.")
+
+
+def sheet_options(context, typical):
+    """The beat sheet's context: the verbs without their fields and examples (pass 2 gets those), with each one's
+    typical length; the rest as pass 2 sees it."""
+    out = dict(context)
+    options = context.get("linkwork_options")
+    if options:
+        out["linkwork_options"] = {**options, "verbs": [
+            {**{k: v for k, v in c.items() if k not in ("fields", "example")},
+             **({"typical_seconds": typical[c["name"]]} if c["name"] in typical else {})} for c in options["verbs"]]}
+    return out
+
+
+def sheet_errors(value, script, timing, figures=None, linkwork=None, typical=None, room=None):
+    """Code checks of the beat sheet: the beats' anchors and order (as full beats), their kinds and choices, and that
+    each Linkwork verb's typical scene fits its beat and the narration's room."""
+    from .narration_room import ROOMS, settings
+    room = room or settings()
+    rows = value.get("beats")
+    if not isinstance(rows, list) or not rows or len(rows) > 120:
+        return ["Need a beat sheet of 1-120 beats: {beats:[...]}"]
+    if any(not isinstance(r, dict) for r in rows):
+        return ["Every beat of the sheet must be an object"]
+    errors, order = anchor_errors(rows, script, timing)
+    kinds = {"image", "flow", "compare", "cycle"} | ({"figure"} if figures else set()) | ({"linkwork"} if linkwork else set())
+    if figures:
+        from .animations import options as animation_options
+        kinds |= {"animation"} if animation_options(figures) else set()
+    verbs = {c["name"] for c in (linkwork or {}).get("cards") or []}
+    library = {f["id"] for f in (figures or {}).get("library", [])}
+    for r in rows:
+        sid, kind = r.get("id"), r.get("kind")
+        if not re.fullmatch(r"S\d{2,3}", str(sid)):
+            errors.append(f"{sid!r}: beat ids are S01, S02, ...")
+        if kind not in kinds:
+            errors.append(unsupported_kind(r, sid, figures, linkwork))
+        elif kind == "linkwork" and r.get("verb") not in verbs:
+            errors.append(f"{sid}: verb must be one of linkwork_options.verbs ({', '.join(sorted(verbs))})")
+        elif kind == "figure" and figures and r.get("figure") != "equation" and r.get("figure") not in library:
+            errors.append(f"{sid}: figure is 'equation' or a figure_options.library id"
+                          + (f" ({', '.join(sorted(library)[:8])})" if library else ""))
+        intent = r.get("intent")
+        if not isinstance(intent, str) or not 3 <= len(intent.split()) <= 30:
+            errors.append(f"{sid}: intent is one line (3-30 words) of what the viewer sees and learns")
+        if r.get("importance") not in IMPORTANCE:
+            errors.append(f"{sid}: importance is core or support")
+        if r.get("room") not in (None, "", *ROOMS):
+            errors.append(f"{sid}: room is one of {', '.join(ROOMS)}, or left out")
+        elif r.get("room") and r.get("importance") != "core":
+            errors.append(f"{sid}: only a core beat gets room; this one is {r.get('importance')}")
+        elif r.get("room") == "replay" and kind != "linkwork":
+            errors.append(f"{sid}: only a linkwork beat can replay; give a {kind} beat 'hold' or 'look'")
+    replays = [r.get("id") for r in rows if r.get("room") == "replay"]
+    if len(replays) > room["max_replays"]:
+        errors.append(f"{', '.join(map(str, replays))}: at most {room['max_replays']} replays in a film; keep them for "
+                      "the motion that is the heart of the film")
+    errors += order
+    if not errors and typical:
+        from .linkwork_beats import TAIL
+        wait = room["max_beat_seconds"] if room["enabled"] else 0.0
+        for r in resolved_scenes({"scenes": rows}, script, timing):
+            need = typical.get(r.get("verb")) if r.get("kind") == "linkwork" else None
+            length = r["end"] - r["start"]
+            if need and need - TAIL > length + wait:
+                errors.append(f"{r['id']}: a {r['verb']} scene typically runs {need - TAIL:.0f} s but this beat has "
+                              f"{length:.1f} s (and the narration can wait {wait:.0f} s more): carry it through the "
+                              "next point (through_point_id), start it a sentence earlier, or choose another verb")
+    return errors
+
+
+def match_errors(value, rows):
+    """A pass-2 batch keeps its sheet rows: same beats, anchors, kinds and choices."""
+    scenes = value.get("scenes")
+    if not isinstance(scenes, list) or len(scenes) != len(rows):
+        return [f"Write exactly {len(rows)} beats, one per row of context.beat_sheet ({', '.join(r['id'] for r in rows)})"]
+    errors = []
+    for scene, row in zip(scenes, rows):
+        if not isinstance(scene, dict):
+            continue
+        for key in ("id", "point_id", "start_word_id", "through_point_id", "kind"):
+            if (scene.get(key) or None) != (row.get(key) or None):
+                errors.append(f"{row['id']}: keep the sheet's {key} {row.get(key)!r} (got {scene.get(key)!r})")
+        if row.get("kind") == "linkwork" and (scene.get("linkwork") or {}).get("verb") != row.get("verb"):
+            errors.append(f"{row['id']}: the sheet chose the verb {row.get('verb')!r}; write its spec")
+        if row.get("kind") == "figure" and isinstance(scene.get("figure"), dict):
+            figure = scene["figure"]
+            chosen = "equation" if figure.get("type") == "equation" else figure.get("id")
+            if row.get("figure") and chosen != row.get("figure"):
+                errors.append(f"{row['id']}: the sheet chose the figure {row.get('figure')!r}; draw that one")
+    return errors
+
+
+def sheet_batches(rows):
+    """Consecutive rows in batches of about STAGED_BEATS, cut only where a new point starts."""
+    batches, current = [], []
+    for row in rows:
+        if current and len(current) >= STAGED_BEATS and row["point_id"] != current[-1]["point_id"]:
+            batches.append(current)
+            current = []
+        current.append(row)
+    return batches + ([current] if current else [])
+
+
+def staged_beats(models, film, evidence, task, context, figures, experimental, linkwork=None):
+    """Concept films: planned in two passes (user, 2026-10-26). Pass 1 writes the beat sheet: anchors, kinds, verbs
+    or figures, intent, importance and room; small enough to review whole, so the film's shape is judged once.
+    Pass 2 writes the full beats a batch at a time from the sheet, each batch with only the verb cards it uses and its
+    neighbours, so repair and rotation work on a few beats. The joined storyboard is validated as a whole; the sheet's
+    importance and room ride on its beats for the narration room."""
+    from .linkwork_beats import typical_seconds
+    from .narration_room import settings as room_settings
+    config = getattr(models, "config", None) or {}
+    room = room_settings(config)
+    script, timing = film["script"], film["timing"]
+    typical = typical_seconds(linkwork["config"], linkwork["cards"]) if linkwork else {}
+    stage = f"visual-sheet-{film['requested_seconds']}"
+    sheet = models.loop(stage, task + SHEET_TASK.replace("{replays}", str(room["max_replays"])),
+                        sheet_options(context, typical),
+                        lambda x: sheet_errors(x, script, timing, figures, linkwork, typical, room),
+                        experimental=experimental, units=SHEET_UNITS)
+    rows = sheet["beats"]
+    order = [p["id"] for p in script["points"]]
+    starts = [p["start"] for p in timing["points"]]
+    ends = starts[1:] + [film["actual_seconds"]]
+    batches = sheet_batches(rows)
+    scenes = []
+    for number, batch in enumerate(batches, 1):
+        first = order.index(batch[0]["point_id"])
+        last = max(order.index(r.get("through_point_id") or r["point_id"]) for r in batch)
+        ids = order[first:last + 1]
+        part_script = {**script, "points": [p for p in script["points"] if p["id"] in ids]}
+        part_timing = batch_timing(timing, ids, 0.0 if first == 0 else starts[first], ends[last])
+        part_context = {**context, "narration_points": [r for r in context["narration_points"] if r["point_id"] in ids],
+                        "script": {**context["script"], "points": [p for p in context["script"]["points"] if p["id"] in ids]},
+                        "beat_sheet": batch, "next_beats": (batches[number] if number < len(batches) else [])[:2],
+                        "previous_scenes": scenes[-2:], "batch": {"number": number, "of": len(batches)}}
+        if context.get("linkwork_options"):
+            used = {r.get("verb") for r in batch if r.get("kind") == "linkwork"}
+            part_context["linkwork_options"] = {**context["linkwork_options"], "verbs": [
+                v for v in context["linkwork_options"]["verbs"] if v["name"] in used]}
+
+        def validate(x, part_script=part_script, part_timing=part_timing, batch=batch):
+            return (beat_errors(x, part_script, part_timing, figures, linkwork) + camera_errors(x, motion_on(config))
+                    + match_errors(x, batch))
+        part = models.loop(f"visual-beats-{film['requested_seconds']}-p{number}", task + STAGED_SCENES_TASK,
+                           part_context, validate, experimental=experimental, units=BEAT_UNITS)
+        for scene, row in zip(part["scenes"], batch):
+            scene.update({k: row[k] for k in ("importance", "room", "intent") if row.get(k)})
+        scenes.extend(part["scenes"])
+    storyboard = {"scenes": scenes}
+    errors = beat_errors(storyboard, script, timing, figures, linkwork)
     if errors:
         raise ValueError(f"Joined visual beats fail validation: {errors}")
     return storyboard
