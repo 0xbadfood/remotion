@@ -147,6 +147,14 @@ class NumericAuditTests(unittest.TestCase):
         coverage = point_coverage(points, points[0]["narration"])
         self.assertEqual([p["coverage"] for p in coverage], [1, 0])
 
+    def test_point_coverage_reads_component_notation_run_together(self):
+        # 2026-10-26, the vector film: "r x equals a x plus b x" heard as "rx equals ax plus bx" scored 44%
+        from infofilm.audio_audit import point_coverage
+        points = [{"id": "P09", "narration": "In three dimensions, R x equals A x plus B x, and R z equals A z plus B z."},
+                  {"id": "P10", "narration": "This is how the components add."}]
+        coverage = point_coverage(points, "In three dimensions, rx equals ax plus bx, and rz equals az plus bz.")
+        self.assertEqual([p["coverage"] for p in coverage], [1, 0])
+
     def test_minor_proper_name_asr_error_remains_tolerated(self):
         result = self.score("The social breakdown also increased piracy in the Hooghly delta.",
                             "The social breakdown also increased piracy in the Hoogley delta.")

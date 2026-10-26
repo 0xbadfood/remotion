@@ -339,7 +339,10 @@ def canonical_numeric_text(text):
 
 
 def point_coverage(points, transcript_text):
-    """Measure each point against the unforced ASR transcript, in script order."""
+    """Measure each point against the unforced ASR transcript, in script order. A word counts as matched when its
+    letters are found in order, ignoring spaces: Whisper writes "r x equals a x plus b x" as "rx equals ax plus bx",
+    which word by word left a point of component notation at 44% and failed every take of the vector film on both
+    voices (2026-10-26), while a dropped sentence still leaves its words unmatched."""
     from quiz_harness.audio_audit import normalize_text
     expected, spans = [], []
     for point in points:
@@ -351,6 +354,14 @@ def point_coverage(points, transcript_text):
     matched = set()
     for block in SequenceMatcher(None, expected, actual, autojunk=False).get_matching_blocks():
         matched.update(range(block.a, block.a+block.size))
+    # The same comparison letter by letter; a word whose every letter is matched is matched too.
+    owner = [i for i, token in enumerate(expected) for _ in token]
+    letters = SequenceMatcher(None, "".join(expected), "".join(actual), autojunk=False)
+    found = [0] * len(expected)
+    for block in letters.get_matching_blocks():
+        for k in range(block.a, block.a+block.size):
+            found[owner[k]] += 1
+    matched.update(i for i, token in enumerate(expected) if found[i] == len(token))
     return [{"point_id": point_id, "expected_words": end-start,
              "matched_words": sum(i in matched for i in range(start, end)),
              "coverage": round(sum(i in matched for i in range(start, end))/max(1, end-start), 4)}
