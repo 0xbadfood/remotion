@@ -75,7 +75,7 @@ def _run_remote(config, store, manifest, name):
     return True
 
 
-SPEAKABLE = 1       # the version of speakable(): part of a recording's identity, so a change records again
+SPEAKABLE = 2       # the version of speakable(): part of a recording's identity, so a change records again
 SAID_AS_WORDS = {"NASA", "ISRO", "LASER", "RADAR", "SONAR", "UNESCO", "UNICEF", "NATO", "SCUBA", "AIDS", "COVID", "OPEC",
                  "SEBI", "NITI", "ASEAN", "SAARC", "BRICS", "GATT", "FIFA", "OK"}
 ROMAN = re.compile(r"^[IVXLCDM]+$")
@@ -92,14 +92,15 @@ def speakable(text):
             return word
         return ".".join(word) + "."
     text = re.sub(r"\b[A-Z]{2,5}\b", acronym, text)
-    # Two or more single letters in a row (not the words a and I) are a unit or a label: spell them.
-    return re.sub(r"\b(?:[b-hj-zB-HJ-Z]\s+)+[b-hj-zB-HJ-Z]\b(?!\.)", lambda m: " ".join(c + "." for c in m.group(0).split()), text)
+    # Two or more single letters in a row (not the words a and I) are a unit or a label: spell them. A unit vector
+    # (k-hat) is a word of its own: "A z k-hat" became "A z. k.-hat", and the voice said "a zic hat" (2026-10-26).
+    return re.sub(r"\b(?:[b-hj-zB-HJ-Z]\s+)+[b-hj-zB-HJ-Z]\b(?![.-])", lambda m: " ".join(c + "." for c in m.group(0).split()), text)
 
 
 def _recorded(store, name, manifest, done, seen):
     """An event for each clip newly recorded, so the studio can show narration progress while the worker runs."""
     for point in [p for p in done if p not in seen]:
-        store.event(name, "point_recorded", {"point": point, "attempt": manifest["seed"] + 1, "of": len(manifest["tasks"])})
+        store.event(name, "point_recorded", {"point": point, "attempt": manifest.get("attempt", manifest["seed"]) + 1, "of": len(manifest["tasks"])})
     return seen | set(done)
 
 
@@ -108,7 +109,10 @@ def _run(config, store, root, settings, reference, reference_text, tasks, attemp
     manifest_path = root / f"provider-{attempt}.json"
     manifest = {**{k: settings[k] for k in ["model", "device", "threads", "speed", "num_steps", "t_shift"]},
                 "lux_root": str(Path(config["lux_root"]).resolve()), "reference": str(reference),
-                "reference_text": reference_text or None, "seed": attempt,
+                # A whole-film repair (audio_variant 1) gets seeds of its own: with the first take's seeds it
+                # recorded the same audio byte for byte and failed the same way (the vector film, 2026-10-26).
+                "reference_text": reference_text or None, "attempt": attempt,
+                "seed": attempt + 100 * int(config.get("audio_variant", 0)),
                 "tasks": [{"id": p["id"], "index": i, "text": speakable(mfa_numeric_text(p["narration"])),
                            "out": str(root / "points" / p["id"] / f"take-{attempt}" / "narration.wav")}
                           for i, p in enumerate(tasks)]}

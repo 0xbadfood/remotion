@@ -45,6 +45,15 @@ class LuxMediaTests(unittest.TestCase):
             wav(Path(task["out"]))
         return type("Done", (), {"returncode": 0, "poll": lambda self: 0, "kill": lambda self: None})()
 
+    def test_a_whole_film_repair_records_with_seeds_of_its_own(self):
+        # 2026-10-26: the repair reused the first take's seeds and recorded the same audio byte for byte
+        passed = lambda *a, **k: {"status": "passed", "score": 1.0, "reasons": []}
+        with patch("infofilm.lux_media.subprocess.Popen", side_effect=self.fake_worker), \
+             patch("infofilm.lux_media.audit_audio", side_effect=passed):
+            render_luxtts(self.config, self.store, self.points, "narration")
+            render_luxtts({**self.config, "audio_variant": 1}, self.store, self.points, "narration-repair")
+        self.assertEqual([run["seed"] for run in self.runs], [0, 100])
+
     def test_each_point_is_voiced_audited_and_failed_points_retaken_with_a_new_seed(self):
         seen = {}
         def audit(config, store, clip, text, **kwargs):
@@ -160,3 +169,5 @@ class SpeakableTests(unittest.TestCase):
                          "The S.I. unit is written m. s. to the power minus two.")
         self.assertEqual(speakable("DNA in Class XI, as NASA says. I saw a car; 5 N for 2 s."),
                          "D.N.A. in Class XI, as NASA says. I saw a car; 5 N for 2 s.")
+        # 2026-10-26: "A z. k.-hat" was said "a zic hat"; a unit vector stays a word of its own
+        self.assertEqual(speakable("A x i-hat plus A y j-hat plus A z k-hat"), "A x i-hat plus A y j-hat plus A z k-hat")
