@@ -69,3 +69,18 @@ class IllustrativeTests(unittest.TestCase):
                 "formula": {"expr": "0.5*t^2", "t": [0, 6]}, "readouts": ["t", "x", "v"]}
         result = linkwork_beats.check_specs({}, [spec])[linkwork_beats._key(spec)]
         self.assertEqual((result["errors"], result["facts"]), ([], []))
+
+
+class LinkworkCrashTests(unittest.TestCase):
+    def test_a_crash_is_reported_with_its_message_not_as_bad_json(self):
+        import tempfile, os
+        from infofilm import linkwork_beats
+        with tempfile.TemporaryDirectory() as d:
+            node = os.path.join(d, "node")
+            with open(node, "w") as f:
+                f.write("#!/bin/sh\necho 'TypeError: entries is not a function' >&2\nexit 1\n")
+            os.chmod(node, 0o755)
+            linkwork_beats._CHECKED.clear()
+            with self.assertRaisesRegex(RuntimeError, "linkwork batch failed: TypeError: entries is not a function"):
+                linkwork_beats.check_specs({"node": node}, [{"verb": "stage"}])
+

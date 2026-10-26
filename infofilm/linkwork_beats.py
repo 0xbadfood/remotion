@@ -63,7 +63,9 @@ def _node(config, *args, timeout=600):
     node = str((config or {}).get("node") or NODE)
     done = subprocess.run([node, str(root / "src" / "cli.ts"), *args], cwd=root, capture_output=True, text=True,
                           timeout=timeout)
-    if done.returncode not in (0, 1):
+    # Exit 1 is also an uncaught exception: with no output, it is Linkwork failing, not the specs' errors (the
+    # projectile film stopped on a bare JSONDecodeError when a spec crashed the batch check).
+    if done.returncode not in (0, 1) or (not done.stdout.strip() and done.stderr.strip()):
         raise RuntimeError(f"linkwork {args[0]} failed: {done.stderr.strip()[-500:]}")
     return done.stdout
 
