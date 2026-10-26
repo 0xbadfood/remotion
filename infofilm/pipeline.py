@@ -23,8 +23,8 @@ from .video import compile_timeline, render
 
 
 def agent_role(config):
-    """The research agent calls tools through chat completions: the reviewer as before, unless the reviewer is a
-    Responses-API connection, then the planner."""
+    """The research agent calls tools through chat completions (or Claude's Messages API, translated in
+    anthropic_llm): the reviewer as before, unless the reviewer is a Responses-API connection, then the planner."""
     return "reviewer" if endpoint(config, "reviewer")["type"] != "openai_responses" else "planner"
 
 

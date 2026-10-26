@@ -2,5 +2,6 @@ fastapi==0.133.1
 uvicorn==0.41.0
 python-multipart==0.0.22
 httpx==0.28.1
+anthropic==2.3.0
 num2words==0.5.14
 opencv-python-headless==5.0.0.93

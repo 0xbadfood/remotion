@@ -149,7 +149,8 @@ def main():
         resumed += "\nFirst-pass summaries of already fetched, archived pages:\n" + "\n".join(
             item["url"] + "\n" + item["text"] for item in seed_digests)
     key = os.environ.get("VLLM_API_KEY") if agent.get("legacy") else api_key(llm.get("llm_secrets_root"), agent.get("id"), agent)
-    model=ArchiveModel(agent["url"],agent.get("model") or None,key,timeout=900,local=agent["type"]=="openai_chat")
+    model=ArchiveModel(agent["url"],agent.get("model") or None,key,timeout=900,local=agent["type"]=="openai_chat",
+                       native=agent["type"]=="anthropic")
     guidance = ''
     if request.get('subject_guidance') is not None:
         guidance = ('\nResearch guidance from a reviewed subject profile (questions, not facts):\n' +

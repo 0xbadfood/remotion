@@ -151,11 +151,14 @@ def readiness(config, llm_root=None):
             config = Registry(llm_root, dict(config)).freeze(dict(config))
         except ValueError:
             pass
+    native = {}
     for role in ("planner", "reviewer"):
         connection = endpoint(config, role)
         key = (os.environ.get("VLLM_API_KEY") if connection.get("legacy") else
                api_key(config.get("llm_secrets_root"), connection.get("id"), connection))
         headers[role] = {"Authorization": "Bearer " + key} if key else {}
+        if connection["type"] == "anthropic":           # checked through the SDK (models.retrieve), not /models
+            native[role] = (connection, key)
         config = {**config, role + "_check": connection["url"]}
     image_endpoint = config["image_url"] + "/api/status"
     registry = config.get("image_provider_registry")
@@ -170,6 +173,13 @@ def readiness(config, llm_root=None):
     def check(entry):
         key, label, url = entry
         try:
+            if key in native:
+                from .anthropic_llm import client
+                connection, secret = native[key]
+                if not secret:
+                    raise ValueError(f"no API key ({connection.get('key_env')} or LLM settings)")
+                client(secret, 5).models.retrieve(connection["model"])
+                return {"id": key, "label": label, "ready": True, "busy": False, "detail": "Available"}
             response = httpx.get(url, headers=headers.get(key), timeout=5)
             response.raise_for_status()
             data = response.json()
@@ -438,8 +448,8 @@ def create_app(config_path=ROOT / "config.json", directory=ROOT / "artifacts/int
         key = body.api_key or (api_key(queue.root, body.id, {**saved, "type": body.type}) if body.id else
                                api_key(queue.root, None, {"type": body.type, "key_env": TYPES[body.type].get("key_env")}))
         try:
-            return {"models": detect_models(body.url, key)[:400]}
-        except (httpx.HTTPError, ValueError) as exc:
+            return {"models": detect_models(body.url, key, kind=body.type)[:400]}
+        except Exception as exc:                        # noqa: BLE001 - shown to the person, key redacted
             raise HTTPException(422, f"Could not list models: {str(exc).replace(key, '[redacted]') if key else exc}"[:400])
 
     @app.get("/api/readiness")

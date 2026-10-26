@@ -22,6 +22,8 @@ TYPES = {
                     'default_concurrency': 1},
     'openrouter': {'label': 'OpenRouter', 'needs_key': True, 'default_url': 'https://openrouter.ai/api/v1',
                    'default_concurrency': 8, 'key_env': 'OPENROUTER_API_KEY'},
+    'anthropic': {'label': 'Anthropic (native Messages API, e.g. Claude Haiku)', 'needs_key': True,
+                  'default_url': 'https://api.anthropic.com', 'default_concurrency': 8, 'key_env': 'ANTHROPIC_API_KEY'},
     'openai_responses': {'label': 'OpenAI (Responses API, e.g. Luna)', 'needs_key': True,
                          'default_url': 'https://api.openai.com/v1', 'default_concurrency': 8, 'key_env': 'OPENAI_API_KEY'},
 }
@@ -53,7 +55,10 @@ def api_key(secrets_root, cid, connection):
     return saved or next((os.environ[n] for n in names if n and os.environ.get(n)), None)
 
 
-def detect_models(url, key=None, timeout=8):
+def detect_models(url, key=None, timeout=8, kind=None):
+    if kind == 'anthropic':                              # the SDK's models list (x-api-key, version header)
+        from .anthropic_llm import client
+        return [m.id for m in client(key, timeout).models.list()] or []
     response = httpx.get(url.rstrip('/') + '/models', timeout=timeout,
                          headers={'Authorization': 'Bearer ' + key} if key else {})
     response.raise_for_status()
@@ -142,7 +147,7 @@ class Registry:
             raise ValueError('Concurrency must be 1-64 and the timeout 30-3600 seconds')
         connection = {'type': kind, 'label': label[:80], 'url': url, 'model': model, 'vision': bool(payload.get('vision')),
                       'timeout': timeout, 'max_concurrency': concurrency}
-        if kind == 'openai_responses':
+        if kind in ('openai_responses', 'anthropic'):
             effort = payload.get('reasoning_effort') or 'low'
             if effort not in ('low', 'medium', 'high'):
                 raise ValueError('Reasoning effort must be low, medium or high')

@@ -13,6 +13,7 @@ from pathlib import Path
 
 import httpx
 
+from .anthropic_llm import LLMBillingError, json_call as anthropic_json
 from .core import digest, read, write
 from .llm_settings import api_key, endpoint
 
@@ -156,6 +157,9 @@ class Models:
         headers = {"Authorization": "Bearer " + key} if key else {}
         images = ([image_path] if image_path else []) + references
         system = "Return only the requested valid JSON object. Be precise, evidence-grounded and concise. Do not invent sources or claim human review."
+        if connection["type"] == "anthropic":
+            return self._anthropic_once(role, name, prompt, connection, key, system, images, references, image_path,
+                                        signature, prefix, max_tokens)
         with httpx.Client(timeout=connection.get("timeout", 900), headers=headers) as client:
             if role not in self.identities:
                 if connection.get("model"):
@@ -198,6 +202,9 @@ class Models:
             self.store.event(name, "running", {"role": role, "model": model})
             start = time.monotonic()
             response = self._post(client, connection, url + path, body, name)
+            if response.status_code == 402:            # OpenRouter: out of credits; stop the job, don't retry
+                raise LLMBillingError(f"{connection.get('label', url)}: payment required (HTTP 402: {response.text[:200]}); "
+                                      "the job stops here: top up the credits, then resume the job")
             if connection["type"] == "openai_responses" and response.status_code < 500:
                 raw = response.json()
             else:
@@ -219,6 +226,28 @@ class Models:
             choice = raw["choices"][0]
             truncated = choice.get("finish_reason") == "length"
             text = choice["message"].get("content") or ""
+        return self._finish(name, prefix, raw, text, truncated, max_tokens)
+
+    def _anthropic_once(self, role, name, prompt, connection, key, system, images, references, image_path, signature,
+                        prefix, max_tokens):
+        """Claude through the native Messages API (anthropic_llm). Thinking counts inside max_tokens, so it gets the
+        same room on top of the answer budget that OpenRouter's reasoning had."""
+        model = self.identities[role] = connection["model"]
+        write(prefix.with_suffix(".request.json"), {"url": connection["url"], "role": role, "model": model,
+            "connection": connection.get("id"), "prompt": prompt, "image": str(image_path) if image_path else None,
+            "input_hash": signature, **({'reference_images': [str(p) for p in references]} if references else {}),
+            "settings": {"max_tokens": max_tokens, "effort": connection.get("reasoning_effort", "low")}})
+        self.store.event(name, "running", {"role": role, "model": model})
+        start = time.monotonic()
+        with llm_slot(connection):
+            raw, text, truncated = anthropic_json(connection, key, system=system, prompt=prompt, images=images,
+                                                  max_tokens=max_tokens + REASONING_ROOM, label=connection.get("label", model))
+        raw["measured_latency_seconds"] = round(time.monotonic() - start, 3)
+        write(prefix.with_suffix(".response.json"), raw)
+        return self._finish(name, prefix, raw, text, truncated, max_tokens)
+
+    def _finish(self, name, prefix, raw, text, truncated, max_tokens):
+        """The answer as one JSON object, cached under the request's signature."""
         if truncated:
             self.store.event(name, "failed", {"reason": "output_token_limit", "max_tokens": max_tokens,
                                             "raw_response": str(prefix.with_suffix(".response.json"))})

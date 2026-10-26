@@ -261,10 +261,15 @@ class ResearchTools:
 
 class QwenClient:
     def __init__(self, base_url: str, model: str | None, api_key: str | None = None, timeout: float = 180.0,
-                 max_response_attempts: int = 3, local: bool = True) -> None:
+                 max_response_attempts: int = 3, local: bool = True, native: bool = False) -> None:
         self.base_url = base_url.rstrip("/")
         self.model = model
         self.local = local
+        # native: Claude through the Anthropic Messages API (anthropic_llm translates this loop's chat shape)
+        self.native = None
+        if native:
+            from .anthropic_llm import client
+            self.native = client(api_key, timeout)
         if not 1 <= max_response_attempts <= 5:
             raise ValueError('Research response attempts must be between one and five')
         self.max_response_attempts = max_response_attempts
@@ -288,6 +293,8 @@ class QwenClient:
 
     def complete(self, messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None = TOOLS) -> dict[str, Any]:
         messages, self.last_context_report = bound_messages(messages, MODEL_MESSAGE_LIMIT)
+        if self.native:
+            return self._complete_native(messages, tools)
         payload: dict[str, Any] = {
             "model": self.discover_model(),
             "messages": messages,
@@ -330,6 +337,19 @@ class QwenClient:
                     'finish_reason': report['finish_reason']}), file=sys.stderr, flush=True)
         raise HarnessError(f'Qwen returned no answer or tool calls after {self.max_response_attempts} attempts '
                            '(thinking disabled; reasoning-only responses cannot be used as evidence)')
+
+
+    def _complete_native(self, messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None) -> dict[str, Any]:
+        from .anthropic_llm import agent_turn
+        self.last_response_reports = []
+        for attempt in range(1, self.max_response_attempts + 1):
+            message, finish, usage = agent_turn(self.native, self.model, messages, tools, max_tokens=4000)
+            usable = bool(str(message.get('content') or '').strip() or message.get('tool_calls'))
+            self.last_response_reports.append({'attempt': attempt, 'usable': usable, 'finish_reason': finish,
+                                               'reasoning_only': False, 'usage': usage})
+            if usable:
+                return message
+        raise HarnessError(f'Claude returned no answer or tool calls after {self.max_response_attempts} attempts')
 
 
 def cited_fetched_urls(answer: str, fetched_urls: set[str]) -> set[str]:
