@@ -81,6 +81,25 @@ class NumericSpeechTests(unittest.TestCase):
         self.assertIn("numeric_mismatch", changed["reasons"])
         self.assertEqual(canonical_numeric_text("the 21st of May in the 1940s"), canonical_numeric_text("the 21st of May in the 1940s"))
 
+    def test_subscript_zero_spoken_naught_matches_asr_digits(self):
+        # Projectile film, 2026-10-26: 'v naught', 'theta naught' and 'two v naught' were said right; Whisper wrote
+        # v0, theta0, 2v0 (and 'theta not'), and every take failed as a numeric mismatch.
+        for expected, heard in [
+                ("The total time of flight, T f, is two v naught sin theta naught divided by g.",
+                 "The total time of flight, Tf is 2v0 sin theta0 divided by g."),
+                ("The maximum height is h m equals v naught sin theta naught, squared, divided by two g.",
+                 "The maximum height is hm equals v0 sin theta 0, squared, divided by 2g."),
+                ("The range is v naught squared sin two theta naught divided by g.",
+                 "The range is v0 squared sin 2 theta not divided by g.")]:
+            with self.subTest(heard=heard):
+                audit = score_english_transcript(expected_text=mfa_numeric_text(expected), transcript_text=heard,
+                                                 audio_duration_seconds=6, speech_span_seconds=5.8)
+                self.assertNotIn("numeric_mismatch", audit["reasons"])
+        changed = score_english_transcript(expected_text=mfa_numeric_text("It is two v naught sin theta naught divided by g."),
+                                           transcript_text="It is 3v0 sin theta0 divided by g.", audio_duration_seconds=4, speech_span_seconds=3.8)
+        self.assertIn("numeric_mismatch", changed["reasons"])
+        self.assertNotIn("1990 s", canonical_numeric_text("the 1990s"))          # a decade is not split
+
     def test_caption_mapping_preserves_year_and_quantity_in_same_point(self):
         text = "In 1970, 1970 soldiers arrived."
         tokenize = lambda value: re.findall(r"[a-z0-9]+", value.lower())

@@ -46,7 +46,9 @@ class LuxMediaTests(unittest.TestCase):
         return type("Done", (), {"returncode": 0, "poll": lambda self: 0, "kill": lambda self: None})()
 
     def test_each_point_is_voiced_audited_and_failed_points_retaken_with_a_new_seed(self):
+        seen = {}
         def audit(config, store, clip, text, **kwargs):
+            seen[str(clip.parent)] = [a["reasons"] for a in kwargs.get("earlier_audits") or []]
             first_take_of_p02 = "P02" in str(clip) and "take-0" in str(clip)
             return {"status": "failed" if first_take_of_p02 else "passed", "score": .5, "reasons": ["low_coverage"]}
         with patch("infofilm.lux_media.subprocess.Popen", side_effect=self.fake_worker), \
@@ -60,6 +62,9 @@ class LuxMediaTests(unittest.TestCase):
         self.assertEqual(first["tasks"][0]["text"], mfa_numeric_text(self.points[0]["narration"]))
         self.assertEqual(info["provider"], "LuxTTS")
         self.assertEqual(info["point_attempts"], {"P01": 1, "P02": 2})
+        # A retake carries the point's earlier failed audits, so a repeated failure reaches the LLM arbiter.
+        self.assertEqual(seen[next(k for k in seen if k.endswith("P02/take-1"))], [["low_coverage"]])
+        self.assertEqual(seen[next(k for k in seen if k.endswith("P01/take-0"))], [])
         # The studio shows progress from these: each clip as it is recorded, each point once it passes its check.
         states = [(state, json.loads(detail).get("point")) for state, detail in self.store.db.execute(
             "select state, detail from events where stage = 'narration-test' order by id")]

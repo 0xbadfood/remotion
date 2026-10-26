@@ -250,6 +250,12 @@ def spoken_numeric_text(text):
     value = unicodedata.normalize("NFKC", str(text or ""))
     # ASR joins designations the narration speaks apart: 'P9', 'U235', 'B29' for 'P nine', 'U two hundred thirty five'.
     value = re.sub(r"(?<=[A-Za-z])(?=\d)", " ", value)
+    # ...and a coefficient to its symbol, 'two v naught' heard as '2v0', 'two g' as '2g' (not '2nd' or '1990s').
+    value = re.sub(r"(?<=\d)(?=[A-Za-z])(?!(?:st|nd|rd|th|s)\b)", " ", value)
+    # A subscript zero is spoken 'naught' (v naught, theta naught); ASR writes it 0, or 'not' after the symbol
+    # (the projectile film, 2026-10-26: every take of six formula points failed on it).
+    value = re.sub(r"\b(?:naught|nought)\b", "zero", value, flags=re.I)
+    value = re.sub(r"\b(v|u|x|y|t|r|theta|θ|omega|ω)\s+not\b", r"\1 zero", value, flags=re.I)
     # ASR writes spoken ranges as 7-10, and ratios as 1.4:1.
     value = re.sub(r"(?<=\d)\s*[-–—]\s*(?=\d)", " to ", value)
     value = re.sub(r"(?<=\d)\s*:\s*(?=\d)", " to ", value)

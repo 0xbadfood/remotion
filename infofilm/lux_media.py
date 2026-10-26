@@ -190,7 +190,13 @@ def render_luxtts(config, store, points, name):
             if not clip.is_file():
                 failures.append(point)
                 continue
-            audit = audit_audio(config, store, clip, point["narration"])
+            # The point's earlier failed takes go with it: the same failure twice goes to the LLM arbiter (as in
+            # vibe_media). Without them the arbiter never ran for LuxTTS (the projectile film, 2026-10-26: 'v naught'
+            # heard as v0 failed every take of six points). Saved beside each take, so a resumed run has them too.
+            earlier = [read(f) for k in range(attempt)
+                       if (f := root / "points" / point["id"] / f"take-{k}" / "audit.json").is_file()]
+            audit = audit_audio(config, store, clip, point["narration"], earlier_audits=earlier)
+            write(clip.parent / "audit.json", {k: v for k, v in audit.items() if k != "recognizer_attempts"})
             if audit["status"] == "passed":
                 selected[point["id"]] = clip
                 store.event(name, "point_accepted", {"point": point["id"], "attempt": attempt + 1, "score": audit["score"]})
