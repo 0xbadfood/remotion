@@ -111,6 +111,8 @@ def prepare_audio(config, store, models, evidence, duration, rate, experimental,
     if selected.exists():
         value = read(selected)
         if value.get("dependency_hash") == dependency_hash:
+            if value.get("audio_info", {}).get("provider") == "VibeVoice":
+                config["tts_engine"] = "vibevoice"           # a LuxTTS film voiced by the fallback: time it as VibeVoice
             return value
     script = supplied_script or make_script(models, evidence, duration, rate, experimental=experimental, creative_brief=creative_brief)
     if supplied_script:
@@ -150,6 +152,19 @@ def prepare_audio(config, store, models, evidence, duration, rate, experimental,
             # Preserve the failed take and render the same text as a new provider job.
             audio, info = render({**config, "audio_variant": attempt+1}, f"narration-{duration}-repair-{attempt}")
             audit = audit_audio(config, store, audio, script_text(audited), points=audited["points"])
+            if audit["status"] != "passed" and config.get("tts_engine") == "luxtts" and config.get("tts_fallback", "vibevoice") == "vibevoice":
+                # User, 2026-10-26: when LuxTTS fails twice it is the voice's weakness (it said "a zic hat" for
+                # "A z k-hat"), so the same script goes to VibeVoice, with its own pronunciation lexicon, before
+                # the run gives up. The rest of the run (timing, delivery) then treats the film as VibeVoice.
+                store.event(f"narration-{duration}", "fallback", {"from": "luxtts", "to": "vibevoice", "audit": audit})
+                fallback = {**config, "tts_engine": "vibevoice"}
+                entries = speech_lexicon(fallback, store, script["points"]) if config.get("speech_conditioning", True) else {}
+                audited = {**script, "points": [{**p, "narration": speech_apply(p["narration"], entries, audit=True)}
+                                                for p in script["points"]]}
+                audio, info = render(fallback, f"narration-{duration}-vibevoice")
+                audit = audit_audio(fallback, store, audio, script_text(audited), points=audited["points"])
+                if audit["status"] == "passed":
+                    config["tts_engine"] = "vibevoice"
             if audit["status"] != "passed":
                 raise RuntimeError("Narration repair still needs review; both takes and audits are retained")
         actual = info["duration_seconds"]
