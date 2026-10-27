@@ -592,16 +592,17 @@ def sheet_errors(value, script, timing, figures=None, linkwork=None, typical=Non
         kinds |= {"animation"} if animation_options(figures) else set()
     verbs = {c["name"] for c in (linkwork or {}).get("cards") or []}
     library = {f["id"] for f in (figures or {}).get("library", [])}
-    for r in rows:
-        sid, kind = r.get("id"), r.get("kind")
+    text = lambda v: v if isinstance(v, str) else None  # an object where a name belongs is an error to report, not
+    for r in rows:                                      # a crash (the PDA film, 2026-10-27: figure was a whole spec)
+        sid, kind = r.get("id"), text(r.get("kind"))
         if not re.fullmatch(r"S\d{2,3}[a-z]{0,3}", str(sid)):         # S03b: a beat a repair added; renumbered after
             errors.append(f"{sid!r}: beat ids are S01, S02, ...")
         if kind not in kinds:
             errors.append(unsupported_kind(r, sid, figures, linkwork))
-        elif kind == "linkwork" and r.get("verb") not in verbs:
+        elif kind == "linkwork" and text(r.get("verb")) not in verbs:
             errors.append(f"{sid}: verb must be one of linkwork_options.verbs ({', '.join(sorted(verbs))})")
-        elif kind == "figure" and figures and r.get("figure") != "equation" and r.get("figure") not in library:
-            errors.append(f"{sid}: figure is 'equation' or a figure_options.library id"
+        elif kind == "figure" and figures and text(r.get("figure")) != "equation" and text(r.get("figure")) not in library:
+            errors.append(f"{sid}: figure is the id alone (a string): 'equation' or a figure_options.library id"
                           + (f" ({', '.join(sorted(library)[:8])})" if library else ""))
         intent = r.get("intent")
         if not isinstance(intent, str) or not 3 <= len(intent.split()) <= SHEET_INTENT_WORDS:

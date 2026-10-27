@@ -172,6 +172,17 @@ class StagedPlanningTests(unittest.TestCase):
         problems = sheet_errors({"beats": rows}, script, timing, linkwork=linkwork, typical={"stage": 31.5})
         self.assertIn("S03: a stage scene typically runs 30 s", " ".join(problems))
 
+    def test_an_object_where_a_name_belongs_is_reported_not_a_crash(self):
+        # 2026-10-27, the PDA film: the planner put a whole figure spec in a beat's figure field
+        from infofilm.creative import sheet_errors
+        script, timing, _, rows = self.sheet()
+        rows[0].update(kind="figure", figure={"id": "pda-heart-front", "stage": "stage-duct-open"})
+        rows[1].update(kind={"name": "image"})
+        figures = {"library": [{"id": "pda-heart-front"}]}
+        problems = " ".join(sheet_errors({"beats": rows}, script, timing, figures))
+        self.assertIn("S01: figure is the id alone (a string)", problems)
+        self.assertIn("S02", problems)
+
     def test_batches_cut_only_where_a_new_point_starts(self):
         from infofilm import creative
         _, _, _, rows = self.sheet()
