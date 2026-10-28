@@ -75,7 +75,7 @@ def _run_remote(config, store, manifest, name):
     return True
 
 
-SPEAKABLE = 2       # the version of speakable(): part of a recording's identity, so a change records again
+SPEAKABLE = 3       # the version of speakable(): part of a recording's identity, so a change records again
 SAID_AS_WORDS = {"NASA", "ISRO", "LASER", "RADAR", "SONAR", "UNESCO", "UNICEF", "NATO", "SCUBA", "AIDS", "COVID", "OPEC",
                  "SEBI", "NITI", "ASEAN", "SAARC", "BRICS", "GATT", "FIFA", "OK"}
 ROMAN = re.compile(r"^[IVXLCDM]+$")
@@ -92,6 +92,11 @@ def speakable(text):
             return word
         return ".".join(word) + "."
     text = re.sub(r"\b[A-Z]{2,5}\b", acronym, text)
+    # A run of the same digit word ("zero zero zero") is said with commas between: in "one point zero zero zero three"
+    # (air's refractive index) the voice dropped a zero in every take of Class 10 Light C6 (2026-10-29), and the
+    # audit rightly heard 1.003; with commas each is said on its own.
+    text = re.sub(r"\b(zero|one|two|three|four|five|six|seven|eight|nine)(?:\s+\1\b(?!-))+",
+                  lambda m: ", ".join([m.group(1)] * len(m.group(0).split())), text, flags=re.I)
     # Two or more single letters in a row (not the words a and I) are a unit or a label: spell them. A unit vector
     # (k-hat) is a word of its own: "A z k-hat" became "A z. k.-hat", and the voice said "a zic hat" (2026-10-26).
     return re.sub(r"\b(?:[b-hj-zB-HJ-Z]\s+)+[b-hj-zB-HJ-Z]\b(?![.-])", lambda m: " ".join(c + "." for c in m.group(0).split()), text)

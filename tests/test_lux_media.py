@@ -171,3 +171,6 @@ class SpeakableTests(unittest.TestCase):
                          "D.N.A. in Class XI, as NASA says. I saw a car; 5 N for 2 s.")
         # 2026-10-26: "A z. k.-hat" was said "a zic hat"; a unit vector stays a word of its own
         self.assertEqual(speakable("A x i-hat plus A y j-hat plus A z k-hat"), "A x i-hat plus A y j-hat plus A z k-hat")
+        # 2026-10-29, Light C6: a run of the same digit lost one in every take ("one point zero zero zero three")
+        self.assertEqual(speakable("Air is one point zero zero zero three."), "Air is one point zero, zero, zero three.")
+        self.assertEqual(speakable("One one-hundredth of it."), "One one-hundredth of it.")
