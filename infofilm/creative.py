@@ -567,11 +567,13 @@ STAGED_SCENES_TASK = (
     "spec's verb) or figure. The row's intent is what the beat must show: write its heading, summary, rationale and "
     "its spec or brief for that. Code keeps the rows' importance and room (the narration waits for a core beat's "
     "room). Continue naturally from context.previous_scenes; context.next_beats come after this batch, so do not "
-    "show their ideas yet. The film's other beats are planned in other calls. Reviewing: each beat's kind and its "
-    "verb or figure were chosen and reviewed in pass 1 and are fixed here (code refuses a change), so never report "
-    "the choice of kind, verb or figure, or ask for another; judge how well each beat's heading, summary and spec "
-    "or brief carry its row's intent with that choice (2026-10-28: C5 of Class 10 Light failed when this review "
-    "kept asking for a Linkwork beat where the sheet had fixed an image).")
+    "show their ideas yet. The film's other beats are planned in other calls. Reviewing: each beat's point, start "
+    "word, kind and its verb or figure were chosen and reviewed in pass 1 and are fixed here (code refuses a change), "
+    "so never report the choice of kind, verb or figure, or where a beat starts, or ask for another; judge how well "
+    "each beat's heading, summary and spec or brief carry its row's intent from where it starts, and when the "
+    "narration names something only later in the beat, ask for the picture to fit (general until then), not for the "
+    "beat to move (2026-10-28: C5 of Class 10 Light failed when this review kept asking for a Linkwork beat where the "
+    "sheet had fixed an image; 2026-10-29: the scattering film's, when it kept asking to move a beat's start).")
 
 
 def sheet_options(context, typical, shortest=None):

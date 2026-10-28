@@ -217,7 +217,7 @@ class StagedPlanningTests(unittest.TestCase):
                     repaired = [rows[0], dict(rows[1], id="S01b"), dict(rows[2], id="S02")]
                     assert not validator({"beats": repaired}), validator({"beats": repaired})
                     return {"beats": repaired}
-                assert "PASS 2" in task and "never report the choice of kind, verb or figure" in task
+                assert "PASS 2" in task and "never report the choice of kind, verb or figure, or where a beat starts" in task
                 ids = [r["id"] for r in context["beat_sheet"]]
                 scenes = [dict(s, id=f"S0{n}", camera="still") for n, s in enumerate(storyboard["scenes"], 1) if f"S0{n}" in ids]
                 assert not validator({"scenes": scenes}), validator({"scenes": scenes})
