@@ -199,9 +199,10 @@ def render(config, store, films):
             s.update(linkwork_file=str(path), linkwork_facts=r["facts"])
 
 
-def typical_seconds(config, cards):
-    """{verb: seconds its card's example scene runs}: what a beat sheet plans each verb's time from."""
-    examples = [c["example"] for c in cards if isinstance(c.get("example"), dict)]
-    results = check_specs(config, examples) if examples else {}
-    return {c["name"]: round(results[_key(c["example"])]["duration"], 1) for c in cards
-            if isinstance(c.get("example"), dict) and not results[_key(c["example"])]["errors"]}
+def typical_seconds(config, cards, field="example"):
+    """{verb: seconds its card's example scene runs}: what a beat sheet plans each verb's time from. field="shortest":
+    the verb's shortest ordinary use (the card's shortest spec, else its example): what a beat must at least hold."""
+    specs = {c["name"]: c.get(field) if isinstance(c.get(field), dict) else c.get("example") for c in cards}
+    specs = {name: spec for name, spec in specs.items() if isinstance(spec, dict)}
+    results = check_specs(config, list(specs.values())) if specs else {}
+    return {name: round(results[_key(spec)]["duration"], 1) for name, spec in specs.items() if not results[_key(spec)]["errors"]}

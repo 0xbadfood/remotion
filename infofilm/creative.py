@@ -542,7 +542,7 @@ SHEET_TASK = (
     "a time, so here give for every beat: id ('S01', 'S02', ... in order); point_id and start_word_id, as the rules "
     "above say; through_point_id when a linkwork or figure beat carries one explanation on through later points; "
     "kind; verb (linkwork beats: one of linkwork_options.verbs, whose typical_seconds says how long its scene "
-    "usually runs); figure (figure beats: 'equation', or the id of a figure_options.library figure); intent (one "
+    "usually runs and shortest_seconds, when given, how short it can be made); figure (figure beats: 'equation', or the id of a figure_options.library figure); intent (one "
     "line: what the viewer sees and learns); importance ('core' for the ideas the film exists to teach, 'support' "
     "for the rest); and, for a core beat that needs time beyond its words, room: 'hold' (a pause to take in an "
     "equation or figure), 'look' or 'notice' (the narrator adds 'Look carefully.' or 'Notice what changes.' while "
@@ -563,19 +563,25 @@ STAGED_SCENES_TASK = (
     "show their ideas yet. The film's other beats are planned in other calls.")
 
 
-def sheet_options(context, typical):
+def sheet_options(context, typical, shortest=None):
     """The beat sheet's context: the verbs without their fields and examples (pass 2 gets those), with each one's
-    typical length; the rest as pass 2 sees it."""
-    out = dict(context)
+    typical length, and its shortest when that is shorter; the rest as pass 2 sees it."""
+    out, shortest = dict(context), shortest or {}
     options = context.get("linkwork_options")
     if options:
         out["linkwork_options"] = {**options, "verbs": [
-            {**{k: v for k, v in c.items() if k not in ("fields", "example")},
-             **({"typical_seconds": typical[c["name"]]} if c["name"] in typical else {})} for c in options["verbs"]]}
+            {**{k: v for k, v in c.items() if k not in ("fields", "example", "shortest")},
+             **({"typical_seconds": typical[c["name"]]} if c["name"] in typical else {}),
+             **({"shortest_seconds": shortest[c["name"]]} if shortest.get(c["name"], 1e9) < typical.get(c["name"], 0) else {})}
+            for c in options["verbs"]]}
     return out
 
 
 def sheet_errors(value, script, timing, figures=None, linkwork=None, typical=None, room=None):
+    # typical: {verb: the shortest its scene can be} (typical_seconds(..., "shortest")). Judging by the card's example
+    # alone kept ray_diagram, whose example showed four object positions (25 s), out of every short beat until the
+    # plan ran out of tries, although one position takes 8 s (Class 10 Light C2, 2026-10-28). Pass 2 still checks
+    # each written spec's real length.
     """Code checks of the beat sheet: the beats' anchors and order (as full beats), their kinds and choices, and that
     each Linkwork verb's typical scene fits its beat and the narration's room."""
     from .narration_room import ROOMS, settings
@@ -627,7 +633,7 @@ def sheet_errors(value, script, timing, figures=None, linkwork=None, typical=Non
             need = typical.get(r.get("verb")) if r.get("kind") == "linkwork" else None
             length = r["end"] - r["start"]
             if need and need - TAIL > length + wait:
-                errors.append(f"{r['id']}: a {r['verb']} scene typically runs {need - TAIL:.0f} s but this beat has "
+                errors.append(f"{r['id']}: a {r['verb']} scene needs at least {need - TAIL:.0f} s but this beat has "
                               f"{length:.1f} s (and the narration can wait {wait:.0f} s more): carry it through the "
                               "next point (through_point_id), start it a sentence earlier, or choose another verb")
     return errors
@@ -678,10 +684,11 @@ def staged_beats(models, film, evidence, task, context, figures, experimental, l
     room = room_settings(config)
     script, timing = film["script"], film["timing"]
     typical = typical_seconds(linkwork["config"], linkwork["cards"]) if linkwork else {}
+    shortest = typical_seconds(linkwork["config"], linkwork["cards"], "shortest") if linkwork else {}
     stage = f"visual-sheet-{film['requested_seconds']}"
     sheet = models.loop(stage, task + SHEET_TASK.replace("{replays}", str(room["max_replays"])),
-                        sheet_options(context, typical),
-                        lambda x: sheet_errors(x, script, timing, figures, linkwork, typical, room),
+                        sheet_options(context, typical, shortest),
+                        lambda x: sheet_errors(x, script, timing, figures, linkwork, shortest, room),
                         experimental=experimental, units=SHEET_UNITS)
     # A targeted repair that adds a beat names it after its neighbour (S03b): the sheet is renumbered in order.
     rows = [{**r, "id": f"S{n:02d}"} for n, r in enumerate(sheet["beats"], 1)]

@@ -168,9 +168,9 @@ class StagedPlanningTests(unittest.TestCase):
         rows[1].pop("room")
         rows[2].update(importance="core", room="replay", point_id="P2")
         self.assertEqual(sheet_errors({"beats": rows}, script, timing, linkwork=linkwork), [])
-        # S03's 2 s beat (ending at 18 s) cannot hold a scene that typically runs 30 s, even with 12 s of room.
+        # S03's 2 s beat (ending at 18 s) cannot hold a scene that runs at least 30 s, even with 12 s of room.
         problems = sheet_errors({"beats": rows}, script, timing, linkwork=linkwork, typical={"stage": 31.5})
-        self.assertIn("S03: a stage scene typically runs 30 s", " ".join(problems))
+        self.assertIn("S03: a stage scene needs at least 30 s", " ".join(problems))
 
     def test_an_object_where_a_name_belongs_is_reported_not_a_crash(self):
         # 2026-10-27, the PDA film: the planner put a whole figure spec in a beat's figure field
@@ -230,4 +230,20 @@ class StagedPlanningTests(unittest.TestCase):
                                         "props": {"car": "a car"}}}
         verbs = sheet_options(context, {"stage": 9.5})["linkwork_options"]["verbs"]
         self.assertEqual(verbs, [{"name": "stage", "about": "props", "typical_seconds": 9.5}])
+        # A verb whose card names a shorter use shows both; its shortest spec stays out of pass 1 like the example.
+        context["linkwork_options"]["verbs"][0]["shortest"] = {"verb": "stage"}
+        verbs = sheet_options(context, {"stage": 25.0}, {"stage": 8.3})["linkwork_options"]["verbs"]
+        self.assertEqual(verbs, [{"name": "stage", "about": "props", "typical_seconds": 25.0, "shortest_seconds": 8.3}])
         self.assertIn("fields", context["linkwork_options"]["verbs"][0])                # pass 2 keeps them
+
+    def test_the_sheet_judges_a_verb_by_its_shortest_use(self):
+        # 2026-10-28, Class 10 Light C2: a four-position example kept ray_diagram out of every short beat
+        from infofilm import linkwork_beats
+        cards = [{"name": "ray_diagram", "example": {"verb": "ray_diagram", "n": 4}, "shortest": {"verb": "ray_diagram", "n": 1}},
+                 {"name": "stage", "example": {"verb": "stage"}}]
+        runs = {linkwork_beats._key(c["example"]): 25.0 for c in cards}
+        runs[linkwork_beats._key(cards[0]["shortest"])] = 8.3
+        fake = lambda config, specs: {linkwork_beats._key(s): {"errors": [], "duration": runs[linkwork_beats._key(s)]} for s in specs}
+        with mock.patch.object(linkwork_beats, "check_specs", fake):
+            self.assertEqual(linkwork_beats.typical_seconds({}, cards), {"ray_diagram": 25.0, "stage": 25.0})
+            self.assertEqual(linkwork_beats.typical_seconds({}, cards, "shortest"), {"ray_diagram": 8.3, "stage": 25.0})
