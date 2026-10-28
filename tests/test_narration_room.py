@@ -172,6 +172,15 @@ class StagedPlanningTests(unittest.TestCase):
         problems = sheet_errors({"beats": rows}, script, timing, linkwork=linkwork, typical={"stage": 31.5})
         self.assertIn("S03: a stage scene needs at least 30 s", " ".join(problems))
 
+    def test_a_late_start_says_how_to_show_something_from_a_later_sentence(self):
+        # 2026-10-29, the scattering film: the reviewer wanted an equation beat to start at the sentence stating the
+        # law, code wanted the point's first beat at its first word, and the sheet ran out of tries
+        from infofilm.creative import sheet_errors
+        script, timing, _, rows = self.sheet()
+        rows[0]["start_word_id"] = "w002"
+        problems = " ".join(sheet_errors({"beats": rows}, script, timing))
+        self.assertIn("open P1 with another beat and start that one at the sentence that states it", problems)
+
     def test_an_object_where_a_name_belongs_is_reported_not_a_crash(self):
         # 2026-10-27, the PDA film: the planner put a whole figure spec in a beat's figure field
         from infofilm.creative import sheet_errors

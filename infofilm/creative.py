@@ -210,7 +210,9 @@ def anchor_errors(scenes, script, timing):
         if not collapsed or collapsed[-1] != point_id:
             collapsed.append(point_id)
             if anchor != point_words[point_id][0]:
-                errors.append(f"First beat of {point_id} must start at its first word")
+                errors.append(f"First beat of {point_id} must start at its first word; to show something only from a "
+                              f"later sentence of {point_id} (an equation, a figure), open {point_id} with another beat "
+                              "and start that one at the sentence that states it")
         indices.append(positions[anchor])
         kind, sid = scene.get("kind"), scene.get("id")
         through = scene.get("through_point_id")
@@ -397,7 +399,11 @@ def make_visual_beats(models, film, evidence, brief, *, experimental=True):
         "Use the per-point shot suggestions: a 13–16-second point containing multiple ideas usually benefits from two views at a meaningful boundary. "
         "Each narration point lists its sentences with start time and duration. A beat starts at a sentence: copy that sentence's "
         "start_word_id exactly into the beat's start_word_id. The first beat of every point starts at its first sentence; further "
-        "beats can start at later sentences within that point. "
+        "beats can start at later sentences within that point. When what a beat shows is stated only in a later sentence of "
+        "its point (an equation, a figure, a result), open the point with another beat and start this one at that sentence. "
+        "Reviewing: never ask for a point's first beat to start later than its first sentence (code refuses it); if something "
+        "appears before it is stated, ask for an opening beat before it instead (2026-10-29: the scattering film's sheet "
+        "ran out of tries on exactly this). "
         "Cover all points in their existing order. Start/end seconds are derived by code, not invented. "
         "Soft beat/image guides and image screen-time shares are suggestions, not quotas; use useful distinct images and let diagrams remain readable. "
         "Choose generated imagery whenever scenes, objects, people or details explain the passage; use graphics only when an actual mechanism or comparison benefits. "
