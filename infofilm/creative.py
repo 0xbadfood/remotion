@@ -561,7 +561,11 @@ STAGED_SCENES_TASK = (
     "spec's verb) or figure. The row's intent is what the beat must show: write its heading, summary, rationale and "
     "its spec or brief for that. Code keeps the rows' importance and room (the narration waits for a core beat's "
     "room). Continue naturally from context.previous_scenes; context.next_beats come after this batch, so do not "
-    "show their ideas yet. The film's other beats are planned in other calls.")
+    "show their ideas yet. The film's other beats are planned in other calls. Reviewing: each beat's kind and its "
+    "verb or figure were chosen and reviewed in pass 1 and are fixed here (code refuses a change), so never report "
+    "the choice of kind, verb or figure, or ask for another; judge how well each beat's heading, summary and spec "
+    "or brief carry its row's intent with that choice (2026-10-28: C5 of Class 10 Light failed when this review "
+    "kept asking for a Linkwork beat where the sheet had fixed an image).")
 
 
 def sheet_options(context, typical, shortest=None):
@@ -571,7 +575,10 @@ def sheet_options(context, typical, shortest=None):
     options = context.get("linkwork_options")
     if options:
         out["linkwork_options"] = {**options, "verbs": [
+            # The options' names (not their docs, which pass 2 gets) show pass 1 what a verb can draw: C5 of Class 10
+            # Light chose images for a coin and a pencil under water that refraction's object_depth draws.
             {**{k: v for k, v in c.items() if k not in ("fields", "example", "shortest")},
+             **({"options": sorted(c["fields"])} if isinstance(c.get("fields"), dict) else {}),
              **({"typical_seconds": typical[c["name"]]} if c["name"] in typical else {}),
              **({"shortest_seconds": shortest[c["name"]]} if shortest.get(c["name"], 1e9) < typical.get(c["name"], 0) else {})}
             for c in options["verbs"]]}

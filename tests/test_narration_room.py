@@ -208,7 +208,7 @@ class StagedPlanningTests(unittest.TestCase):
                     repaired = [rows[0], dict(rows[1], id="S01b"), dict(rows[2], id="S02")]
                     assert not validator({"beats": repaired}), validator({"beats": repaired})
                     return {"beats": repaired}
-                assert "PASS 2" in task
+                assert "PASS 2" in task and "never report the choice of kind, verb or figure" in task
                 ids = [r["id"] for r in context["beat_sheet"]]
                 scenes = [dict(s, id=f"S0{n}", camera="still") for n, s in enumerate(storyboard["scenes"], 1) if f"S0{n}" in ids]
                 assert not validator({"scenes": scenes}), validator({"scenes": scenes})
@@ -229,11 +229,11 @@ class StagedPlanningTests(unittest.TestCase):
         context = {"linkwork_options": {"verbs": [{"name": "stage", "about": "props", "fields": {"a": 1}, "example": {}}],
                                         "props": {"car": "a car"}}}
         verbs = sheet_options(context, {"stage": 9.5})["linkwork_options"]["verbs"]
-        self.assertEqual(verbs, [{"name": "stage", "about": "props", "typical_seconds": 9.5}])
+        self.assertEqual(verbs, [{"name": "stage", "about": "props", "options": ["a"], "typical_seconds": 9.5}])
         # A verb whose card names a shorter use shows both; its shortest spec stays out of pass 1 like the example.
         context["linkwork_options"]["verbs"][0]["shortest"] = {"verb": "stage"}
         verbs = sheet_options(context, {"stage": 25.0}, {"stage": 8.3})["linkwork_options"]["verbs"]
-        self.assertEqual(verbs, [{"name": "stage", "about": "props", "typical_seconds": 25.0, "shortest_seconds": 8.3}])
+        self.assertEqual(verbs, [{"name": "stage", "about": "props", "options": ["a"], "typical_seconds": 25.0, "shortest_seconds": 8.3}])
         self.assertIn("fields", context["linkwork_options"]["verbs"][0])                # pass 2 keeps them
 
     def test_the_sheet_judges_a_verb_by_its_shortest_use(self):
