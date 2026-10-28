@@ -155,6 +155,18 @@ class NumericAuditTests(unittest.TestCase):
         coverage = point_coverage(points, "In three dimensions, rx equals ax plus bx, and rz equals az plus bz.")
         self.assertEqual([p["coverage"] for p in coverage], [1, 0])
 
+    def test_a_subscript_read_digit_by_digit_matches_whisper_writing_it_joined(self):
+        # 2026-10-29, Class 10 Light C6: "n two one" heard as "N21" read as "n twenty one", and every take failed
+        result = self.score("So n one two is the reciprocal of n two one, and n two one equals v one over v two.",
+                            "So N12 is the reciprocal of N21, and N21 equals V1 over V2.")
+        self.assertEqual(result["status"], "passed", result["reasons"])
+        from infofilm.audio_audit import point_coverage
+        coverage = point_coverage([{"id": "P06", "narration": "So n one two is the reciprocal of n two one."}], "So N12 is the reciprocal of N21.")
+        self.assertEqual(coverage[0]["coverage"], 1)
+        # Only where the script reads it digit by digit: a changed value, or a number read whole, is untouched.
+        self.assertIn("numeric_mismatch", self.score("The index is n two one, about one point three three.", "The index is N20, about 1.33.")["reasons"])
+        self.assertEqual(self.score("Uranium two hundred thirty five, written U235, splits.", "Uranium 235, written U235, splits.")["status"], "passed")
+
     def test_minor_proper_name_asr_error_remains_tolerated(self):
         result = self.score("The social breakdown also increased piracy in the Hooghly delta.",
                             "The social breakdown also increased piracy in the Hoogley delta.")

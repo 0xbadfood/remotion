@@ -12,7 +12,7 @@ from num2words import num2words
 
 from .core import read
 
-AUDIT_POLICY = "english-completeness-equivalent-years-v6"
+AUDIT_POLICY = "english-completeness-symbol-digits-v7"   # v7: subscripts read digit by digit (2026-10-29)
 DEFAULT_FALLBACK_MODELS = ("Systran/faster-whisper-small", "openai/whisper-large-v3-turbo")
 
 
@@ -296,7 +296,7 @@ def score_english_transcript(*, expected_text, transcript_text,
     kwargs = {"config": config} if config is not None else {}
     result = score_transcript(
         expected_text=canonical_numeric_text(expected_text),
-        transcript_text=canonical_numeric_text(transcript_text),
+        transcript_text=canonical_numeric_text(read_symbol_digits(expected_text, transcript_text)),
         audio_duration_seconds=audio_duration_seconds,
         speech_span_seconds=speech_span_seconds, **kwargs,
     )
@@ -322,6 +322,23 @@ def score_english_transcript(*, expected_text, transcript_text,
         result["status"] = "failed"
     result["audit_policy"] = AUDIT_POLICY
     return result
+
+
+_DIGIT_WORDS = dict(zip("0123456789", ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"]))
+
+
+def read_symbol_digits(expected_text, transcript_text):
+    """A symbol whose subscript the script reads digit by digit ('n two one', 'v one two'): Whisper writes it 'N21',
+    which would then read as 'n twenty one' and fail as a changed number (Class 10 Light C6, 2026-10-29: every take of
+    'n two one equals v one over v two' failed on both points that named n₂₁ or n₁₂). Where the script has that
+    digit-by-digit reading, the transcript's symbol is spaced the same way; any other number is left as it is."""
+    script = " " + " ".join(re.sub(r"[^a-z0-9]+", " ", canonical_numeric_text(expected_text).lower()).split()) + " "
+
+    def spaced(m):
+        letters, digits = m.group(1), m.group(2)
+        reading = " ".join([letters.lower(), *(_DIGIT_WORDS[d] for d in digits)])
+        return f"{letters} {' '.join(digits)}" if f" {reading} " in script else m.group(0)
+    return re.sub(r"\b([A-Za-z]{1,3})(\d{2,4})\b", spaced, str(transcript_text or ""))
 
 
 def canonical_numeric_text(text):
@@ -350,7 +367,7 @@ def point_coverage(points, transcript_text):
         start = len(expected)
         expected.extend(tokens)
         spans.append((point["id"], start, len(expected)))
-    actual = normalize_text(canonical_numeric_text(transcript_text)).split()
+    actual = normalize_text(canonical_numeric_text(read_symbol_digits(" ".join(p["narration"] for p in points), transcript_text))).split()
     matched = set()
     for block in SequenceMatcher(None, expected, actual, autojunk=False).get_matching_blocks():
         matched.update(range(block.a, block.a+block.size))
