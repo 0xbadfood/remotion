@@ -43,7 +43,12 @@ TASK = (
     "(a passage with no numbers is never a reason for an image). When the narration sets the same "
     "thing in two situations (a train beside a platform, then on a long route; a bus on its route, then in a parking "
     "bay), show both in ONE beat as the verb's cases, so the contrast is on screen together, and draw each as the "
-    "narration names it (the case's setting). Code checks every spec and returns its errors. Reviewing: report as "
+    "narration names it (the case's setting). When two cases need two drawings that one spec cannot hold (a concave "
+    "and a convex mirror, light entering and leaving glass, a series and a parallel circuit), put them side by side "
+    "in one beat as a compound: linkwork:{compound:true, parts:[{id:'a', box:[0, 0, 960, 1080], spec:{...}}, "
+    "{id:'b', box:[960, 0, 960, 1080], spec:{...}}]}, each part a full spec of a listed verb (one of them the beat "
+    "sheet's verb), each reflowing into its half; give each part panel:false where its verb offers it, so its "
+    "drawing fills its half under its own title. Code checks every spec and returns its errors. Reviewing: report as "
     "major an image beat that a listed verb with the listed props could have drawn, naming the verb and props. A "
     "spec with illustrative:true shows no numbers: its values only shape the picture and are not claims, so never "
     "report them; report only a shape or direction that contradicts the narration.")
@@ -144,6 +149,16 @@ def speed_to_fit(scene_seconds, beat_seconds):
     return round(min(FIT, (scene_seconds - TAIL) / beat_seconds), 3)
 
 
+def spec_verbs(spec):
+    """The verbs a linkwork spec uses: [its verb], or its parts' verbs for a compound; None when it is neither."""
+    if not isinstance(spec, dict):
+        return None
+    if spec.get("compound") is True and isinstance(spec.get("parts"), list) and spec["parts"]:
+        verbs = [p.get("spec", {}).get("verb") for p in spec["parts"] if isinstance(p, dict) and isinstance(p.get("spec"), dict)]
+        return verbs if verbs and len(verbs) == len(spec["parts"]) and all(isinstance(v, str) for v in verbs) else None
+    return [spec["verb"]] if isinstance(spec.get("verb"), str) else None
+
+
 def beat_errors(config, scenes, cards):
     """Errors of the linkwork beats among resolved scenes (with start and end seconds)."""
     beats = [s for s in scenes if s.get("kind") == "linkwork"]
@@ -153,10 +168,12 @@ def beat_errors(config, scenes, cards):
     errors, specs = [], []
     for s in beats:
         spec = s.get("linkwork")
-        if not isinstance(spec, dict) or not isinstance(spec.get("verb"), str):
-            errors.append(f"{s.get('id')}: a linkwork beat needs a 'linkwork' object: a verb spec")
-        elif spec["verb"] not in names:
-            errors.append(f"{s.get('id')}: verb {spec['verb']!r} is not one of linkwork_options.verbs ({', '.join(sorted(names))})")
+        verbs = spec_verbs(spec)
+        if verbs is None:
+            errors.append(f"{s.get('id')}: a linkwork beat needs a 'linkwork' object: a verb spec, or "
+                          "{compound:true, parts:[{id, box, spec}, ...]} for two cases side by side")
+        elif any(v not in names for v in verbs):
+            errors.append(f"{s.get('id')}: verb {next(v for v in verbs if v not in names)!r} is not one of linkwork_options.verbs ({', '.join(sorted(names))})")
         else:
             specs.append(spec)
     results = check_specs(config, specs) if specs else {}
@@ -176,7 +193,7 @@ def beat_errors(config, scenes, cards):
         # levers it really has: a longer beat, or less to show (a graph's own drawing pace has no time to shorten).
         limit = length + grace if grace else FIT * length       # the scene's motion, past which it goes back
         if not r["errors"] and r["duration"] > limit + TAIL:
-            errors.append(f"{s['id']}: its {spec['verb']} needs about {r['duration'] - TAIL:.1f} s but the beat is only "
+            errors.append(f"{s['id']}: its {' + '.join(spec_verbs(spec))} needs about {r['duration'] - TAIL:.1f} s but the beat is only "
                           f"{length:.1f} s{f' (and the narration can wait {grace:.0f} s more)' if grace else ''}: join this passage with the next sentence for a longer beat, or show less (fewer "
                           f"steps, cases or events; any times in the spec inside 0 to {max(1.0, limit):.1f} s)")
     return errors

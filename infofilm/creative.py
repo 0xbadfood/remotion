@@ -542,7 +542,8 @@ SHEET_TASK = (
     "a time, so here give for every beat: id ('S01', 'S02', ... in order); point_id and start_word_id, as the rules "
     "above say; through_point_id when a linkwork or figure beat carries one explanation on through later points; "
     "kind; verb (linkwork beats: one of linkwork_options.verbs, whose typical_seconds says how long its scene "
-    "usually runs and shortest_seconds, when given, how short it can be made); figure (figure beats: 'equation', or the id of a figure_options.library figure); intent (one "
+    "usually runs and shortest_seconds, when given, how short it can be made; one linkwork beat can also set two "
+    "cases side by side, such as a concave and a convex mirror, which pass 2 writes as a compound of two specs); figure (figure beats: 'equation', or the id of a figure_options.library figure); intent (one "
     "line: what the viewer sees and learns); importance ('core' for the ideas the film exists to teach, 'support' "
     "for the rest); and, for a core beat that needs time beyond its words, room: 'hold' (a pause to take in an "
     "equation or figure), 'look' or 'notice' (the narrator adds 'Look carefully.' or 'Notice what changes.' while "
@@ -640,7 +641,9 @@ def sheet_errors(value, script, timing, figures=None, linkwork=None, typical=Non
 
 
 def match_errors(value, rows):
-    """A pass-2 batch keeps its sheet rows: same beats, anchors, kinds and choices."""
+    """A pass-2 batch keeps its sheet rows: same beats, anchors, kinds and choices (a compound keeps the sheet's verb
+    among its parts)."""
+    from .linkwork_beats import spec_verbs
     scenes = value.get("scenes")
     if not isinstance(scenes, list) or len(scenes) != len(rows):
         return [f"Write exactly {len(rows)} beats, one per row of context.beat_sheet ({', '.join(r['id'] for r in rows)})"]
@@ -651,7 +654,7 @@ def match_errors(value, rows):
         for key in ("id", "point_id", "start_word_id", "through_point_id", "kind"):
             if (scene.get(key) or None) != (row.get(key) or None):
                 errors.append(f"{row['id']}: keep the sheet's {key} {row.get(key)!r} (got {scene.get(key)!r})")
-        if row.get("kind") == "linkwork" and (scene.get("linkwork") or {}).get("verb") != row.get("verb"):
+        if row.get("kind") == "linkwork" and row.get("verb") not in (spec_verbs(scene.get("linkwork")) or []):
             errors.append(f"{row['id']}: the sheet chose the verb {row.get('verb')!r}; write its spec")
         if row.get("kind") == "figure" and isinstance(scene.get("figure"), dict):
             figure = scene["figure"]

@@ -24,6 +24,24 @@ class LinkworkBeatTests(unittest.TestCase):
         self.assertTrue(any("off the axis" in e for e in linkwork_beats.beat_errors({}, [self.beat(off)], self.cards)))
         self.assertTrue(any("not one of" in e for e in linkwork_beats.beat_errors({}, [self.beat({"verb": "pendulum"})], self.cards)))
 
+    def test_two_cases_side_by_side_are_one_compound_beat(self):
+        # 2026-10-28, Class 10 Light C2: the sheet asked for a concave and a convex mirror side by side; one
+        # ray_diagram draws one mirror, and the beat failed every round until the plan ran out of tries.
+        cards = [{"name": "ray_diagram"}]
+        part = lambda device, x: {"id": device.split("_")[0], "box": [x, 0, 960, 1080], "spec": {
+            "verb": "ray_diagram", "device": device, "focal_length": 10, "objects": ["infinity"], "panel": False}}
+        pair = {"compound": True, "parts": [part("concave_mirror", 0), part("convex_mirror", 960)]}
+        self.assertEqual(linkwork_beats.spec_verbs(pair), ["ray_diagram", "ray_diagram"])
+        self.assertEqual(linkwork_beats.beat_errors({}, [self.beat(pair, 0.0, 9.0)], cards), [])
+        stray = {"compound": True, "parts": [part("concave_mirror", 0), {**part("convex_mirror", 960), "spec": {"verb": "pendulum"}}]}
+        self.assertTrue(any("'pendulum' is not one of" in e for e in linkwork_beats.beat_errors({}, [self.beat(stray)], cards)))
+        self.assertIsNone(linkwork_beats.spec_verbs({"compound": True, "parts": []}))
+        self.assertTrue(any("compound:true" in e for e in linkwork_beats.beat_errors({}, [self.beat({"device": "x"})], cards)))
+        from infofilm.creative import match_errors
+        row = {"id": "S06", "point_id": "P07", "kind": "linkwork", "verb": "ray_diagram"}
+        scene = {"id": "S06", "point_id": "P07", "kind": "linkwork", "linkwork": pair}
+        self.assertFalse([e for e in match_errors({"scenes": [scene]}, [row]) if "the sheet chose the verb" in e])
+
     def test_motion_must_fit_inside_its_beat(self):
         errors = linkwork_beats.beat_errors({"narration_room": False}, [self.beat(self.spec, 10.0, 11.0)], self.cards)
         self.assertTrue(any("but the beat is only 1.0 s" in e and "join this passage" in e for e in errors), errors)
