@@ -24,6 +24,20 @@ class LinkworkBeatTests(unittest.TestCase):
         self.assertTrue(any("off the axis" in e for e in linkwork_beats.beat_errors({}, [self.beat(off)], self.cards)))
         self.assertTrue(any("not one of" in e for e in linkwork_beats.beat_errors({}, [self.beat({"verb": "pendulum"})], self.cards)))
 
+    def test_a_blank_option_is_an_option_not_taken(self):
+        # 2026-10-29, the force-on-a-conductor film: reverse: "" on five beats, each a code error
+        spec = {**self.spec, "title": "", "object": "car", "illustrative": None}
+        self.assertEqual(linkwork_beats.beat_errors({}, [self.beat(spec)], self.cards), [])
+        self.assertNotIn("title", spec)
+
+    def test_errors_offer_illustrative_for_values_the_narration_never_gives(self):
+        # 2026-10-29: the reviewer struck a circuit's invented values and the verb asked for them back, round and round
+        off = {**self.spec, "moves": [{"t": 0, "x": 0}, {"t": 2, "x": 20}]}
+        problems = " ".join(linkwork_beats.beat_errors({}, [self.beat(off)], self.cards))
+        self.assertIn("set illustrative:true", problems)
+        problems = " ".join(linkwork_beats.beat_errors({}, [self.beat({**off, "illustrative": True})], self.cards))
+        self.assertNotIn("set illustrative:true", problems)
+
     def test_two_cases_side_by_side_are_one_compound_beat(self):
         # 2026-10-28, Class 10 Light C2: the sheet asked for a concave and a convex mirror side by side; one
         # ray_diagram draws one mirror, and the beat failed every round until the plan ran out of tries.

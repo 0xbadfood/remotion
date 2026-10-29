@@ -159,6 +159,25 @@ def spec_verbs(spec):
     return [spec["verb"]] if isinstance(spec.get("verb"), str) else None
 
 
+def drop_blanks(value):
+    """Drop fields left empty ("" or null) from a spec, in place: an option the planner leaves blank is an option not
+    taken (2026-10-29, the force-on-a-conductor film: reverse: "" five times, each a code error)."""
+    if isinstance(value, dict):
+        for key in [k for k, v in value.items() if v is None or v == ""]:
+            del value[key]
+        for v in value.values():
+            drop_blanks(v)
+    elif isinstance(value, list):
+        for v in value:
+            drop_blanks(v)
+    return value
+
+
+def illustrated(spec):
+    return bool(spec.get("illustrative")) or bool(spec.get("compound")) and all(
+        (p.get("spec") or {}).get("illustrative") for p in spec.get("parts") or [] if isinstance(p, dict))
+
+
 def beat_errors(config, scenes, cards):
     """Errors of the linkwork beats among resolved scenes (with start and end seconds)."""
     beats = [s for s in scenes if s.get("kind") == "linkwork"]
@@ -167,7 +186,7 @@ def beat_errors(config, scenes, cards):
     names = {c["name"] for c in cards or []}
     errors, specs = [], []
     for s in beats:
-        spec = s.get("linkwork")
+        spec = drop_blanks(s.get("linkwork"))
         verbs = spec_verbs(spec)
         if verbs is None:
             errors.append(f"{s.get('id')}: a linkwork beat needs a 'linkwork' object: a verb spec, or "
@@ -188,6 +207,11 @@ def beat_errors(config, scenes, cards):
             continue
         r = results[_key(spec)]
         errors += [f"{s['id']}: {e}" for e in r["errors"][:6]]
+        if r["errors"] and not illustrated(spec):
+            # 2026-10-29: a reviewer struck a circuit's invented values, the verb then asked for them again, and the
+            # plan went round until it ran out of tries
+            errors.append(f"{s['id']}: a value the verb needs that the narration never states: give it a simple one "
+                          "and set illustrative:true, so no number shows")
         length = s["end"] - s["start"]
         # A scene a little long plays faster (speed_to_fit); one far too long cannot, and the planner is told the
         # levers it really has: a longer beat, or less to show (a graph's own drawing pace has no time to shorten).
