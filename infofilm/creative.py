@@ -564,9 +564,15 @@ SHEET_TASK = (
     "equation or figure), 'look' or 'notice' (the narrator adds 'Look carefully.' or 'Notice what changes.' while "
     "the scene plays on), or 'replay' (a Linkwork scene plays again after 'Watch it once more.'; at most {replays} "
     "in the film, for the motion that is the heart of the idea). Give the core ideas the time they need: a longer "
-    "beat, a scene carried through the next point, or room; never rush them to fit more beats in. "
+    "beat, a scene carried through the next point, or room; never rush them to fit more beats in. A figure or "
+    "scene that shows what a later sentence states (a rule's labelled mapping, a result, a case) starts at that "
+    "sentence; when it is not the point's first sentence, open the point with another beat before it "
+    "(2026-10-29: Fleming's rule figure, its fingers labelled, opened the point at 'stretch your fingers', five "
+    "tries running, before the narration named what each finger shows). "
     "Reviewing: judge the film's shape: vector first, one beat per idea, whether every core idea gets the time and "
-    "room it needs, and whether each beat's choice fits its passage. "
+    "room it needs, and whether each beat's choice fits its passage. A room's cue ('Look carefully.', 'Notice what "
+    "changes.', 'Watch it once more.') is spoken by code when the film is voiced, so it is never in the narration "
+    "you see: never report it missing. "
     "Return ONLY {beats:[{id, point_id, start_word_id, through_point_id (optional), kind, verb (linkwork), figure "
     "(figure), intent, importance, room (optional)}]}; the scene shape above is for pass 2, not this call.")
 

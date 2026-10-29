@@ -214,6 +214,13 @@ class StagedPlanningTests(unittest.TestCase):
         self.assertIn("show both in the one beat", problems)
         self.assertIn("One sentence opens at most one beat", inspect.getsource(make_visual_beats))
 
+    def test_the_sheet_knows_room_cues_are_added_and_figures_wait_for_their_sentence(self):
+        # 2026-10-29, the force-on-a-conductor film: the reviewer struck every room as a cue missing from the
+        # narration, and the planner kept a labelled rule figure at the point's first sentence, five tries running
+        from infofilm.creative import SHEET_TASK
+        self.assertIn("spoken by code when the film is voiced", SHEET_TASK)
+        self.assertIn("open the point with another beat before it", SHEET_TASK)
+
     def test_a_name_wrapped_in_an_object_is_unwrapped(self):
         # 2026-10-29, the electric power film: {"type": "equation"} three tries running, for "equation"
         from infofilm.creative import sheet_errors
