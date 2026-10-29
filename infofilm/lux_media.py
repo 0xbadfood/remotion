@@ -75,7 +75,7 @@ def _run_remote(config, store, manifest, name):
     return True
 
 
-SPEAKABLE = 3       # the version of speakable(): part of a recording's identity, so a change records again
+SPEAKABLE = 4       # the version of speakable(): part of a recording's identity, so a change records again
 SAID_AS_WORDS = {"NASA", "ISRO", "LASER", "RADAR", "SONAR", "UNESCO", "UNICEF", "NATO", "SCUBA", "AIDS", "COVID", "OPEC",
                  "SEBI", "NITI", "ASEAN", "SAARC", "BRICS", "GATT", "FIFA", "OK"}
 ROMAN = re.compile(r"^[IVXLCDM]+$")

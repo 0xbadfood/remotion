@@ -178,4 +178,14 @@ class SpeakableTests(unittest.TestCase):
         self.assertEqual(speakable("It is three hundred seventy three point seven one four seven five four cubic metres."),
                          "It is three hundred seventy three point seven, one, four, seven, five, four cubic metres.")
         self.assertEqual(speakable("About two point five metres."), "About two point five metres.")
+
+    def test_a_change_to_speakable_bumps_its_version(self):
+        # 2026-10-29: the long-decimal fix left SPEAKABLE at 3, so the rerun reused the garbled takes and failed again.
+        # When speakable's output changes, raise SPEAKABLE (recordings are made again) and record both here.
+        import hashlib, json
+        from infofilm.lux_media import SPEAKABLE, speakable
+        samples = ["The SI unit is written m s to the power minus two.", "Air is one point zero zero zero three.",
+                   "It is three hundred seventy three point seven one four seven five four cubic metres.", "A z k-hat", "DNA in Class XI."]
+        seen = hashlib.sha256(json.dumps([speakable(x) for x in samples]).encode()).hexdigest()[:16]
+        self.assertEqual((SPEAKABLE, seen), (4, "8622a5d3400b0ac1"))
         self.assertEqual(speakable("One one-hundredth of it."), "One one-hundredth of it.")
