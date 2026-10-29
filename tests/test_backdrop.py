@@ -102,6 +102,18 @@ class PaintedWordsTests(unittest.TestCase):
             cloud.save(path)
             self.assertGreater(len(painted_words(path)), 0)
 
+    def test_a_changed_text_check_carries_a_new_version(self):
+        """2026-10-30: the check learned to read large titles but kept TEXT_CHECK = 2, so every cached backdrop that
+        passed the old check was trusted and re-renders kept their garbled titles. Changing the check's code without
+        raising TEXT_CHECK fails here; record the new fingerprint with the new version."""
+        import hashlib
+        import inspect
+        from infofilm import backdrop
+        code = "".join(inspect.getsource(f) for f in (backdrop.ocr_words, backdrop.strokes, backdrop.painted_words))
+        known = {3: "e541fea11f645de8"}
+        self.assertEqual(known.get(backdrop.TEXT_CHECK), hashlib.sha256(code.encode()).hexdigest()[:16],
+                         "the text check changed: raise TEXT_CHECK and record its fingerprint here")
+
     def test_a_large_light_title_on_a_plain_dark_backdrop_is_read(self):
         """2026-10-30: "Slalar Pnioct", crisp light grey on a dark gradient, passed every view of the gate."""
         from PIL import Image, ImageDraw, ImageFont

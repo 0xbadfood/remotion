@@ -30,8 +30,8 @@ DIGITS = re.compile(r"[^.;]*\d[^.;]*[.;]?")
 # though the prompt asked for a wordless image. Faint light letters on a textured dark image ("Unli·om Cirrcoual
 # Mountrein") escape plain OCR, so the check also reads the thin bright and thin dark strokes alone; texture read that
 # way gives only short low-confidence words. Over 102 backdrops every painted one had a word read at confidence 80 or
-# two long words at 50, and no clean one did.
-TEXT_CHECK = 2
+# two long words at 50, and no clean one did. A large crisp title needs a wider blur (version 3, 2026-10-30).
+TEXT_CHECK = 3
 SURE, LIKELY = 80, 50
 TAKES = 3
 
