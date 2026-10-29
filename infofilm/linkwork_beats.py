@@ -79,6 +79,10 @@ def teaching_text(evidence):
     record = (evidence or {}).get("curriculum") or {}
     parts = [record.get("concept", ""), record.get("summary", ""), record.get("chapter", "")]
     parts += [str(c) for c in record.get("coverage") or []]
+    # The facts the film will say: the coverage names equations and objectives, but how the book shows them (the area
+    # under a v-t graph) is only in the facts (2026-10-29, Equations of Motion: graph never reached the shortlist, and
+    # every beat sheet failed for want of the v-t graph and its area).
+    parts += [str(f.get("claim", "")) for f in (evidence or {}).get("facts") or [] if isinstance(f, dict)]
     return "\n".join(p for p in parts if p)
 
 

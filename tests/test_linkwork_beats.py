@@ -47,6 +47,14 @@ class LinkworkBeatTests(unittest.TestCase):
         wrong = {"verb": "sig_figs", "mode": "count", "numbers": [25]}
         self.assertNotIn("set illustrative:true", " ".join(linkwork_beats.beat_errors({}, [self.beat(wrong)], cards)))
 
+    def test_the_shortlist_reads_the_facts_the_film_will_say(self):
+        # 2026-10-29, Equations of Motion: the coverage listed only equations, the area under the v-t graph was in the
+        # facts alone, graph never reached the shortlist and every beat sheet failed for want of it
+        evidence = {"curriculum": {"concept": "Equations of Motion", "coverage": [{"point": "v = v0 + at"}]},
+                    "facts": [{"claim": "The area under the v-t curve between 0 and t is the displacement."}]}
+        self.assertIn("area under the v-t curve", linkwork_beats.teaching_text(evidence))
+        self.assertIn("graph", [c["name"] for c in linkwork_beats.shortlist({}, evidence, {"subject": "physics"})])
+
     def test_two_cases_side_by_side_are_one_compound_beat(self):
         # 2026-10-28, Class 10 Light C2: the sheet asked for a concave and a convex mirror side by side; one
         # ray_diagram draws one mirror, and the beat failed every round until the plan ran out of tries.
