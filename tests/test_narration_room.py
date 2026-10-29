@@ -192,6 +192,18 @@ class StagedPlanningTests(unittest.TestCase):
         self.assertIn("S01: figure is the id alone (a string)", problems)
         self.assertIn("S02", problems)
 
+    def test_two_beats_at_one_sentence_say_to_share_the_beat(self):
+        # 2026-10-29, the electric power film: P = I²R and P = V²/R in one sentence; the planner sees only sentence
+        # starts, so "a later word" was advice it could not take, and the reviewer kept asking for the second beat
+        from infofilm.creative import sheet_errors, make_visual_beats
+        import inspect
+        script, timing, _, rows = self.sheet()
+        rows[1]["start_word_id"] = rows[0]["start_word_id"]
+        rows[1]["point_id"] = rows[0]["point_id"]
+        problems = " ".join(sheet_errors({"beats": rows}, script, timing))
+        self.assertIn("show both in the one beat", problems)
+        self.assertIn("One sentence opens at most one beat", inspect.getsource(make_visual_beats))
+
     def test_a_name_wrapped_in_an_object_is_unwrapped(self):
         # 2026-10-29, the electric power film: {"type": "equation"} three tries running, for "equation"
         from infofilm.creative import sheet_errors

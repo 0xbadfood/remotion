@@ -236,8 +236,8 @@ def anchor_errors(scenes, script, timing):
         anchored = [s for s in scenes if s.get("start_word_id") in positions]
         bad = [b.get("id") for a, b in zip(anchored, anchored[1:]) if positions[b["start_word_id"]] <= positions[a["start_word_id"]]]
         order.append("Word anchors must increase strictly; no repeats or backward cuts" + (f" (at {', '.join(map(str, bad))})" if bad else "")
-                     + ": two beats never start on one word; start the second at a later word of its sentence, or show "
-                       "both in one beat")
+                     + ": two beats never start at one sentence; show both in the one beat (an equation beat can show two "
+                       "results in turn), or start the second at a later sentence")
     return errors, order
 
 
@@ -406,6 +406,9 @@ def make_visual_beats(models, film, evidence, brief, *, experimental=True):
         "Reviewing: never ask for a point's first beat to start later than its first sentence (code refuses it); if something "
         "appears before it is stated, ask for an opening beat before it instead (2026-10-29: the scattering film's sheet "
         "ran out of tries on exactly this). "
+        "One sentence opens at most one beat: two results stated in the same sentence share that beat (an equation beat shows "
+        "both, one after the other); reviewing, never ask for a second beat at the sentence another beat starts at "
+        "(2026-10-29: the electric power film's sheet ran out of tries asking for P = V²/R apart from P = I²R, both in one sentence). "
         "Cover all points in their existing order. Start/end seconds are derived by code, not invented. "
         "Soft beat/image guides and image screen-time shares are suggestions, not quotas; use useful distinct images and let diagrams remain readable. "
         "Choose generated imagery whenever scenes, objects, people or details explain the passage; use graphics only when an actual mechanism or comparison benefits. "
