@@ -27,10 +27,12 @@ LABEL_WORDS = re.compile(r"[^.;]*\b(?:label\w*|caption\w*|overlay\w*|banner\w*|t
 # A sentence with a figure in it (the 10 g steel bob) asks for written numbers.
 DIGITS = re.compile(r"[^.;]*\d[^.;]*[.;]?")
 # 2026-10-29: 18 of 70 backdrops had painted titles and fake diagrams ("Dimeinnal Aayiss Retiontions", "Merror Fumule")
-# though the prompt asked for a wordless image; OCR finds two or more such words in every one of them and at most one
-# stray in the clean ones.
-TEXT_CHECK = 1
-MOST_WORDS = 1
+# though the prompt asked for a wordless image. Faint light letters on a textured dark image ("Unli·om Cirrcoual
+# Mountrein") escape plain OCR, so the check also reads the thin bright and thin dark strokes alone; texture read that
+# way gives only short low-confidence words. Over 102 backdrops every painted one had a word read at confidence 80 or
+# two long words at 50, and no clean one did.
+TEXT_CHECK = 2
+SURE, LIKELY = 80, 50
 TAKES = 3
 
 
@@ -40,13 +42,49 @@ def clean(text, limit):
     return re.sub(r"\s+", " ", DIGITS.sub(" ", LABEL_WORDS.sub(" ", text))).strip(" ,.;")[:limit]
 
 
+def ocr_words(path, psm):
+    """(confidence, word) for each word of four or more letters tesseract reads."""
+    out = subprocess.run(["tesseract", str(path), "-", "--psm", str(psm), "tsv"], capture_output=True, text=True,
+                         timeout=120).stdout
+    found = []
+    for line in out.splitlines()[1:]:
+        cells = line.split("\t")
+        if len(cells) == 12 and re.fullmatch(r"[A-Za-z]{4,}", cells[11].strip()):
+            found.append((float(cells[10]), cells[11].strip()))
+    return found
+
+
+def strokes(image, dark):
+    """Only the thin strokes brighter (or darker) than their surroundings, as black on white."""
+    from PIL import ImageChops, ImageFilter, ImageOps
+    source = ImageOps.invert(image) if dark else image
+    top = ImageOps.autocontrast(ImageChops.subtract(source, source.filter(ImageFilter.GaussianBlur(8))), cutoff=0.5)
+    return top.point(lambda v: 0 if v > 110 else 255)
+
+
 def painted_words(path):
-    """Words of four or more letters that OCR reads in an image (None when tesseract is missing)."""
+    """Words OCR is fairly sure were painted in an image: any read at SURE confidence, or two long ones (five or more
+    letters) read at LIKELY. Empty for a clean image; None when tesseract is missing."""
+    import tempfile
+    from PIL import Image
     try:
-        out = subprocess.run(["tesseract", str(path), "-"], capture_output=True, text=True, timeout=120).stdout
+        views = [ocr_words(path, 3)]
+        with tempfile.TemporaryDirectory() as folder:
+            image = Image.open(path).convert("L")
+            for dark in (False, True):
+                view = Path(folder) / f"strokes-{int(dark)}.png"
+                strokes(image, dark).save(view)
+                views.append(ocr_words(view, 11))
     except (FileNotFoundError, subprocess.TimeoutExpired):
         return None
-    return re.findall(r"[A-Za-z]{4,}", out)
+    words = []
+    for found in views:
+        sure = [w for c, w in found if c >= SURE]
+        likely = [w for c, w in found if c >= LIKELY and len(w) >= 5]
+        for w in sure + (likely if len(set(likely)) > 1 else []):
+            if w not in words:
+                words.append(w)
+    return words
 
 
 def wordless(store, value):
@@ -54,7 +92,7 @@ def wordless(store, value):
     if value.get("text_check") == TEXT_CHECK:
         return True
     words = painted_words(value["file"])
-    if words is not None and len(words) > MOST_WORDS:
+    if words:
         store.event("backdrop", "rejected", {"file": value["file"], "painted_words": words[:12]})
         return False
     return True
@@ -127,7 +165,7 @@ def draw(store, current, provider_id, text, params, seed, root):
                 folder = root if take == 0 else root / f"take-{take}"
                 candidate = render_take(current, store, folder, {**params, "seed": str(seed + take)}, "chapter backdrop")
                 words = painted_words(candidate)
-                if words is not None and len(words) > MOST_WORDS:
+                if words:
                     store.event("backdrop", "rejected", {"file": str(candidate), "painted_words": words[:12]})
                     continue
                 value = {"file": str(candidate), "sha256": digest(Path(candidate).read_bytes()), "prompt": text,

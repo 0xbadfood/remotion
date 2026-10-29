@@ -81,6 +81,27 @@ class PaintedWordsTests(unittest.TestCase):
             Image.new("RGB", (900, 300), (20, 30, 40)).save(path)
             self.assertEqual(painted_words(path), [])
 
+    def test_faint_letters_on_a_textured_backdrop_are_read_and_texture_alone_is_not(self):
+        """2026-10-29: "Unli·om Cirrcoual Mountrein", faint grey on a cloudy dark image, passed plain OCR."""
+        import random
+        from PIL import Image, ImageDraw, ImageFilter, ImageFont
+        from infofilm.backdrop import painted_words
+        rng = random.Random(7)
+        cloud = Image.new("L", (1536, 864))
+        cloud.putdata([rng.randint(30, 140) for _ in range(1536 * 864)])
+        cloud = cloud.filter(ImageFilter.GaussianBlur(3))
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "b.png"
+            cloud.save(path)
+            words = painted_words(path)
+            if words is None:
+                self.skipTest("tesseract is not installed")
+            self.assertEqual(words, [])
+            ImageDraw.Draw(cloud).text((420, 150), "Unliom Cirrcoual Mountrein", fill=120,
+                                       font=ImageFont.load_default(size=44))
+            cloud.save(path)
+            self.assertGreater(len(painted_words(path)), 0)
+
     def test_a_take_with_words_is_drawn_again_and_all_failing_keeps_the_gradient(self):
         from unittest import mock
         from infofilm import backdrop
