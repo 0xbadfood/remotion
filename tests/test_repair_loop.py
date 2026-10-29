@@ -155,6 +155,25 @@ class CallEscalationTests(unittest.TestCase):
             self.assertEqual(models._call_once.call_count, 1)                  # bad JSON / loop drafts: not here
 
 
+class ProviderRefusalTests(unittest.TestCase):
+    """2026-10-29: OpenAI's filter flagged a scene plan (a false positive) and the whole film stopped."""
+
+    def test_a_refused_prompt_goes_once_to_the_other_model(self):
+        from infofilm.llm import ProviderRefusal
+        folder = tempfile.TemporaryDirectory(); self.addCleanup(folder.cleanup)
+        store = Store(folder.name); self.addCleanup(store.db.close)
+        models = Models({"planner_url": "p", "reviewer_url": "r"}, store)
+        refused = ProviderRefusal("luna refused the prompt: invalid_prompt")
+        models._call_once = Mock(side_effect=[refused, {"ok": True}])
+        self.assertEqual(models.call("reviewer", "visual-beats-p3-draft-3", "Task"), {"ok": True})
+        self.assertEqual([c.args[0] for c in models._call_once.call_args_list], ["reviewer", "planner"])
+        self.assertTrue(models._call_once.call_args_list[1].args[1].endswith("-refused"))
+        models._call_once = Mock(side_effect=[refused, refused])                # both refuse: it stands
+        with self.assertRaises(ProviderRefusal):
+            models.call("planner", "x", "Task")
+        self.assertEqual(models._call_once.call_count, 2)
+
+
 class ReviewDecisionTests(unittest.TestCase):
     """Dandi C07: once code screened the moved targets, the reviewer's 78 (which still counted them) blocked the pass."""
 

@@ -78,6 +78,10 @@ class ModelOutputError(ValueError):
     """A saved response failed the output contract; safe to retry within a budget."""
 
 
+class ProviderRefusal(RuntimeError):
+    """The provider refused the prompt itself (flagged by its usage filter), not the model's answer."""
+
+
 # Development floor for screened rounds, kept low on purpose so runs keep going and surface other failures (user,
 # 2026-10-13). Production accepts nothing below PASS_SCORE.
 PASS_SCORE, SCREENED_FLOOR = 82, 65
@@ -132,7 +136,21 @@ class Models:
     def call(self, role, name, prompt, *, image_path=None, reference_image_paths=None, max_tokens=7000, escalate=True):
         """One model call. A response cut off at the output limit is retried once with 30% more room (user rule,
         2026-10-13): retrying at the same cap tends to fail again. Repair-loop drafts pass escalate=False because the
-        loop raises their cap itself (x1.6 up to max_output_tokens)."""
+        loop raises their cap itself (x1.6 up to max_output_tokens). A prompt the provider's filter refuses goes once to
+        the other role's model (2026-10-29: OpenAI flagged a Force and Inertia scene plan, a false positive, and the
+        whole film stopped)."""
+        try:
+            return self._call_escalating(role, name, prompt, image_path=image_path,
+                                         reference_image_paths=reference_image_paths, max_tokens=max_tokens, escalate=escalate)
+        except ProviderRefusal as exc:
+            other = {"planner": "reviewer", "reviewer": "planner"}.get(role)
+            if not other or not self.config.get(other + "_url") or name.endswith("-refused"):
+                raise
+            self.store.event(name, "refused", {"role": role, "fallback": other, "error": str(exc)[:300]})
+            return self._call_escalating(other, name + "-refused", prompt, image_path=image_path,
+                                         reference_image_paths=reference_image_paths, max_tokens=max_tokens, escalate=escalate)
+
+    def _call_escalating(self, role, name, prompt, *, image_path=None, reference_image_paths=None, max_tokens=7000, escalate=True):
         try:
             return self._call_once(role, name, prompt, image_path=image_path, reference_image_paths=reference_image_paths,
                                    max_tokens=max_tokens)
@@ -225,6 +243,8 @@ class Models:
             truncated = raw.get("status") == "incomplete" and "max_output" in str(raw.get("incomplete_details"))
             if not truncated and (response.status_code >= 400 or raw.get("status") != "completed"):
                 detail = str(raw.get("error") or raw.get("incomplete_details") or raw.get("status"))[:400]
+                if (raw.get("error") or {}).get("code") == "invalid_prompt" or "flagged" in detail:
+                    raise ProviderRefusal(f"{connection.get('label', url)} refused the prompt: {detail}")
                 raise RuntimeError(f"{connection.get('label', url)} request did not complete: {detail}")
             text = "".join(part.get("text", "") for item in raw.get("output", []) if item.get("type") == "message"
                            for part in item.get("content", []) if part.get("type") == "output_text")
