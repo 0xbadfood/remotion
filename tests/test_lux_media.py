@@ -203,3 +203,17 @@ class LongNumberTests(unittest.TestCase):
         self.assertNotIn("311.3,", problems)
         point["narration"] = "Its area is 311.3 square metres; 6.032 N and 0.0025 kg."
         self.assertEqual(script_errors({"points": [point]}, evidence), [])
+
+
+class PiecesTests(unittest.TestCase):
+    def test_a_point_dense_with_numbers_is_recorded_sentence_by_sentence(self):
+        # 2026-10-29, the significant-figures film: every take of a ten-number point slipped on a different number
+        from infofilm.lux_media import pieces
+        dense = {"id": "P10", "narration": "Subtract 7.06 g from 12.9 g. So 12.9 minus 7.06 is 5.8 g, not 5.84 g. "
+                                           "The difference of 0.307 m and 0.304 m is 0.003 m."}
+        parts = pieces(dense)
+        self.assertEqual([p["id"] for p in parts], ["P10-s1", "P10-s2", "P10-s3"])
+        self.assertEqual(parts[1]["narration"], "So 12.9 minus 7.06 is 5.8 g, not 5.84 g.")
+        self.assertEqual({p["part_of"] for p in parts}, {"P10"})
+        plain = {"id": "P02", "narration": "A unit is a standard. We compare with it 2 times."}
+        self.assertEqual(pieces(plain), [plain])

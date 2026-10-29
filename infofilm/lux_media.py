@@ -171,6 +171,20 @@ def _join_wavs(paths, destination):
                 output.writeframes(source.readframes(source.getnframes()))
 
 
+NUMBER = re.compile(r"\d+(?:\.\d+)?|\b(?:zero|one|two|three|four|five|six|seven|eight|nine)\s+point\b|\bto the power\b", re.I)
+DENSE = 5           # numbers in a point from which it is recorded sentence by sentence
+
+
+def pieces(point):
+    """A point with many numbers, as its sentences (each recorded and audited on its own, then joined): in a point
+    reading ten numbers every take slipped on one, a different one each time, and the whole point was taken again
+    (the significant-figures film, 2026-10-29). Other points stay whole."""
+    sentences = [x for x in re.split(r"(?<=[.!?])\s+(?=[A-Z0-9])", point["narration"].strip()) if x]
+    if len(NUMBER.findall(point["narration"])) < DENSE or len(sentences) < 2:
+        return [point]
+    return [{**point, "id": f"{point['id']}-s{j + 1}", "narration": x, "part_of": point["id"]} for j, x in enumerate(sentences)]
+
+
 def render_luxtts(config, store, points, name):
     if not lux_installed(config):
         raise RuntimeError("LuxTTS runtime is missing (lux_python, lux_root)")
@@ -179,7 +193,7 @@ def render_luxtts(config, store, points, name):
     reference_text = " ".join(str(config.get("reference_transcript") or "").split())
     text = "\n\n".join(point["narration"] for point in points)
     identity = digest({"points": points, "reference_sha256": digest(reference.read_bytes()), "reference_text": reference_text,
-                       "speakable": SPEAKABLE,
+                       "speakable": SPEAKABLE, "pieces": DENSE,
                        **{k: settings[k] for k in ["model", "speed", "num_steps", "t_shift"]}, "variant": config.get("audio_variant", 0)})
     root = store.root / "audio" / "luxtts" / identity[:20]
     final = root / "narration.wav"
@@ -190,7 +204,8 @@ def render_luxtts(config, store, points, name):
                 raise ValueError("Saved LuxTTS narration changed after its audit")
             return final, cached
     root.mkdir(parents=True, exist_ok=True)
-    selected, pending, started = {}, list(points), time.monotonic()
+    units = [piece for p in points for piece in pieces(p)]
+    selected, pending, started = {}, list(units), time.monotonic()
     for attempt in range(settings["max_attempts"]):
         if not pending:
             break
@@ -224,13 +239,24 @@ def render_luxtts(config, store, points, name):
     if pending:
         raise RuntimeError(f"LuxTTS point narration still needs review after {settings['max_attempts']} attempts: "
                            + ", ".join(p["id"] for p in pending))
+    taken = {key: int(path.parent.name.split("-")[-1]) + 1 for key, path in selected.items()}
+    for p in points:                                    # a point recorded in sentences: its sentences joined
+        parts = [u["id"] for u in units if u.get("part_of") == p["id"]]
+        if parts:
+            joined = root / "points" / p["id"] / "joined" / "narration.wav"
+            joined.parent.mkdir(parents=True, exist_ok=True)
+            _join_wavs([selected[x] for x in parts], joined)
+            selected[p["id"]] = joined
+            taken[p["id"]] = max(taken[x] for x in parts)
+            for x in parts:
+                selected.pop(x)
     _join_wavs([selected[p["id"]] for p in points], final)
     spoken = {p["id"]: mfa_numeric_text(p["narration"]) for p in points}
     info = {**audio_info(final), "text": text, "text_sha256": digest(text), "audit_policy": AUDIT_POLICY,
             "spoken_points": spoken, "reference_audio": str(reference), "reference_audio_sha256": digest(reference.read_bytes()),
             "reference_transcript": reference_text or None, "language": "en", "provider": "LuxTTS",
             **{k: settings[k] for k in ["model", "device", "speed", "num_steps", "t_shift", "max_attempts"]},
-            "point_attempts": {key: int(path.parent.name.split("-")[-1]) + 1 for key, path in selected.items()},
+            "point_attempts": {key: taken[key] for key in selected},
             "measured_latency_seconds": round(time.monotonic() - started, 3),
             "observed_words_per_minute": round(word_count(text) / audio_info(final)["duration_seconds"] * 60, 3),
             "point_clips": {key: str(value) for key, value in selected.items()}}
