@@ -21,6 +21,20 @@ class BackdropPromptTests(unittest.TestCase):
             self.assertNotIn(gone, text)
         self.assertIsNone(RASTER_LABEL.search(text))
 
+    def test_equations_and_diagrams_stay_out_and_the_image_is_wordless(self):
+        # 2026-10-29, Resistors in Parallel: the style asked for equations and tables, and the backdrop came back a
+        # chalkboard of garbled writing ("Resistors in Parrald") behind every equation slide
+        context = {"chapter": {"objective": "Resistors in Parallel"},
+                   "film": {"shared_visual_style": "Clean editorial explanatory illustration on a dark field. Use native vector "
+                                                   "graphics for all circuit diagrams (Figures 11.7). Show equations, derivation "
+                                                   "steps and the Example 11.8 tab"}}
+        text = prompt(context)
+        self.assertIn("Clean editorial explanatory illustration", text)
+        for gone in ("vector graphics", "derivation", "Example 11.8"):
+            self.assertNotIn(gone, text)
+        self.assertIn("A wordless image", text)
+        self.assertIsNone(RASTER_LABEL.search(text))
+
     def test_clean_drops_label_sentences_and_quotes(self):
         self.assertEqual(clean('Mangroves at dawn. Add a banner with the date. "Royal" tigers swim.', 200),
                          "Mangroves at dawn. tigers swim")

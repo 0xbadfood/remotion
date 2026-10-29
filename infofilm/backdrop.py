@@ -14,8 +14,11 @@ from pathlib import Path
 from .core import digest, read, write
 
 PROTOCOL = "infofilm.chapter-backdrop.v1"
+# Sentences about written or drawn-in-code elements: equations, tables and diagrams belong to native overlays, and
+# naming them in an image prompt paints a chalkboard of garbled writing (2026-10-29, the Electricity films).
 LABEL_WORDS = re.compile(r"[^.;]*\b(?:label\w*|caption\w*|overlay\w*|banner\w*|text|typography|words?|date|title\w*|"
-                         r"names?|letter\w*|numbers?|quotes?|identified)\b[^.;]*[.;]?", re.I)
+                         r"names?|letter\w*|numbers?|quotes?|identified|equations?|formula\w*|derivations?|tables?|tab|"
+                         r"figures?|fig|diagrams?|graphs?|charts?|vector|examples?|worksheets?|symbols?)\b[^.;]*[.;]?", re.I)
 
 
 def clean(text, limit):
@@ -34,7 +37,9 @@ def prompt(context):
             + (f"Shared visual style: {style}. " if style else "")
             + f"Scene: an evocative, unpeopled backdrop that sets the mood for this lesson: {lesson}. "
             + (f"Visual world: {direction}. " if direction else "")
-            + "Quiet, cinematic, richly textured surfaces and gentle light.")
+            + "Quiet, cinematic, richly textured surfaces and gentle light. "
+            + "A wordless image: no writing, letters, numbers or equations anywhere, and no blackboards, whiteboards, "
+              "books, papers or screens.")
 
 
 def backdrop_context(store):
