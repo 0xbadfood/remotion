@@ -73,6 +73,20 @@ class LinkworkBeatTests(unittest.TestCase):
         scene = {"id": "S06", "point_id": "P07", "kind": "linkwork", "linkwork": pair}
         self.assertFalse([e for e in match_errors({"scenes": [scene]}, [row]) if "the sheet chose the verb" in e])
 
+    def test_a_linkwork_beat_that_keeps_failing_steps_down_to_a_quiet_image(self):
+        # 2026-10-29, Equations of Motion: a moving dot could never show "the signs given to v0, v, a, t and x matter",
+        # pass 2 may not change the kind, and the batch ran out of tries
+        from infofilm.creative import beat_ladder, match_errors
+        row = {"id": "S15", "point_id": "P01", "start_word_id": "w0001", "kind": "linkwork", "verb": "motion_on_line"}
+        written = {**row, "heading": "Signs matter", "summary": "Each quantity carries a sign.", "linkwork": self.spec}
+        ladder = beat_ladder([row])
+        self.assertIn("words", ladder(2, "S15", written))
+        built = ladder(3, "S15", written)
+        self.assertEqual((built["kind"], built["heading"], built["start_word_id"]), ("image", "Signs matter", "w0001"))
+        self.assertEqual(match_errors({"scenes": [built]}, [row]), [])
+        self.assertTrue(1 <= len(built["image_brief"]) <= 1800)          # what beat_errors asks of an image beat
+        self.assertIsNone(beat_ladder([{**row, "kind": "figure"}])(3, "S15", written))   # only a verb steps down
+
     def test_motion_must_fit_inside_its_beat(self):
         errors = linkwork_beats.beat_errors({"narration_room": False}, [self.beat(self.spec, 10.0, 11.0)], self.cards)
         self.assertTrue(any("but the beat is only 1.0 s" in e and "join this passage" in e for e in errors), errors)

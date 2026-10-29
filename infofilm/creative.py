@@ -675,6 +675,31 @@ def sheet_errors(value, script, timing, figures=None, linkwork=None, typical=Non
     return errors
 
 
+# A Linkwork beat whose verb cannot carry its sheet row's intent fails every round (2026-10-29, Equations of Motion: a
+# moving dot asked to show "the signs given to v0, v, a, t and x matter"), and pass 2 may not change the kind. The
+# stage's ladder: rung 2 tells the writer to draw what the verb can and let the words carry the point; rung 3, owned
+# by code, makes it a quiet image beat under the writer's heading and summary, so one beat never stops a film.
+LADDER_IMAGE = ("A quiet abstract editorial backdrop: soft layered fields of light and muted colour, gentle depth, no people, "
+                "no objects, no text.")
+
+
+def beat_ladder(rows):
+    kinds = {r["id"]: r.get("kind") for r in rows}
+
+    def ladder(rung, ident, value):
+        if not isinstance(value, dict) or kinds.get(value.get("id")) != "linkwork":
+            return None
+        if rung == 2:
+            return ("The sheet's verb has not carried this beat's intent after several tries: draw only what the verb can "
+                    "show truly, and let the heading and summary state the rest in words.")
+        keep = {k: value[k] for k in ("id", "point_id", "start_word_id", "through_point_id", "heading", "summary")
+                if value.get(k)}
+        return {**keep, "kind": "image", "labels": [], "details": [], "motion": "drift", "copy_density": "minimal",
+                "camera": "still", "image_brief": LADDER_IMAGE, "fallback": "ladder",
+                "rationale": "Code fallback: the verb could not show this point; the heading, summary and narration carry it."}
+    return ladder
+
+
 def match_errors(value, rows):
     """A pass-2 batch keeps its sheet rows: same beats, anchors, kinds and choices (a compound keeps the sheet's verb
     among its parts)."""
@@ -686,10 +711,11 @@ def match_errors(value, rows):
     for scene, row in zip(scenes, rows):
         if not isinstance(scene, dict):
             continue
-        for key in ("id", "point_id", "start_word_id", "through_point_id", "kind"):
+        fallback = scene.get("fallback") == "ladder"          # code's own replacement keeps the anchors only
+        for key in ("id", "point_id", "start_word_id", "through_point_id") + (() if fallback else ("kind",)):
             if (scene.get(key) or None) != (row.get(key) or None):
                 errors.append(f"{row['id']}: keep the sheet's {key} {row.get(key)!r} (got {scene.get(key)!r})")
-        if row.get("kind") == "linkwork" and row.get("verb") not in (spec_verbs(scene.get("linkwork")) or []):
+        if row.get("kind") == "linkwork" and not fallback and row.get("verb") not in (spec_verbs(scene.get("linkwork")) or []):
             errors.append(f"{row['id']}: the sheet chose the verb {row.get('verb')!r}; write its spec")
         if row.get("kind") == "figure" and isinstance(scene.get("figure"), dict):
             figure = scene["figure"]
@@ -754,7 +780,7 @@ def staged_beats(models, film, evidence, task, context, figures, experimental, l
             return (beat_errors(x, part_script, part_timing, figures, linkwork) + camera_errors(x, motion_on(config))
                     + match_errors(x, batch))
         part = models.loop(f"visual-beats-{film['requested_seconds']}-p{number}", task + STAGED_SCENES_TASK,
-                           part_context, validate, experimental=experimental, units=BEAT_UNITS)
+                           part_context, validate, experimental=experimental, units=BEAT_UNITS, ladder=beat_ladder(batch))
         for scene, row in zip(part["scenes"], batch):
             scene.update({k: row[k] for k in ("importance", "room", "intent") if row.get(k)})
         scenes.extend(part["scenes"])
