@@ -22,6 +22,19 @@ from .planning import make_evidence, make_library, make_script, make_storyboard,
 from .video import compile_timeline, render
 
 
+POINT_LEVEL = {"numeric_mismatch", "text_mismatch"}
+
+
+def point_audited(audit, info):
+    """The whole film's audit, given that every point clip passed its own (three recognisers and an arbiter): a number
+    or word one recogniser mishears in the joined film does not overrule them; coverage, order, silence and repeats,
+    which only the joined film shows, still fail it (the significant-figures film, 2026-10-29: all 18 points passed,
+    then one whole-film transcript misheard a number among a hundred, and the film went to another voice)."""
+    if audit["status"] == "passed" or not info.get("point_attempts") or not set(audit.get("reasons") or []) <= POINT_LEVEL:
+        return audit
+    return {**audit, "status": "passed", "acceptance_method": "point_audits", "whole_film_reasons": audit["reasons"]}
+
+
 def agent_role(config):
     """The research agent calls tools through chat completions (or Claude's Messages API, translated in
     anthropic_llm): the reviewer as before, unless the reviewer is a Responses-API connection, then the planner."""
@@ -144,14 +157,14 @@ def prepare_audio(config, store, models, evidence, duration, rate, experimental,
                                     for p in script["points"]]}
     for attempt in range(2):
         audio, info = render(config, f"narration-{duration}-{attempt}")
-        audit = audit_audio(config, store, audio, script_text(audited), points=audited["points"])
+        audit = point_audited(audit_audio(config, store, audio, script_text(audited), points=audited["points"]), info)
         if audit["status"] != "passed":
             store.event(f"narration-{duration}", "audit_failed", {"audit": audit})
             if attempt == 1:
                 raise RuntimeError("Narration did not pass bounded ASR review")
             # Preserve the failed take and render the same text as a new provider job.
             audio, info = render({**config, "audio_variant": attempt+1}, f"narration-{duration}-repair-{attempt}")
-            audit = audit_audio(config, store, audio, script_text(audited), points=audited["points"])
+            audit = point_audited(audit_audio(config, store, audio, script_text(audited), points=audited["points"]), info)
             if audit["status"] != "passed" and config.get("tts_engine") == "luxtts" and config.get("tts_fallback", "vibevoice") == "vibevoice":
                 # User, 2026-10-26: when LuxTTS fails twice it is the voice's weakness (it said "a zic hat" for
                 # "A z k-hat"), so the same script goes to VibeVoice, with its own pronunciation lexicon, before

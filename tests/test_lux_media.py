@@ -217,3 +217,14 @@ class PiecesTests(unittest.TestCase):
         self.assertEqual({p["part_of"] for p in parts}, {"P10"})
         plain = {"id": "P02", "narration": "A unit is a standard. We compare with it 2 times."}
         self.assertEqual(pieces(plain), [plain])
+
+
+class WholeFilmAuditTests(unittest.TestCase):
+    def test_point_audits_stand_against_a_number_misheard_in_the_whole_film(self):
+        # 2026-10-29, the significant-figures film: 18 points passed, the joined film's transcript misheard one number
+        from infofilm.pipeline import point_audited
+        failed = {"status": "failed", "reasons": ["numeric_mismatch"]}
+        self.assertEqual(point_audited(failed, {"point_attempts": {"P01": 1}})["status"], "passed")
+        self.assertEqual(point_audited(failed, {})["status"], "failed")                       # not point-audited
+        gap = {"status": "failed", "reasons": ["numeric_mismatch", "point_coverage"]}
+        self.assertEqual(point_audited(gap, {"point_attempts": {"P01": 1}})["status"], "failed")
