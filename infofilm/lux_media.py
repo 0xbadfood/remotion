@@ -92,6 +92,12 @@ def speakable(text):
             return word
         return ".".join(word) + "."
     text = re.sub(r"\b[A-Z]{2,5}\b", acronym, text)
+    # The digits after a point, three or more, are said one by one with commas between: the voice ran long decimals
+    # together ("three hundred seventy three point seven one four seven five four" came out "3 meters, 307, 17.5" in
+    # every take of the significant-figures film, 2026-10-29).
+    digit = r"(?:zero|one|two|three|four|five|six|seven|eight|nine)"
+    text = re.sub(rf"\b(point\s+)({digit}(?:\s+{digit}\b(?!-)){{2,}})",
+                  lambda m: m.group(1) + ", ".join(m.group(2).split()), text, flags=re.I)
     # A run of the same digit word ("zero zero zero") is said with commas between: in "one point zero zero zero three"
     # (air's refractive index) the voice dropped a zero in every take of Class 10 Light C6 (2026-10-29), and the
     # audit rightly heard 1.003; with commas each is said on its own.

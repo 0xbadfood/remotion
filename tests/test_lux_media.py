@@ -172,5 +172,10 @@ class SpeakableTests(unittest.TestCase):
         # 2026-10-26: "A z. k.-hat" was said "a zic hat"; a unit vector stays a word of its own
         self.assertEqual(speakable("A x i-hat plus A y j-hat plus A z k-hat"), "A x i-hat plus A y j-hat plus A z k-hat")
         # 2026-10-29, Light C6: a run of the same digit lost one in every take ("one point zero zero zero three")
-        self.assertEqual(speakable("Air is one point zero zero zero three."), "Air is one point zero, zero, zero three.")
+        self.assertEqual(speakable("Air is one point zero zero zero three."), "Air is one point zero, zero, zero, three.")
+        self.assertEqual(speakable("Twelve zero zero people."), "Twelve zero, zero people.")
+        # 2026-10-29, significant figures: long decimals ran together in every take; each digit is said on its own
+        self.assertEqual(speakable("It is three hundred seventy three point seven one four seven five four cubic metres."),
+                         "It is three hundred seventy three point seven, one, four, seven, five, four cubic metres.")
+        self.assertEqual(speakable("About two point five metres."), "About two point five metres.")
         self.assertEqual(speakable("One one-hundredth of it."), "One one-hundredth of it.")
