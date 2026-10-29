@@ -105,3 +105,19 @@ class AgentTurnTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class DroppedStreamTests(unittest.TestCase):
+    def test_a_stream_cut_off_midway_starts_again(self):
+        # 2026-10-29, Stopping Distance: "peer closed connection without sending complete message body" stopped a film
+        from infofilm.anthropic_llm import STREAM_TRIES, _final
+        message = MagicMock(stop_reason="end_turn")
+        good = MagicMock(); good.__enter__.return_value.get_final_message.return_value = message
+        cut = MagicMock(); cut.__enter__.return_value.get_final_message.side_effect = httpx.RemoteProtocolError("peer closed")
+        cli, waits = MagicMock(), []
+        cli.messages.stream.side_effect = [cut, cut, good]
+        self.assertIs(_final(cli, "beats", sleep=waits.append, model="m"), message)
+        self.assertEqual(waits, [10, 20])
+        cli.messages.stream.side_effect = [cut] * STREAM_TRIES
+        with self.assertRaises(httpx.RemoteProtocolError):
+            _final(cli, "beats", sleep=waits.append, model="m")

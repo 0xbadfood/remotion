@@ -8,9 +8,11 @@ from __future__ import annotations
 
 import base64
 import json
+import time
 from pathlib import Path
 
 import anthropic
+import httpx
 
 MEDIA = {'.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.gif': 'image/gif'}
 
@@ -35,16 +37,28 @@ def _image(path):
                                         'data': base64.standard_b64encode(path.read_bytes()).decode()}}
 
 
-def _final(cli, label, **params):
+# A stream cut off midway (2026-10-29, Stopping Distance: "peer closed connection without sending complete message
+# body") is past the SDK's own retries, which only cover a request that fails to start: the whole call starts again.
+DROPPED = (httpx.RemoteProtocolError, httpx.ReadError, httpx.ReadTimeout, anthropic.APIConnectionError)
+STREAM_TRIES = 5
+
+
+def _final(cli, label, *, sleep=time.sleep, **params):
     """Stream the request (long thinking + answer would otherwise risk an HTTP timeout) and return the message."""
-    try:
-        with cli.messages.stream(**params) as stream:
-            message = stream.get_final_message()
-    except anthropic.APIStatusError as exc:
-        if _billing(exc):
-            raise LLMBillingError(f'{label}: the Anthropic account cannot pay for this call ({exc.message}); '
-                                  'the job stops here: top up the credit balance, then resume the job') from exc
-        raise
+    for attempt in range(STREAM_TRIES):
+        try:
+            with cli.messages.stream(**params) as stream:
+                message = stream.get_final_message()
+            break
+        except anthropic.APIStatusError as exc:
+            if _billing(exc):
+                raise LLMBillingError(f'{label}: the Anthropic account cannot pay for this call ({exc.message}); '
+                                      'the job stops here: top up the credit balance, then resume the job') from exc
+            raise
+        except DROPPED:
+            if attempt == STREAM_TRIES - 1:
+                raise
+            sleep(10 * 2 ** attempt)
     if message.stop_reason == 'refusal':
         details = message.stop_details
         raise RuntimeError(f'{label} declined the request (refusal'
