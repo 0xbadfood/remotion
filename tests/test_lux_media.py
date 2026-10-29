@@ -172,7 +172,7 @@ class SpeakableTests(unittest.TestCase):
         # 2026-10-26: "A z. k.-hat" was said "a zic hat"; a unit vector stays a word of its own
         self.assertEqual(speakable("A x i-hat plus A y j-hat plus A z k-hat"), "A x i-hat plus A y j-hat plus A z k-hat")
         # 2026-10-29, Light C6: a run of the same digit lost one in every take ("one point zero zero zero three")
-        self.assertEqual(speakable("Air is one point zero zero zero three."), "Air is one point zero, zero, zero, three.")
+        self.assertEqual(speakable("Air is one point zero zero zero three."), "Air is one point zero, zero, zero three.")
         self.assertEqual(speakable("Twelve zero zero people."), "Twelve zero, zero people.")
         # 2026-10-29, significant figures: long decimals ran together in every take; each digit is said on its own
         self.assertEqual(speakable("It is three hundred seventy three point seven one four seven five four cubic metres."),
@@ -187,5 +187,19 @@ class SpeakableTests(unittest.TestCase):
         samples = ["The SI unit is written m s to the power minus two.", "Air is one point zero zero zero three.",
                    "It is three hundred seventy three point seven one four seven five four cubic metres.", "A z k-hat", "DNA in Class XI."]
         seen = hashlib.sha256(json.dumps([speakable(x) for x in samples]).encode()).hexdigest()[:16]
-        self.assertEqual((SPEAKABLE, seen), (4, "8622a5d3400b0ac1"))
+        self.assertEqual((SPEAKABLE, seen), (5, "98e3bbfdf600f300"))
         self.assertEqual(speakable("One one-hundredth of it."), "One one-hundredth of it.")
+
+
+class LongNumberTests(unittest.TestCase):
+    def test_a_long_calculator_value_is_never_read_out(self):
+        # 2026-10-29, the significant-figures film: 311.299254 and 373.714754 were garbled in every take
+        from infofilm.planning import script_errors
+        evidence = {"facts": [{"id": "F1"}]}
+        point = {"id": "P07", "heading": "A cube", "fact_ids": ["F1"],
+                 "narration": "Its area is 311.299254 square metres, reported as 311.3; 0.003 m stays."}
+        problems = " ".join(script_errors({"points": [point]}, evidence))
+        self.assertIn("P07: narration reads out 311.299254", problems)
+        self.assertNotIn("311.3,", problems)
+        point["narration"] = "Its area is 311.3 square metres; 6.032 N and 0.0025 kg."
+        self.assertEqual(script_errors({"points": [point]}, evidence), [])

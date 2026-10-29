@@ -209,6 +209,14 @@ def script_errors(value, evidence, budget=None, duration=None):
             errors.append(f"{p.get('id')}: needs narration, a heading and fact_ids drawn only from the evidence")
         if word_count(p.get("heading", "")) > 7:
             errors.append(f"{p.get('id')}: heading has {word_count(p.get('heading', ''))} words; at most 7")
+        # 2026-10-29, the significant-figures film: the voice garbled 311.299254 and 373.714754 in every take. A long
+        # calculator value is shown on screen, never read out.
+        long = [n for n in re.findall(r"\d[\d,]*\.\d+", p.get("narration", ""))
+                if len(n.split(".")[1]) > 4 or len(re.sub(r"\D", "", n)) > 7]
+        if long:
+            errors.append(f"{p.get('id')}: narration reads out {', '.join(long[:3])}: say at most 4 digits after the point "
+                          f"(at most 7 in all); give the rounded or reported value, and let the picture show the long one "
+                          f"('the calculator shows 311.299254' becomes 'the calculator gives about 311.299, with more digits')")
     sheet = (evidence.get("chapter_context") or {}).get("beat_sheet")
     if sheet and points:
         words, target = sum(word_count(p.get("narration", "")) for p in points), sheet["word_budget"]
