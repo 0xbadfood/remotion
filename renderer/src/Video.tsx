@@ -4,6 +4,8 @@ import {DepthImage} from './DepthImage';
 import {LinkworkScene} from './Linkwork';
 import type {Scene as LinkworkData} from './linkwork/index.ts';
 
+// A Linkwork scene's lowest text (96% down) lands at 88.5%, clear of a one-line caption: (0.885 - 0.095) / (0.96 - 0.095).
+export const LINKWORK_FIT = 0.913;
 export type Scene = {id:string; point_id:string; from:number; duration:number; kind:'image'|'flow'|'compare'|'cycle'|'figure'|'animation'|'linkwork'; linkwork?:LinkworkData; linkworkSpeed?:number; linkworkRestart?:number; src?:string; credit?:string; depth?:string; clip?:string; clipSeconds?:number; backdrop?:string;
   heading:string; summary:string; labels:string[]; details:string[]; banner?:string; needs_review?:boolean; review_tag?:string; copy_density?:'minimal'|'standard'; motion:'push'|'pull'|'drift'|'hold'; index:number; source_ids:string[]; reveals?:number[];
   layers?:{base:string; highlight?:string|null; highlightAt:number; labels:{src:string; at:number}[]}};
@@ -95,8 +97,13 @@ const SceneView:React.FC<{scene:Scene;lead:number;brief?:FilmData['creativeBrief
   // background, with its own heading; it fills the frame and the film's captions sit over its free bottom band.
   // A Linkwork beat: an exact scene drawn by code from its checked data, frame by frame, on the film's background; its
   // times count from the cut (the lead keeps it in step with the narration, as for animations).
+  // Linkwork lays out between the header strip (top 9.5%) and 96% down; the scene is fitted, from the header's edge,
+  // above the captions' band (one line starts 10.4% from the bottom), so no label sits under a caption (2026-10-29:
+  // axis names, the earth plate's label and a coil's readout were hidden).
   if (scene.kind==='linkwork' && scene.linkwork) return <AbsoluteFill style={{background:teal,overflow:'hidden',opacity:fade}}>
-    <Sequence from={lead}><LinkworkScene scene={scene.linkwork} transparent speed={scene.linkworkSpeed ?? 1} restart={scene.linkworkRestart}/></Sequence>
+    <AbsoluteFill style={{transform:`scale(${LINKWORK_FIT})`,transformOrigin:'50% 9.5%'}}>
+      <Sequence from={lead}><LinkworkScene scene={scene.linkwork} transparent speed={scene.linkworkSpeed ?? 1} restart={scene.linkworkRestart}/></Sequence>
+    </AbsoluteFill>
   </AbsoluteFill>;
   if (scene.kind==='animation') return <AbsoluteFill style={{background:teal,overflow:'hidden',opacity:fade}}>
     {scene.src && <Sequence from={lead}><OffthreadVideo data-measure="animation" src={staticFile(scene.src)} muted
