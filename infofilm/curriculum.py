@@ -28,7 +28,12 @@ EVIDENCE_TASK = (
     "textbook itself and is authoritative: keep its facts, dates, names, terms and framing, and never contradict it. "
     "The other sources are checked additions that fill gaps the book leaves (an unexplained term, a missing date, a "
     "person or place it names without explaining); use them only for that, and leave out any claim that disagrees "
-    "with the book. Add no opinions of your own. Up to 30 facts are allowed so that the whole concept is covered.")
+    "with the book. Add no opinions of your own. Up to 30 facts are allowed so that the whole concept is covered. "
+    "An 'Objective:' coverage point was written about the concept, not taken from the book: if no supplied source "
+    "teaches what it asks, never invent or stretch a fact to carry it; list it in source_gaps as {{coverage: 'K3', "
+    "why: what the sources do and do not say}}. A point in source_gaps needs no fact and is not narrated. A reviewer "
+    "accepts a true source gap, and raises one only when a supplied source does teach the point. Book points "
+    "(Definition, Law, Key term, Equation, Event, Person) are never gaps.")
 
 SCRIPT_TASK = (
     " This is a curriculum film for {audience}, teaching one textbook concept. Coverage overrides the advice above "
@@ -379,10 +384,36 @@ def coverage_ids(curriculum):
     return [c['id'] for c in curriculum.get('coverage', [])]
 
 
+# Objectives are written about a concept when its digest is built, and may ask for more than its book text teaches:
+# Work Done by a Constant Force asked for "the physical significance of work in terms of energy transfer", which the
+# book never says there; six honest briefs flagged the gap and every one was refused (2026-10-30). Such a point may be
+# declared a source gap instead of carried by a stretched fact; at most a third of the objectives, never a book point.
+def source_gaps(evidence, curriculum):
+    """Coverage ids the brief declares no source teaches, and the errors in that declaration."""
+    points = {c['id']: c['point'] for c in curriculum.get('coverage', [])}
+    gaps, errors = set(), []
+    listed = evidence.get('source_gaps') or []
+    if not isinstance(listed, list):
+        return gaps, ['source_gaps is a list of {coverage, why}']
+    for g in listed:
+        c = g.get('coverage') if isinstance(g, dict) else None
+        if c not in points or not str(g.get('why') or '').strip():
+            errors.append(f'source_gaps: each is {{coverage, why}} with a coverage id from {sorted(points)}')
+        elif not points[c].startswith('Objective:'):
+            errors.append(f'source_gaps: {c} is the book\'s own point ({points[c][:60]}), so a fact must carry it')
+        else:
+            gaps.add(c)
+    objectives = sum(p.startswith('Objective:') for p in points.values())
+    if len(gaps) > -(-objectives // 3):
+        errors.append(f'source_gaps: at most {-(-objectives // 3)} of the {objectives} objectives may be gaps; carry the others with facts')
+    return gaps, errors
+
+
 def evidence_coverage_errors(evidence, curriculum):
-    """Every coverage point is carried by a fact; facts name only known coverage ids."""
+    """Every coverage point is carried by a fact, or declared a source gap; facts name only known coverage ids."""
     known = set(coverage_ids(curriculum))
-    carried, errors = set(), []
+    gaps, errors = source_gaps(evidence, curriculum)
+    carried = set(gaps)
     for fact in evidence.get('facts', []):
         ids = fact.get('coverage') or []
         if not isinstance(ids, list) or any(c not in known for c in ids):
@@ -404,6 +435,7 @@ def script_coverage_errors(script, evidence):
         return []
     by_fact = {f.get('id'): set(f.get('coverage') or []) for f in evidence.get('facts', [])}
     narrated = {c for p in script.get('points', []) for f in p.get('fact_ids') or [] for c in by_fact.get(f, ())}
+    narrated |= source_gaps(evidence, curriculum)[0]                  # a declared gap is not narrated
     missing = [c for c in coverage_ids(curriculum) if c not in narrated]
     if not missing:
         return []

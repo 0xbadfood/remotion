@@ -173,7 +173,8 @@ def make_evidence(models, extraction, subject="How the Indian monsoon works", au
             task = task.replace("usable for short informational films", "usable for a short simplified film")
         else:
             task = task.replace("usable for short informational films", "usable for a short curriculum film").replace(
-                "evidence_note:'paraphrased support and section'}", "evidence_note:'paraphrased support and section',coverage:['K1']}")
+                "evidence_note:'paraphrased support and section'}", "evidence_note:'paraphrased support and section',coverage:['K1']}").replace(
+                "narrative_priorities:[string]}", "narrative_priorities:[string], source_gaps?:[{coverage,why}]}")
         task += evidence_task(curriculum)
     if chapter_context:
         task += (" This is one chapter of a longer film. Research its owned questions, scope and objective thoroughly. "

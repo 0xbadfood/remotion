@@ -27,6 +27,22 @@ class CurriculumTests(unittest.TestCase):
         self.assertEqual(script_coverage_errors(script, evidence), [])
         self.assertEqual(script_coverage_errors(script, {'facts': []}), [])          # ordinary films: no check
 
+    def test_an_objective_no_source_teaches_may_be_declared_a_gap(self):
+        # Work Done by a Constant Force (2026-10-30): an objective asked for "energy transfer", which the book never
+        # says there; six honest briefs flagged it and each was refused. A declared gap carries it; book points cannot.
+        curriculum = {**CURRICULUM, 'coverage': [{'id': 'K1', 'point': 'Objective: why salt'}, {'id': 'K2', 'point': 'Event: Dandi'},
+                                                 {'id': 'K3', 'point': 'Objective: energy transfer'}]}
+        evidence = {'curriculum': curriculum, 'facts': [{'id': 'F01', 'coverage': ['K1']}, {'id': 'F02', 'coverage': ['K2']}],
+                    'source_gaps': [{'coverage': 'K3', 'why': 'the book gives work, not energy transfer'}]}
+        self.assertEqual(evidence_coverage_errors(evidence, curriculum), [])
+        script = {'points': [{'id': 'P01', 'fact_ids': ['F01']}, {'id': 'P02', 'fact_ids': ['F02']}]}
+        self.assertEqual(script_coverage_errors(script, evidence), [], 'a gap is not narrated')
+        book = {**evidence, 'source_gaps': [{'coverage': 'K2', 'why': 'no'}]}
+        self.assertIn("K2 is the book's own point", ' '.join(evidence_coverage_errors(book, curriculum)))
+        both = {**evidence, 'facts': evidence['facts'][1:], 'source_gaps': [{'coverage': 'K1', 'why': 'a'}, {'coverage': 'K3', 'why': 'b'}]}
+        self.assertIn('at most 1 of the 2 objectives', ' '.join(evidence_coverage_errors(both, curriculum)))
+        self.assertIn('source_gaps', evidence_task(curriculum))
+
     def test_book_source_is_read_whole_and_task_names_the_concept(self):
         text = 'Unrelated opening words. ' * 400 + 'The end of the chapter.'
         context = evidence_context({'results': [{'url': 'https://ncert.nic.in/textbook/pdf/jess302.pdf', 'complete': True,
