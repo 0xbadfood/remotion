@@ -235,7 +235,9 @@ def anchor_errors(scenes, script, timing):
     if indices != sorted(set(indices)):
         anchored = [s for s in scenes if s.get("start_word_id") in positions]
         bad = [b.get("id") for a, b in zip(anchored, anchored[1:]) if positions[b["start_word_id"]] <= positions[a["start_word_id"]]]
-        order.append("Word anchors must increase strictly; no repeats or backward cuts" + (f" (at {', '.join(map(str, bad))})" if bad else ""))
+        order.append("Word anchors must increase strictly; no repeats or backward cuts" + (f" (at {', '.join(map(str, bad))})" if bad else "")
+                     + ": two beats never start on one word; start the second at a later word of its sentence, or show "
+                       "both in one beat")
     return errors, order
 
 
@@ -607,6 +609,11 @@ def sheet_errors(value, script, timing, figures=None, linkwork=None, typical=Non
         return ["Need a beat sheet of 1-120 beats: {beats:[...]}"]
     if any(not isinstance(r, dict) for r in rows):
         return ["Every beat of the sheet must be an object"]
+    for r in rows:   # {"type": "equation"} for "equation": the planner kept the wrapper three tries running (electric
+        f = r.get("figure")                      # power film, 2026-10-29); one plain name inside it is that name
+        names = [v for v in f.values() if isinstance(v, str)] if isinstance(f, dict) else []
+        if isinstance(f, dict) and len(f) == 1 and len(names) == 1 and next(iter(f)) in ("type", "id", "name", "figure"):
+            r["figure"] = names[0]
     errors, order = anchor_errors(rows, script, timing)
     kinds = {"image", "flow", "compare", "cycle"} | ({"figure"} if figures else set()) | ({"linkwork"} if linkwork else set())
     if figures:

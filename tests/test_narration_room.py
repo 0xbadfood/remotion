@@ -192,6 +192,17 @@ class StagedPlanningTests(unittest.TestCase):
         self.assertIn("S01: figure is the id alone (a string)", problems)
         self.assertIn("S02", problems)
 
+    def test_a_name_wrapped_in_an_object_is_unwrapped(self):
+        # 2026-10-29, the electric power film: {"type": "equation"} three tries running, for "equation"
+        from infofilm.creative import sheet_errors
+        script, timing, _, rows = self.sheet()
+        rows[0].update(kind="figure", figure={"type": "equation"})
+        rows[1].update(kind="figure", figure={"id": "pda-heart-front"})
+        figures = {"library": [{"id": "pda-heart-front"}]}
+        problems = " ".join(sheet_errors({"beats": rows}, script, timing, figures))
+        self.assertNotIn("figure is the id alone", problems)
+        self.assertEqual((rows[0]["figure"], rows[1]["figure"]), ("equation", "pda-heart-front"))
+
     def test_batches_cut_only_where_a_new_point_starts(self):
         from infofilm import creative
         _, _, _, rows = self.sheet()
