@@ -54,11 +54,12 @@ def ocr_words(path, psm):
     return found
 
 
-def strokes(image, dark):
-    """Only the thin strokes brighter (or darker) than their surroundings, as black on white."""
+def strokes(image, dark, radius=8):
+    """Only the strokes brighter (or darker) than their surroundings within `radius`, as black on white: 8 finds thin
+    faint lettering on texture, 25 a large title whose strokes a small blur takes for background."""
     from PIL import ImageChops, ImageFilter, ImageOps
     source = ImageOps.invert(image) if dark else image
-    top = ImageOps.autocontrast(ImageChops.subtract(source, source.filter(ImageFilter.GaussianBlur(8))), cutoff=0.5)
+    top = ImageOps.autocontrast(ImageChops.subtract(source, source.filter(ImageFilter.GaussianBlur(radius))), cutoff=0.5)
     return top.point(lambda v: 0 if v > 110 else 255)
 
 
@@ -68,19 +69,23 @@ def painted_words(path):
     import tempfile
     from PIL import Image
     try:
-        views = [ocr_words(path, 3)]
+        views = [(ocr_words(path, 3), False)]
         with tempfile.TemporaryDirectory() as folder:
             image = Image.open(path).convert("L")
+            # Scalar Product (2026-10-30): a crisp light title, "Slalar Pnioct", across a plain dark backdrop
+            # was read by no view until the background was taken over a wider blur
             for dark in (False, True):
-                view = Path(folder) / f"strokes-{int(dark)}.png"
-                strokes(image, dark).save(view)
-                views.append(ocr_words(view, 11))
+                for radius in (8, 25):
+                    view = Path(folder) / f"strokes-{int(dark)}-{radius}.png"
+                    strokes(image, dark, radius).save(view)
+                    # the wide view reads texture as words too (at about 50): only a sure word counts there
+                    views.append((ocr_words(view, 11), radius > 8))
     except (FileNotFoundError, subprocess.TimeoutExpired):
         return None
     words = []
-    for found in views:
+    for found, sure_only in views:
         sure = [w for c, w in found if c >= SURE]
-        likely = [w for c, w in found if c >= LIKELY and len(w) >= 5]
+        likely = [] if sure_only else [w for c, w in found if c >= LIKELY and len(w) >= 5]
         for w in sure + (likely if len(set(likely)) > 1 else []):
             if w not in words:
                 words.append(w)

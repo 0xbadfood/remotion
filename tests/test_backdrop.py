@@ -102,6 +102,23 @@ class PaintedWordsTests(unittest.TestCase):
             cloud.save(path)
             self.assertGreater(len(painted_words(path)), 0)
 
+    def test_a_large_light_title_on_a_plain_dark_backdrop_is_read(self):
+        """2026-10-30: "Slalar Pnioct", crisp light grey on a dark gradient, passed every view of the gate."""
+        from PIL import Image, ImageDraw, ImageFont
+        from infofilm.backdrop import painted_words
+        dark = Image.new("L", (1536, 864))
+        dark.putdata([max(10, 70 - y // 14) for y in range(864) for _ in range(1536)])
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "b.png"
+            dark.save(path)
+            words = painted_words(path)
+            if words is None:
+                self.skipTest("tesseract is not installed")
+            self.assertEqual(words, [])
+            ImageDraw.Draw(dark).text((556, 320), "Slalar Pnioct", fill=200, font=ImageFont.load_default(size=72))
+            dark.save(path)
+            self.assertGreater(len(painted_words(path)), 0)
+
     def test_a_take_with_words_is_drawn_again_and_all_failing_keeps_the_gradient(self):
         from unittest import mock
         from infofilm import backdrop
