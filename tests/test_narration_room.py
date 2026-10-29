@@ -136,6 +136,16 @@ class SpanningBeatTests(unittest.TestCase):
         storyboard["scenes"][2]["through_point_id"] = "P1"
         self.assertIn("through_point_id must be a later narration point", " ".join(beat_errors(storyboard, script, timing)))
 
+    def test_a_long_summary_is_told_its_count(self):
+        # 2026-10-29, the loop and solenoid film: three rewrites of 13-16 words when told only "at most 12"
+        from infofilm.creative import beat_errors
+        from test_creative import example
+        script, timing, storyboard, _ = example()
+        storyboard["scenes"][0]["summary"] = "Turns should be close and carry current the same way; spread turns weaken the net field."
+        problems = " ".join(beat_errors(storyboard, script, timing))
+        self.assertIn("summary has 16 words, at most 12", problems)
+        self.assertIn("main claim", problems)
+
 
 if __name__ == "__main__":
     unittest.main()

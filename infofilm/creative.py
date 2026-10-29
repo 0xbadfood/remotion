@@ -282,8 +282,12 @@ def beat_errors(value, script, timing, figures=None, linkwork=None):
         else:
             errors.append(unsupported_kind(scene, sid, figures, linkwork))
         for key, limit in [("heading", 7), ("summary", 12)]:
-            if not isinstance(scene.get(key), str) or len(scene[key].split()) > limit:
+            if not isinstance(scene.get(key), str):
                 errors.append(f"{sid}: {key} must be a string of at most {limit} words")
+            elif (count := len(scene[key].split())) > limit:
+                # 2026-10-29: a reviewer rewrote one summary to 13-16 words three times running when told only the limit
+                errors.append(f"{sid}: {key} has {count} words, at most {limit}: keep only its main claim in {limit} words "
+                              f"or fewer; the narration carries the conditions and contrasts")
         if scene.get("motion") not in {"push", "pull", "drift", "hold"}:
             errors.append(f"{sid}: unsupported motion")
         if scene.get("copy_density") not in {"minimal", "standard"}:
