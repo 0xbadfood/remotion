@@ -92,7 +92,8 @@ def review_decision(review, errors, experimental, config=None):
     """Accept a round or not: (accepted, reason). Reasons: "code_checks_only" (the reviewer twice returned no review), "clean" (code checks pass, the review passes with score at
     least PASS_SCORE and no blocker/major), "screened" (code removed every blocking finding, e.g. a moved target or a
     batch demanding a person code adds later, and the reviewer's score, which still counts those findings, is at
-    least SCREENED_FLOOR), "unreviewed" (non-experimental mode, code checks pass), or why it was rejected.
+    least SCREENED_FLOOR), "code_owned" (the only findings are minor and some are about a unit code has taken over),
+    "unreviewed" (non-experimental mode, code checks pass), or why it was rejected.
 
     Development stand-in: production never accepts below PASS_SCORE; this decision moves to the premium arbiter path (an Opus-class model that
     writes the stuck unit itself from unit-level context, with only code checks after it; pipeline-findings-todo.md,
@@ -115,6 +116,11 @@ def review_decision(review, errors, experimental, config=None):
     screened = any(i.get("downgraded") for i in issues)
     if screened and score >= config.get("screened_score_floor", SCREENED_FLOOR):
         return True, "screened"
+    # A unit code has taken over (ladder rung 3) is what the score now counts against: with nothing else above minor,
+    # the round stands (2026-10-29, Vector Representation: the code-owned recap beat held the batch at 22 to 55
+    # after every other finding was gone, until the batch ran out of tries).
+    if any("ladder rung 3" in str(i.get("downgraded") or "") for i in issues):
+        return True, "code_owned"
     return False, "score_below_floor" if screened else "review_failed"
 
 

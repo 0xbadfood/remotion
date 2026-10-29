@@ -170,6 +170,10 @@ class ReviewDecisionTests(unittest.TestCase):
         self.assertEqual(review_decision(clean, ["P01: too long"], True), (False, "code_errors"))
         self.assertEqual(review_decision(None, [], False), (True, "unreviewed"))
         self.assertEqual(review_decision(screened, [], True, {"screened_score_floor": 80}), (False, "score_below_floor"))
+        # 2026-10-29, Vector Representation: a beat code had taken over held the batch at 22-55 with nothing else wrong
+        owned = {"pass": False, "score": 30, "issues": [{"severity": "minor", "downgraded": "code-owned fallback (ladder rung 3)"}]}
+        self.assertEqual(review_decision(owned, [], True), (True, "code_owned"))
+        self.assertEqual(review_decision({**owned, "issues": owned["issues"] + [{"severity": "major"}]}, [], True), (False, "blocking_findings"))
 
 
 class LadderTests(unittest.TestCase):
