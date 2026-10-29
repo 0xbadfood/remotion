@@ -207,7 +207,9 @@ def beat_errors(config, scenes, cards):
             continue
         r = results[_key(spec)]
         errors += [f"{s['id']}: {e}" for e in r["errors"][:6]]
-        if r["errors"] and not illustrated(spec):
+        # a verb whose numbers are the picture (sig_figs, dimensions) is never illustrative: it needs the narration's own
+        numeric = any(c.get("numeric") for c in cards or [] if c["name"] in spec_verbs(spec))
+        if r["errors"] and not illustrated(spec) and not numeric:
             # 2026-10-29: a reviewer struck a circuit's invented values, the verb then asked for them again, and the
             # plan went round until it ran out of tries
             errors.append(f"{s['id']}: a value the verb needs that the narration never states: give it a simple one "

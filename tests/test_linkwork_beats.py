@@ -38,6 +38,15 @@ class LinkworkBeatTests(unittest.TestCase):
         problems = " ".join(linkwork_beats.beat_errors({}, [self.beat({**off, "illustrative": True})], self.cards))
         self.assertNotIn("set illustrative:true", problems)
 
+    def test_a_verb_whose_numbers_are_the_picture_is_never_made_illustrative(self):
+        # 2026-10-29, Units and Measurement C4: three sig_figs scenes set illustrative and showed only blank underlines
+        cards = [{"name": "sig_figs", "numeric": True}]
+        hidden = {"verb": "sig_figs", "mode": "count", "numbers": ["0.0025"], "illustrative": True}
+        problems = " ".join(linkwork_beats.beat_errors({}, [self.beat(hidden)], cards))
+        self.assertIn("never illustrative", problems)
+        wrong = {"verb": "sig_figs", "mode": "count", "numbers": [25]}
+        self.assertNotIn("set illustrative:true", " ".join(linkwork_beats.beat_errors({}, [self.beat(wrong)], cards)))
+
     def test_two_cases_side_by_side_are_one_compound_beat(self):
         # 2026-10-28, Class 10 Light C2: the sheet asked for a concave and a convex mirror side by side; one
         # ray_diagram draws one mirror, and the beat failed every round until the plan ran out of tries.
