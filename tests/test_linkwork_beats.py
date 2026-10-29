@@ -87,6 +87,19 @@ class LinkworkBeatTests(unittest.TestCase):
         self.assertTrue(1 <= len(built["image_brief"]) <= 1800)          # what beat_errors asks of an image beat
         self.assertIsNone(beat_ladder([{**row, "kind": "figure"}])(3, "S15", written))   # only a verb steps down
 
+    def test_a_sheet_row_that_keeps_failing_is_kept_and_a_fallback_image_is_judged_as_a_backdrop(self):
+        # 2026-10-29: Stopping Distance's sheet ran out of rounds on one row; Equations of Motion's ladder image was
+        # reviewed against the passage it stood in for and carried "needs expert review" into the film
+        from infofilm.creative import LADDER_IMAGE, library_from_beats, sheet_ladder
+        row = {"id": "S15", "point_id": "P05", "kind": "linkwork", "verb": "graph", "intent": "totals at three speeds"}
+        self.assertIn("every claim", sheet_ladder(2, "S15", row))
+        self.assertEqual(sheet_ladder(3, "S15", row), row)
+        scene = {"id": "S15", "point_id": "P01", "kind": "image", "fallback": "ladder", "image_brief": LADDER_IMAGE,
+                 "rationale": "Code fallback"}
+        films = [{"script": {"points": [{"id": "P01", "fact_ids": ["F01"]}]}, "storyboard": {"scenes": [scene]}}]
+        asset = library_from_beats(films, {"visual_style": "calm"})["assets"][0]
+        self.assertNotIn("Matches the exact narrated passage and subject", asset["acceptance"])
+
     def test_motion_must_fit_inside_its_beat(self):
         errors = linkwork_beats.beat_errors({"narration_room": False}, [self.beat(self.spec, 10.0, 11.0)], self.cards)
         self.assertTrue(any("but the beat is only 1.0 s" in e and "join this passage" in e for e in errors), errors)

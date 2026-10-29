@@ -700,6 +700,18 @@ def beat_ladder(rows):
     return ladder
 
 
+def sheet_ladder(rung, ident, value):
+    """The beat sheet's ladder (2026-10-29, Stopping Distance: seven rounds at 70-79, each finding a new detail one
+    row's intent left out). A row that keeps failing review is told to cover what its sentences say, in order; then it
+    is kept as written: pass 2 writes the full beat from the narration itself and reviews it there."""
+    if not isinstance(value, dict):
+        return None
+    if rung == 2:
+        return ("This row has failed review several times: make its intent name every claim, value and comparison of the "
+                "sentences it spans, each shown only from the sentence that says it.")
+    return dict(value)
+
+
 def match_errors(value, rows):
     """A pass-2 batch keeps its sheet rows: same beats, anchors, kinds and choices (a compound keeps the sheet's verb
     among its parts)."""
@@ -753,7 +765,7 @@ def staged_beats(models, film, evidence, task, context, figures, experimental, l
     sheet = models.loop(stage, task + SHEET_TASK.replace("{replays}", str(room["max_replays"])),
                         sheet_options(context, typical, shortest),
                         lambda x: sheet_errors(x, script, timing, figures, linkwork, shortest, room),
-                        experimental=experimental, units=SHEET_UNITS)
+                        experimental=experimental, units=SHEET_UNITS, ladder=sheet_ladder)
     # A targeted repair that adds a beat names it after its neighbour (S03b): the sheet is renumbered in order.
     rows = [{**r, "id": f"S{n:02d}"} for n, r in enumerate(sheet["beats"], 1)]
     order = [p["id"] for p in script["points"]]
@@ -808,8 +820,11 @@ def library_from_beats(films, brief):
                     world = brief["world"]
                     prompt = (f"{prompt} Draw exactly: the guide is {world['guide']} The setting is {world['setting']} "
                               f"Style: {world['style']}")
+                # a ladder fallback is a quiet backdrop by design: judged as one, not against the passage it stands in for
+                acceptance = (["No people, machines, places or text", "Matches the shared visual style"] if scene.get("fallback") == "ladder"
+                              else ["Matches the exact narrated passage and subject", "Consistent with the shared creative brief", "No raster typography, charts or invented factual labels"])
                 assets.append({"id": asset_id, "purpose": scene["rationale"], "prompt": prompt,
-                    "acceptance": ["Matches the exact narrated passage and subject", "Consistent with the shared creative brief", "No raster typography, charts or invented factual labels"],
+                    "acceptance": acceptance,
                     "fact_ids": list(points[scene["point_id"]]["fact_ids"])})
             else:
                 asset = next(a for a in assets if a["id"] == shared[key])
