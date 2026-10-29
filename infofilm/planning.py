@@ -195,6 +195,10 @@ def max_points(duration=None):
     return max(25, -(-int(duration) // 14)) if duration else 25
 
 
+BACKSTAGE = re.compile(r"\b(?:the|these|our|supplied|available|given)\s+(?:sources|passages|excerpts)\b(?!\s+of\b)"
+                       r"|\bevidence\s+brief\b|\bsources?\s+(?:do|does|did)\s+not\s+(?:say|state|mention|give|explain|describe|tell)\b", re.I)
+
+
 def script_errors(value, evidence, budget=None, duration=None):
     errors = []
     points = value.get("points", [])
@@ -210,6 +214,12 @@ def script_errors(value, evidence, budget=None, duration=None):
             errors.append(f"{p.get('id')}: needs narration, a heading and fact_ids drawn only from the evidence")
         if word_count(p.get("heading", "")) > 7:
             errors.append(f"{p.get('id')}: heading has {word_count(p.get('heading', ''))} words; at most 7")
+        # 2026-10-30, Work-Energy Theorem: "the sources do not say more about how this resistive force varies". The
+        # viewer never saw a brief: narration speaks about the subject, never about its sources (the book it may name).
+        # a documentary may weigh its sources in a historian's voice; a lesson's student hears only about the subject
+        if evidence.get("curriculum") and BACKSTAGE.search(p.get("narration", "")):
+            errors.append(f"{p.get('id')}: narration speaks about its sources (\"{BACKSTAGE.search(p['narration']).group(0)}\"); "
+                          "say what is known, or leave the point out; the viewer never sees the sources or the brief")
         # 2026-10-29, the significant-figures film: the voice garbled 311.299254 and 373.714754 in every take. A long
         # calculator value is shown on screen, never read out.
         long = [n for n in re.findall(r"\d[\d,]*\.\d+", p.get("narration", ""))

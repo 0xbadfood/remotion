@@ -3,7 +3,7 @@ the evidence and the narration; the textbook source is read whole."""
 import unittest
 
 from infofilm.curriculum import evidence_coverage_errors, evidence_task, script_coverage_errors
-from infofilm.planning import evidence_context
+from infofilm.planning import evidence_context, script_errors
 
 CURRICULUM = {'concept': 'The Salt March', 'audience': 'Class 10 students', 'book': 'Class 10 History',
               'chapter_no': 2, 'chapter': 'Nationalism in India',
@@ -42,6 +42,18 @@ class CurriculumTests(unittest.TestCase):
         both = {**evidence, 'facts': evidence['facts'][1:], 'source_gaps': [{'coverage': 'K1', 'why': 'a'}, {'coverage': 'K3', 'why': 'b'}]}
         self.assertIn('at most 1 of the 2 objectives', ' '.join(evidence_coverage_errors(both, curriculum)))
         self.assertIn('source_gaps', evidence_task(curriculum))
+
+    def test_a_lesson_never_talks_about_its_sources(self):
+        # Work-Energy Theorem (2026-10-30): "the sources do not say more about how this resistive force varies"
+        evidence = {'curriculum': CURRICULUM, 'facts': [{'id': 'F01'}]}
+        point = {'id': 'P01', 'heading': 'Resistive work', 'fact_ids': ['F01'],
+                 'narration': 'The resistive work is minus 8.75 joules, and the sources do not say more about it.'}
+        self.assertIn('narration speaks about its sources', ' '.join(script_errors({'points': [point]}, evidence)))
+        point['narration'] = 'Light from the Sun is the source of energy for plants, as the book says.'
+        self.assertNotIn('speaks about its sources', ' '.join(script_errors({'points': [point]}, evidence)))
+        point['narration'] = 'Our sources place the fire at the Chinese Museum.'
+        self.assertNotIn('speaks about its sources', ' '.join(script_errors({'points': [point]}, {'facts': [{'id': 'F01'}]})),
+                         'a documentary may weigh its sources')
 
     def test_book_source_is_read_whole_and_task_names_the_concept(self):
         text = 'Unrelated opening words. ' * 400 + 'The end of the chapter.'
