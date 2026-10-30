@@ -158,6 +158,34 @@ class ScreenUnchangedTests(unittest.TestCase):
         self.assertTrue(lone["pass"])                                                # nothing left blocking, score >= 82
 
 
+class ReversalTests(unittest.TestCase):
+    """Calorimetry C6 evidence: asked for a beat at w0146, then blocked that beat as a needless split, three rounds running."""
+    def plan(self):
+        return {"beats": [{"id": "S04", "start_word_id": "w0121", "intent": "Heat flows."}, {"id": "S04b", "start_word_id": "w0146", "intent": "Equal."},
+                           {"id": "S05", "start_word_id": "w0162", "intent": "Ball."}]}
+
+    def spec(self):
+        from infofilm.creative import SHEET_UNITS
+        return SHEET_UNITS
+
+    def test_a_review_cannot_remove_the_beat_it_asked_for(self):
+        from infofilm import repair_units as ru
+        asked = ["Use the opening beat to show heat flowing, then start a beat at w0146 for the equal heat."]
+        review = {"pass": False, "score": 74, "issues": [{"severity": "major", "field": "S04", "problem": "S04b repeats it.", "correction": "Remove S04b and let S04 cover both sentences."}]}
+        out = ru.screen_reversal(review, asked, self.plan(), self.spec())
+        self.assertEqual(out["issues"][0]["severity"], "minor")
+        self.assertIn("w0146", out["issues"][0]["downgraded"])
+
+    def test_other_findings_still_block(self):
+        from infofilm import repair_units as ru
+        asked = ["Start a beat at w0146 for the equal heat."]
+        for issue in ({"severity": "major", "field": "S04b", "problem": "Wrong figure.", "correction": "Show 23 degrees."},       # a fix, not an undo
+                      {"severity": "major", "field": "S05", "problem": "Off topic.", "correction": "Remove S05."}):               # nobody asked for S05
+            out = ru.screen_reversal({"score": 70, "issues": [issue]}, asked, self.plan(), self.spec())
+            self.assertEqual(out["issues"][0]["severity"], "major")
+        self.assertEqual(ru.screen_reversal({"score": 70, "issues": [{"severity": "major", "field": "S04b", "problem": "x", "correction": "Remove S04b."}]}, [], self.plan(), self.spec())["issues"][0]["severity"], "major")
+
+
 class OtherListPointerTests(unittest.TestCase):
     """Jet engine C02 evidence: 'F16.narrative_priorities' flagged fact F16 for six rounds; the priority never changed."""
 

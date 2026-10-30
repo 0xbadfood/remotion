@@ -379,6 +379,7 @@ class Models:
         mechanical, mechanical_cap = 0, self.config.get("validation_rounds", 3)
         unchanged = []                                  # flagged units the planner returned unchanged last round
         reviewed, raised = None, set()                  # last reviewed candidate; units ever sent to the planner
+        asked = []                                      # corrections earlier rounds gave for blocking findings
         abstract, owned, pending = {}, set(), None      # ladder rung 2 instructions; rung 3 code-owned units
         tokens = max_tokens                             # raised when a draft hits the output limit (escalation)
         # The writer and the judge rotate (user, 2026-10-24): after every `rotate_after` failed rounds the reviewer's
@@ -492,6 +493,8 @@ class Models:
                     if ids and set(ids) <= owned and issue.get("severity") in {"blocker", "major"}:
                         issue.update(severity="minor", downgraded="code-owned fallback (ladder rung 3)")
                 review = ru.screen_unchanged(review, reviewed, current, raised, units)
+                review = ru.screen_reversal(review, asked, current, units)
+                asked.extend(str(i.get("correction") or "") for i in ru.blocking(review))
                 reviewed = current
                 write(directory / f"review-{attempt}.json", review)
             passing, decision = review_decision(review, errors, experimental, self.config)

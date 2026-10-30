@@ -163,6 +163,36 @@ def screen_unchanged(review, previous, candidate, raised, spec=None):
     return review
 
 
+UNDO_WORDS = re.compile(r"\b(remove|merge|drop|delete|join|combine|one beat|single beat|one scene)\b", re.I)
+
+
+def screen_reversal(review, asked, candidate, spec=None):
+    """The review may not undo what it asked for (Calorimetry C6, 2026-10-31): round 1 asked for a beat at w0146, the writer
+    added S04b there, and three later rounds blocked S04b as a needless split, until the stage ran out of tries. A blocking
+    finding that would remove a unit standing on an anchor an earlier correction asked for becomes minor. `asked` holds the
+    corrections of earlier rounds' blocking findings."""
+    earlier = " ".join(asked)
+    if not earlier or not isinstance((review or {}).get("issues"), list):
+        return review
+    known = units(candidate, spec)
+    for issue in review["issues"]:
+        if not isinstance(issue, dict) or issue.get("severity") not in {"blocker", "major"}:
+            continue
+        text = " ".join(str(issue.get(k) or "") for k in ("problem", "correction"))
+        if not UNDO_WORDS.search(str(issue.get("correction") or "")):
+            continue
+        named = set(resolve(issue.get("field"), candidate, spec)) | {i for i in known if re.search(rf"\b{re.escape(i)}\b", text)}
+        for ident in named:
+            value = unit_value(candidate, ident, spec)
+            anchor = value.get("start_word_id") if isinstance(value, dict) else None
+            if anchor and re.search(rf"\b{re.escape(anchor)}\b", earlier):
+                issue.update(severity="minor", downgraded=f"would undo {ident}, at {anchor}, which an earlier review asked for")
+                break
+    if review.get("pass") is not True and not blocking(review):
+        review["pass"] = isinstance(review.get("score"), (int, float)) and review["score"] >= 82
+    return review
+
+
 def error_units(error, candidate, spec=None):
     """Validator errors name their unit before the first ': ' (e.g. 'S21: diagram labels/details are too long')."""
     head = str(error).split(": ", 1)[0] if ": " in str(error) else ""
