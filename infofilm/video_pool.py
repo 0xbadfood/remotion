@@ -129,7 +129,7 @@ class ComfyWorker(Worker):
             self._poll(client, f"{self.url}/v1/videos/{job['id']}", {"token": token})
             data = client.get(f"{self.url}/v1/videos/{job['id']}/content", params={"token": token}, timeout=300)
             raw.write_bytes(data.raise_for_status().content)
-        subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(raw), "-vf", "trim=start_frame=1,setpts=PTS-STARTPTS",
+        subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-y", "-i", str(raw), "-vf", "trim=start_frame=1,setpts=PTS-STARTPTS",
                         "-an", "-c:v", "libx264", "-crf", "16", "-pix_fmt", "yuv420p", str(target)], check=True,
                        timeout=300)
         raw.unlink(missing_ok=True)

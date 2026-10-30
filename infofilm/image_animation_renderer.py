@@ -341,7 +341,7 @@ def stitch(results: list[dict], output: Path, audio: Path | None, *, fps: int,
     listing = output / "concat.txt"
     listing.write_text("".join("file '"+str(Path(item["video"]).resolve()).replace("'", "'\\''")+"'\n" for item in results))
     silent = output / "animation-silent.mp4"
-    subprocess.run(["ffmpeg", "-y", "-v", "error", "-f", "concat", "-safe", "0", "-i", str(listing),
+    subprocess.run(["ffmpeg", "-nostdin", "-y", "-v", "error", "-f", "concat", "-safe", "0", "-i", str(listing),
         "-c", "copy", "-movflags", "+faststart", str(silent)], check=True)
     probe = probe_video(silent)
     delivery = {"silent_video": str(silent.resolve()), "video": str(silent.resolve()), "probe": probe,
@@ -353,7 +353,7 @@ def stitch(results: list[dict], output: Path, audio: Path | None, *, fps: int,
         if abs(audio_duration-source_duration) > max(1/fps+.01, .05):
             raise ValueError("Narration audio duration differs from the complete MFA timeline")
         narrated = output / "animation-narrated.mp4"
-        subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", str(silent), "-i", str(audio), "-map", "0:v:0",
+        subprocess.run(["ffmpeg", "-nostdin", "-y", "-v", "error", "-i", str(silent), "-i", str(audio), "-map", "0:v:0",
             "-map", "1:a:0", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-af", "apad",
             "-shortest", "-movflags", "+faststart", str(narrated)], check=True)
         all_streams = json.loads(subprocess.run(["ffprobe", "-v", "error", "-show_streams", "-of", "json", str(narrated)],

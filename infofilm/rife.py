@@ -34,7 +34,7 @@ def main(source, target, multiplier=2):
     sys.path.insert(0, str(ROOT / "vendor" / "rife"))
     from rife_arch import IFNet
     width, height, rate = _probe(source)
-    raw = subprocess.run(["ffmpeg", "-v", "error", "-i", str(source), "-f", "rawvideo", "-pix_fmt", "rgb24", "-"],
+    raw = subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-i", str(source), "-f", "rawvideo", "-pix_fmt", "rgb24", "-"],
                          check=True, capture_output=True).stdout
     frames = torch.from_numpy(np.frombuffer(raw, np.uint8).reshape(-1, height, width, 3).copy())
     frames = frames.permute(0, 3, 1, 2).float().div(255)

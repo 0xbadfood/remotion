@@ -150,7 +150,7 @@ def render_audio(config, store, text, name):
                 response = client.get(config["tts_url"] + "/jobs/" + job_id + "/audio")
                 response.raise_for_status()
                 (directory / "provider.wav").write_bytes(response.content)
-            subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(directory / "provider.wav"), "-ac", "1", "-c:a", "pcm_s16le", str(final)], check=True)
+            subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-y", "-i", str(directory / "provider.wav"), "-ac", "1", "-c:a", "pcm_s16le", str(final)], check=True)
         finally:
             from .gpu_release import release_vibevoice
             release_vibevoice(config, store, request_fn=request, allow_restart=final.exists())

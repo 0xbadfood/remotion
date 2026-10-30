@@ -61,7 +61,7 @@ def breakage(clip, still, limit):
     try:
         seconds = probe_seconds(clip)
         frame = clip.with_suffix(".middle.png")
-        subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", f"{seconds / 2:.3f}", "-i", str(clip), "-frames:v", "1",
+        subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-y", "-ss", f"{seconds / 2:.3f}", "-i", str(clip), "-frames:v", "1",
                         str(frame)], check=True, timeout=120)
         a = Image.open(frame).convert("L").resize((64, 36))
         b = Image.open(still).convert("L").resize((64, 36))
