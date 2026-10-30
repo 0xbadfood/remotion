@@ -241,6 +241,10 @@ def anchor_errors(scenes, script, timing):
     return errors, order
 
 
+ON_SCREEN_NOTE = re.compile(r"\bflagged\s+(?:for|as|to)\b|\b(?:for|needs?|awaiting|under)\s+(?:(?:a|an|the)\s+)?"
+                            r"(?:teacher|expert|editor(?:ial)?|human|further|team)?\s*review\b|\bto be (?:checked|verified)\b", re.I)
+
+
 def beat_errors(value, script, timing, figures=None, linkwork=None):
     """Validate coverage and references, never impose creative image-count quotas. `figures`: the film's figure
     options (figures.options); without them a figure beat is not allowed. `linkwork`: {config, cards} when the film
@@ -288,6 +292,11 @@ def beat_errors(value, script, timing, figures=None, linkwork=None):
                 # 2026-10-29: a reviewer rewrote one summary to 13-16 words three times running when told only the limit
                 errors.append(f"{sid}: {key} has {count} words, at most {limit}: keep only its main claim in {limit} words "
                               f"or fewer; the narration carries the conditions and contrasts")
+            # 2026-10-30, Energy of an Orbiting Satellite: a summary read "printed ΔE and ΔV flagged for review" on
+            # screen. Heading and summary are what the student reads; a note for the team goes in the rationale
+            elif note := ON_SCREEN_NOTE.search(scene[key]):
+                errors.append(f"{sid}: {key} carries a note for the team (\"{note.group(0)}\"); the viewer reads it on "
+                              f"screen: state the subject's claim, and put review notes in the rationale")
         if scene.get("motion") not in {"push", "pull", "drift", "hold"}:
             errors.append(f"{sid}: unsupported motion")
         if scene.get("copy_density") not in {"minimal", "standard"}:

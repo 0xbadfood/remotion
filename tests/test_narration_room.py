@@ -146,6 +146,17 @@ class SpanningBeatTests(unittest.TestCase):
         self.assertIn("summary has 16 words, at most 12", problems)
         self.assertIn("main claim", problems)
 
+    def test_a_summary_never_carries_a_note_for_the_team(self):
+        # 2026-10-30, Energy of an Orbiting Satellite: "printed ΔE and ΔV flagged for review" was shown on screen
+        from infofilm.creative import beat_errors
+        from test_creative import example
+        script, timing, storyboard, _ = example()
+        storyboard["scenes"][0]["summary"] = "Example 7.8 orbit energies; printed values flagged for review."
+        self.assertIn("carries a note for the team", " ".join(beat_errors(storyboard, script, timing)))
+        for fine in ("A Soviet-flagged freighter nears Cuba.", "Energies of the two orbits compared.", "Review: what we learnt."):
+            storyboard["scenes"][0]["summary"] = fine
+            self.assertNotIn("note for the team", " ".join(beat_errors(storyboard, script, timing)), fine)
+
 
 if __name__ == "__main__":
     unittest.main()
