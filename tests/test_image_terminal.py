@@ -122,6 +122,44 @@ class TerminalImageTests(unittest.TestCase):
             self.assertEqual(result['review']['score_source'], 'take_review'); self.assertTrue(result['needs_review'])
             store.db.close()
 
+    def two_failed_takes(self, folder):
+        store = Store(folder); root, original = self.setup(folder)
+        second = image(root/'takes/take-01/candidate-0.png', 'blue')
+        state = read(root/'message-state.json')
+        state['takes'][0]['review'] = {**self.score(55), 'repair_mode': 'targeted', 'mode_reason': 'Small fix.'}
+        state['takes'].append({'provider': 'qwen_local', 'candidate': str(second), 'sha256': digest(second.read_bytes()),
+                               'settings': {'prompt': 'A clerk examines plain parchment, closer.'},
+                               'review': {**self.score(76), 'repair_mode': 'targeted', 'mode_reason': 'Small fix.'}})
+        write(root/'message-state.json', state)
+        return store, root, original, second
+
+    def test_when_no_take_passed_they_are_compared_side_by_side_and_a_misread_subject_loses(self):
+        # A spinning top (2026-10-30): the take scored highest looked like a cocktail glass; compared together, the
+        # reviewer picks the take whose subject reads as a top, though its own score was lower.
+        config = {**self.config, 'image_terminal_recovery': {'enabled': True, 'provider': 'flux_dev_local', 'max_candidates': 0}}
+        with tempfile.TemporaryDirectory() as folder:
+            store, root, original, second = self.two_failed_takes(folder)
+            models = Mock(); models.call.return_value = {'pick': 'A', 'misread': ['B'], 'reason': 'B looks like a glass.'}
+            result = recover(config, store, root, self.case, models, terminal_settings(config))
+            self.assertEqual(result['file'], str(original))
+            self.assertIn('side by side', result['terminal_recovery']['rule'])
+            self.assertTrue(result['needs_review'])
+            sheet = Image.open(models.call.call_args.kwargs['image_path'])
+            self.assertEqual(sheet.size, (2 * 768, 432))
+            store.db.close()
+
+    def test_a_failed_or_contradictory_comparison_leaves_the_score_ranking(self):
+        config = {**self.config, 'image_terminal_recovery': {'enabled': True, 'provider': 'flux_dev_local', 'max_candidates': 0}}
+        for answer in [{'pick': 'B', 'misread': ['B']}, {'pick': 'Z'}, ValueError('bad JSON')]:
+            with tempfile.TemporaryDirectory() as folder:
+                store, root, original, second = self.two_failed_takes(folder)
+                models = Mock(); models.call.side_effect = [answer] if isinstance(answer, Exception) else None
+                if not isinstance(answer, Exception): models.call.return_value = answer
+                result = recover(config, store, root, self.case, models, terminal_settings(config))
+                self.assertEqual(result['file'], str(second))
+                self.assertEqual(result['terminal_recovery']['rule'], 'highest marks; premium wins ties')
+                store.db.close()
+
     def test_score_schema_rejects_nan_boolean_and_out_of_range_marks(self):
         for bad in [float('nan'), True, 51, -1]:
             value = self.score(80);value['message_marks'] = bad

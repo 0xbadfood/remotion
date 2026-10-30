@@ -227,13 +227,18 @@ def recover(config, store, root, case, models, policy, *, session_managed=False)
              'score': review['score'], 'pass': review['pass'], 'position': len(scored), 'candidate_pool': len(candidates)})
         write(rescue / 'scores.json', scored)
     best = max(scored, key=lambda item: (item['review']['score'], item['provider'] == policy['provider']))
+    rule = 'highest marks; premium wins ties'
+    if len(scored) > 1 and not any(item['review'].get('pass') is True for item in scored):
+        pick = compare_takes(models, case, scored, rescue)
+        if pick is not None:
+            best, rule = scored[pick], 'none passed: the takes compared side by side, the subject read first'
     value = {'asset': case['asset_id'], 'visual_message': case['visual_message'], 'file': best['candidate'],
              'sha256': best['sha256'], 'prompt': best['settings']['prompt'], 'settings': best['settings'],
              'provider_id': best['provider'], 'review': best['review'], 'evaluated_prompt': target,
              'total_attempts': len(candidates), 'needs_review': True, 'review_tag': REVIEW_TAG,
              'selection_status': 'best_available', 'terminal_recovery': {'protocol': PROTOCOL,
                 'premium_provider': policy['provider'], 'scores': str(rescue / 'scores.json'),
-                'premium_candidates': policy['max_candidates'], 'rule': 'highest marks; premium wins ties'}}
+                'premium_candidates': policy['max_candidates'], 'rule': rule}}
     asset = case['library']['assets'][0]
     value.update({k: asset[k] for k in ['people_in_frame', 'person_reference_status', 'reference_card', 'reference_faces'] if k in asset})
     write(selection, value)
@@ -242,3 +247,53 @@ def recover(config, store, root, case, models, policy, *, session_managed=False)
     store.event(case['asset_id'], 'best_available_selected', {'provider': best['provider'], 'score': best['review']['score'],
         'review_pass': best['review']['pass'], 'needs_review': True, 'tag': REVIEW_TAG})
     return value
+
+LETTERS = 'ABCDEFGH'
+
+
+def compare_takes(models, case, scored, rescue):
+    """When no take passed, the takes are judged together, side by side, by one reviewer: each take's own score came
+    from a separate call, marked down for whatever detail that call looked at, so scores across takes don't compare.
+    A spinning top's four takes (2026-10-30) were each failed on a guide line or cone; the one shown, scored highest,
+    looked like a cocktail glass, while a take scored 25 marks lower was plainly a top. The subject must read as what it
+    is before any detail counts. Returns the chosen index, or None (the score ranking stands) if the call fails."""
+    from PIL import Image, ImageDraw, ImageFont
+    cache = rescue / 'compare.json'
+    if cache.exists():
+        value = read(cache)
+        return value['index'] if value.get('candidates') == [item['sha256'] for item in scored] else None
+    takes = scored[:len(LETTERS)]
+    cols = 2 if len(takes) <= 4 else 3
+    rows = -(-len(takes) // cols)
+    w, h = 768, 432
+    sheet = Image.new('RGB', (cols * w, rows * h), 'white')
+    font = ImageFont.load_default(size=56)
+    for i, item in enumerate(takes):
+        img = Image.open(item['candidate']).convert('RGB')
+        img.thumbnail((w, h))
+        x, y = (i % cols) * w, (i // cols) * h
+        sheet.paste(img, (x + (w - img.width) // 2, y + (h - img.height) // 2))
+        draw = ImageDraw.Draw(sheet)
+        draw.rectangle([x, y, x + 76, y + 76], fill='black')
+        draw.text((x + 18, y + 6), LETTERS[i], fill='white', font=font)
+    path = rescue / 'compare.png'
+    sheet.save(path)
+    letters = LETTERS[:len(takes)]
+    task = ('The attached sheet shows ' + str(len(takes)) + ' candidate illustrations, labelled ' + ', '.join(letters) + '. '
+            'None fully passed review; one of them must still be used, tagged for expert review. Choose the one that best '
+            'shows a student: ' + json.dumps(case['visual_message']) + '. First test, before any detail: is the main '
+            'subject plainly what it is meant to be (a spinning top must look like a top, not a glass or a vase)? A take '
+            'whose subject reads as something else is never chosen while another reads correctly. Then prefer the take '
+            'whose overall picture carries the message; guide lines, haze or exact placement matter less. Return JSON '
+            '{"pick": one letter, "misread": [letters whose main subject reads as something else], "reason": string}.')
+    try:
+        value = models.call('reviewer', 'terminal-compare-' + case['asset_id'], task, image_path=path, max_tokens=800)
+        pick, misread = value['pick'], value.get('misread', [])
+        if not (isinstance(pick, str) and pick in letters and isinstance(misread, list) and pick not in misread):
+            return None
+    except Exception:            # any failed or malformed call: the score ranking stands
+        return None
+    index = letters.index(pick)
+    write(cache, {'candidates': [item['sha256'] for item in scored], 'index': index, 'pick': pick,
+                  'misread': misread, 'reason': str(value.get('reason', ''))[:600]})
+    return index
