@@ -43,6 +43,18 @@ class CurriculumTests(unittest.TestCase):
         self.assertIn('at most 1 of the 2 objectives', ' '.join(evidence_coverage_errors(both, curriculum)))
         self.assertIn('source_gaps', evidence_task(curriculum))
 
+    def test_an_objective_taught_in_part_is_carried_and_its_missing_part_declared(self):
+        # Gravitational potential energy (2026-10-30): "derive U for two point masses"; the book derives it only for the
+        # Earth and a particle. A fact carries what the book gives and a gap names the missing derivation.
+        curriculum = {**CURRICULUM, 'coverage': [{'id': 'K1', 'point': 'Objective: derive U for two point masses'},
+                                                 {'id': 'K2', 'point': 'Event: Dandi'}]}
+        evidence = {'curriculum': curriculum, 'facts': [{'id': 'F01', 'coverage': ['K1']}, {'id': 'F02', 'coverage': ['K2']}],
+                    'source_gaps': [{'coverage': 'K1', 'why': 'the book derives it for the Earth and a particle only'}]}
+        self.assertEqual(evidence_coverage_errors(evidence, curriculum), [])
+        task = evidence_task(curriculum)
+        self.assertIn('only in part', task)
+        self.assertIn('whole or in part', task)
+
     def test_a_lesson_never_talks_about_its_sources(self):
         # Work-Energy Theorem (2026-10-30): "the sources do not say more about how this resistive force varies"
         evidence = {'curriculum': CURRICULUM, 'facts': [{'id': 'F01'}]}

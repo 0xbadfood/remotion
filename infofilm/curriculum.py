@@ -31,8 +31,12 @@ EVIDENCE_TASK = (
     "with the book. Add no opinions of your own. Up to 30 facts are allowed so that the whole concept is covered. "
     "An 'Objective:' coverage point was written about the concept, not taken from the book: if no supplied source "
     "teaches what it asks, never invent or stretch a fact to carry it; list it in source_gaps as {{coverage: 'K3', "
-    "why: what the sources do and do not say}}. A point in source_gaps needs no fact and is not narrated. A reviewer "
-    "accepts a true source gap, and raises one only when a supplied source does teach the point. Book points "
+    "why: what the sources do and do not say}}. A point in source_gaps needs no fact and is not narrated. When the "
+    "sources teach an objective only in part (the result but not its derivation, or only a special case), carry that "
+    "part with facts as usual and also list the objective in source_gaps, its why naming the part no source gives "
+    "(2026-10-30: 'derive U for two point masses', where the book derives it only for the Earth and a particle, failed "
+    "six reviews). A reviewer accepts a true source gap, whole or in part, never asks a fact to supply what a declared "
+    "gap says no source gives, and raises a gap only when a supplied source does teach the missing part. Book points "
     "(Definition, Law, Key term, Equation, Event, Person) are never gaps.")
 
 SCRIPT_TASK = (
