@@ -148,6 +148,39 @@ class TerminalImageTests(unittest.TestCase):
             self.assertEqual(sheet.size, (2 * 768, 432))
             store.db.close()
 
+    def test_a_take_unfit_for_students_is_never_shown(self):
+        # C13 of keph1-06 (2026-10-30): an acrobat's tucked pose came back as a bare body; it is never the best available
+        config = {**self.config, 'image_terminal_recovery': {'enabled': True, 'provider': 'flux_dev_local', 'max_candidates': 0}}
+        with tempfile.TemporaryDirectory() as folder:
+            store, root, original, second = self.two_failed_takes(folder)
+            state = read(root/'message-state.json')
+            state['takes'][1]['review']['reason_keys'] = ['unsuitable_for_students']
+            write(root/'message-state.json', state)
+            models = Mock()
+            result = recover(config, store, root, self.case, models, terminal_settings(config))
+            self.assertEqual(result['file'], str(original))      # the higher-scored take was unfit
+            models.call.assert_not_called()                      # one usable take: nothing to compare
+            store.db.close()
+        with tempfile.TemporaryDirectory() as folder:
+            store, root, original, second = self.two_failed_takes(folder)
+            state = read(root/'message-state.json')
+            for take in state['takes']:
+                take['review']['reason_keys'] = ['unsuitable_for_students']
+            write(root/'message-state.json', state)
+            with self.assertRaisesRegex(RuntimeError, 'unsuitable for students'):
+                recover(config, store, root, self.case, Mock(), terminal_settings(config))
+            store.db.close()
+
+    def test_people_are_said_to_be_clothed_and_reviewers_check_it(self):
+        from infofilm.prompt_styles import compose
+        from infofilm.educational_review import review_guidance
+        acrobat = compose('structured', setting='A studio.', visual_style='Editorial.', layout='Full frame.',
+                          scene='One circus acrobat mid-somersault, knees pulled to the chest.')
+        self.assertIn('modestly clothed', acrobat)
+        beaker = compose('structured', setting='A lab.', visual_style='Editorial.', layout='Full frame.', scene='A beaker of water.')
+        self.assertNotIn('clothed', beaker)
+        self.assertIn('unsuitable_for_students', review_guidance({}))
+
     def test_a_failed_or_contradictory_comparison_leaves_the_score_ranking(self):
         config = {**self.config, 'image_terminal_recovery': {'enabled': True, 'provider': 'flux_dev_local', 'max_candidates': 0}}
         for answer in [{'pick': 'B', 'misread': ['B']}, {'pick': 'Z'}, ValueError('bad JSON')]:

@@ -24,7 +24,12 @@ IMAGE_REVIEW_REASONS = {
     "prompt_ambiguity": "Ambiguous or contradictory scene wording caused the wrong interpretation.",
     "backend_corruption": "Blank, unreadable or technically corrupted output requiring backend diagnosis.",
     "uncertain": "Observed concern cannot be confidently classified; needs rechecking.",
+    "unsuitable_for_students": "Not fit for a school film: a person not plainly clothed (bare body, nudity, underwear), gore or sexualised content.",
 }
+UNSUITABLE = "unsuitable_for_students"
+AUDIENCE_RULE = ("The audience is school students. A person who is not plainly clothed (a bare body, nudity or "
+                 "near-nudity, underwear), gore or sexualised content fails with reason key unsuitable_for_students, "
+                 "whatever else is right, and gets usability_marks 0.\n")
 
 
 def image_review_errors(review, *, require_inventory=False, reference_available=None):

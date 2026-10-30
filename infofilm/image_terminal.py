@@ -226,12 +226,17 @@ def recover(config, store, root, case, models, policy, *, session_managed=False)
         store.event(case['asset_id'], 'candidate_scored', {'candidate': str(path), 'provider': item['provider'],
              'score': review['score'], 'pass': review['pass'], 'position': len(scored), 'candidate_pool': len(candidates)})
         write(rescue / 'scores.json', scored)
-    best = max(scored, key=lambda item: (item['review']['score'], item['provider'] == policy['provider']))
+    # a take unfit for students is never shown, not even as the best available (C13 of keph1-06, 2026-10-30)
+    from .image_providers import UNSUITABLE
+    usable = [item for item in scored if UNSUITABLE not in (item['review'].get('reason_keys') or [])]
+    if not usable:
+        raise RuntimeError(f"{case['asset_id']}: every take was unsuitable for students; nothing can be shown")
+    best = max(usable, key=lambda item: (item['review']['score'], item['provider'] == policy['provider']))
     rule = 'highest marks; premium wins ties'
-    if len(scored) > 1 and not any(item['review'].get('pass') is True for item in scored):
-        pick = compare_takes(models, case, scored, rescue)
+    if len(usable) > 1 and not any(item['review'].get('pass') is True for item in usable):
+        pick = compare_takes(models, case, usable, rescue)
         if pick is not None:
-            best, rule = scored[pick], 'none passed: the takes compared side by side, the subject read first'
+            best, rule = usable[pick], 'none passed: the takes compared side by side, the subject read first'
     value = {'asset': case['asset_id'], 'visual_message': case['visual_message'], 'file': best['candidate'],
              'sha256': best['sha256'], 'prompt': best['settings']['prompt'], 'settings': best['settings'],
              'provider_id': best['provider'], 'review': best['review'], 'evaluated_prompt': target,

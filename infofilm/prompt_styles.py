@@ -10,6 +10,8 @@ description the generator needs, since it knows each scene; a mechanical rewrite
 """
 from __future__ import annotations
 
+import re
+
 STYLES = ('structured', 'descriptive_v1')
 
 PLANNER_GUIDE = (
@@ -44,7 +46,18 @@ def prompt_style(config):
     return style
 
 
+# Films are for school students: a person in a scene is said to be clothed, because a pose described by body parts
+# alone ("knees pulled to the chest") came back as a bare body, and the reviewer passed it (C13 of keph1-06, 2026-10-30).
+PEOPLE = re.compile(r"\b(person|people|man|men|woman|women|boy|girl|child|children|kid|student|teacher|worker|farmer|"
+                    r"athlete|acrobat|gymnast|dancer|skater|diver|swimmer|player|runner|cyclist|rider|driver|figure|"
+                    r"human|body|someone|crowd|family|scientist|doctor|nurse|patient|baby|infant|parent|"
+                    r"mother|father|soldier|king|queen)s?\b", re.I)
+CLOTHED = ' Every person shown is fully and modestly clothed, in everyday, work or sports clothes suited to a school film.'
+
+
 def compose(style, *, setting, visual_style, layout, scene, addendum=''):
+    if PEOPLE.search(scene) and 'modestly clothed' not in scene:
+        scene = scene.rstrip() + CLOTHED
     if style == 'descriptive_v1':
         parts = [visual_style.strip().rstrip('.') + '.', scene.strip(), setting.strip().rstrip('.') + '.', layout.strip()]
         return ' '.join(p for p in parts if p.strip('. ')) + addendum

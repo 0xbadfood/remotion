@@ -40,9 +40,10 @@ def component_checks_enabled(asset):
 
 
 def review_guidance(asset):
+    from .image_providers import AUDIENCE_RULE
     if component_checks_enabled(asset):
-        return GUIDANCE
-    return ('Component inventory checks are not enabled for this narrative/symbolic asset. '
+        return AUDIENCE_RULE + GUIDANCE
+    return AUDIENCE_RULE + ('Component inventory checks are not enabled for this narrative/symbolic asset. '
             'Judge its actual prompt, visible meaning and framing normally. Use component_inventory [].\n')
 
 
