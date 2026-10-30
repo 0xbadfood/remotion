@@ -43,6 +43,17 @@ class CurriculumTests(unittest.TestCase):
         self.assertIn('at most 1 of the 2 objectives', ' '.join(evidence_coverage_errors(both, curriculum)))
         self.assertIn('source_gaps', evidence_task(curriculum))
 
+    def test_an_objective_taught_in_part_does_not_count_against_the_limit_on_gaps(self):
+        # Introduction to Thermodynamics (2026-10-31): the reviewer rightly asked for a partial gap beside a whole one; the
+        # limit refused the pair, every round, until the stage ran out of tries.
+        curriculum = {**CURRICULUM, 'coverage': [{'id': 'K1', 'point': 'Objective: scope'}, {'id': 'K2', 'point': 'Objective: caloric against kinetic'},
+                                                 {'id': 'K3', 'point': 'Objective: equilibrium'}]}
+        gaps = [{'coverage': 'K2', 'why': 'caloric yes, kinetic no'}, {'coverage': 'K3', 'why': 'no source'}]
+        evidence = {'curriculum': curriculum, 'facts': [{'id': 'F01', 'coverage': ['K1']}, {'id': 'F02', 'coverage': ['K2']}], 'source_gaps': gaps}
+        self.assertEqual(evidence_coverage_errors(evidence, curriculum), [])
+        whole = {**evidence, 'facts': [{'id': 'F01', 'coverage': ['K1']}]}
+        self.assertIn('at most 1 of the 3 objectives', ' '.join(evidence_coverage_errors(whole, curriculum)))
+
     def test_an_objective_taught_in_part_is_carried_and_its_missing_part_declared(self):
         # Gravitational potential energy (2026-10-30): "derive U for two point masses"; the book derives it only for the
         # Earth and a particle. A fact carries what the book gives and a gap names the missing derivation.

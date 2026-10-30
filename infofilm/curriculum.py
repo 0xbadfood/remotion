@@ -408,7 +408,10 @@ def source_gaps(evidence, curriculum):
         else:
             gaps.add(c)
     objectives = sum(p.startswith('Objective:') for p in points.values())
-    if len(gaps) > -(-objectives // 3):
+    # The limit is on objectives left with nothing. One taught in part is carried by facts, as the task tells the writer to
+    # do: counted here, it asked for what it forbade (Introduction to Thermodynamics, 2026-10-31: one whole gap and one partial).
+    carried = {c for f in evidence.get('facts', []) if isinstance(f, dict) and isinstance(f.get('coverage'), list) for c in f['coverage']}
+    if len(gaps - carried) > -(-objectives // 3):
         errors.append(f'source_gaps: at most {-(-objectives // 3)} of the {objectives} objectives may be gaps; carry the others with facts')
     return gaps, errors
 
