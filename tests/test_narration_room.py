@@ -202,6 +202,21 @@ class StagedPlanningTests(unittest.TestCase):
         self.assertIn("S01: figure is the id alone (a string)", problems)
         self.assertIn("S02", problems)
 
+    def test_one_book_figure_is_not_split_over_beats_in_a_row(self):
+        # 2026-10-30, C9 of keph1-06: Fig. 6.25 on three beats in a row, each asked to hide the later suspensions;
+        # a book figure shows whole and pass 2 may not change it, so every try failed
+        from infofilm.creative import sheet_errors
+        script, timing, _, rows = self.sheet()
+        figures = {"library": [{"id": "Fig-6-25"}, {"id": "Fig-6-26"}]}
+        rows[0].update(kind="figure", figure="Fig-6-25")
+        rows[1].update(kind="figure", figure="Fig-6-25")
+        problems = " ".join(sheet_errors({"beats": rows}, script, timing, figures))
+        self.assertIn("S01, S02: Fig-6-25 is a book figure and shows whole", problems)
+        rows[1].update(figure="Fig-6-26")
+        self.assertNotIn("shows whole", " ".join(sheet_errors({"beats": rows}, script, timing, figures)))
+        rows[0].update(figure="equation"); rows[1].update(figure="equation")    # equations are written per beat
+        self.assertNotIn("shows whole", " ".join(sheet_errors({"beats": rows}, script, timing, figures)))
+
     def test_two_beats_at_one_sentence_say_to_share_the_beat(self):
         # 2026-10-29, the electric power film: P = I²R and P = V²/R in one sentence; the planner sees only sentence
         # starts, so "a later word" was advice it could not take, and the reviewer kept asking for the second beat

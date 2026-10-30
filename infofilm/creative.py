@@ -568,7 +568,8 @@ SHEET_TASK = (
     "scene that shows what a later sentence states (a rule's labelled mapping, a result, a case) starts at that "
     "sentence; when it is not the point's first sentence, open the point with another beat before it "
     "(2026-10-29: Fleming's rule figure, its fingers labelled, opened the point at 'stretch your fingers', five "
-    "tries running, before the narration named what each finger shows). "
+    "tries running, before the narration named what each finger shows). A library figure shows whole, all its parts at once: "
+    "never ask it to withhold a part, and never put the same figure on beats in a row. "
     "Reviewing: judge the film's shape: vector first, one beat per idea, whether every core idea gets the time and "
     "room it needs, and whether each beat's choice fits its passage. A room's cue ('Look carefully.', 'Notice what "
     "changes.', 'Watch it once more.') is spoken by code when the film is voiced, so it is never in the narration "
@@ -657,6 +658,15 @@ def sheet_errors(value, script, timing, figures=None, linkwork=None, typical=Non
             errors.append(f"{sid}: only a core beat gets room; this one is {r.get('importance')}")
         elif r.get("room") == "replay" and kind != "linkwork":
             errors.append(f"{sid}: only a linkwork beat can replay; give a {kind} beat 'hold' or 'look'")
+    # a book figure shows whole: the same one on beats in a row can't withhold its later parts from the earlier beats,
+    # and pass 2 may not change the figure (2026-10-30: C9 of keph1-06 put Fig. 6.25 on three beats, hiding the second
+    # suspension, then the intersection; every pass-2 try failed)
+    for a, b in zip(rows, rows[1:]):
+        fa = text(a.get("figure"))
+        if a.get("kind") == b.get("kind") == "figure" and fa in library and fa == text(b.get("figure")):
+            errors.append(f"{a.get('id')}, {b.get('id')}: {fa} is a book figure and shows whole; give it one beat, "
+                          "carried on with through_point_id, starting where the narration has named what it shows "
+                          "(draw the steps before that with a verb or an image)")
     replays = [r.get("id") for r in rows if r.get("room") == "replay"]
     if len(replays) > room["max_replays"]:
         errors.append(f"{', '.join(map(str, replays))}: at most {room['max_replays']} replays in a film; keep them for "
