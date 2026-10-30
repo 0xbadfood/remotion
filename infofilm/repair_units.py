@@ -11,6 +11,9 @@ A stage declares its units in a spec:
 - "operations": lists where a repair may insert or remove items (code assigns the new ids);
 - "links": {subfield: {item id: [unit ids]}}: a pointer '<item>.<subfield>' naming something that lives in another
   unit is redirected to it (Cuba C04: 'A017.banner' means the banner unit of A017's scene, '160:S18').
+- "open": {list: id field}: a top-level list any repair may add to or replace items of, matched by that field, even
+  when the candidate has none yet (evidence's source_gaps: a reviewer asked six times for a declared gap and every
+  repair could return only the flagged fact, so the gap never landed; Fluids C2, 2026-10-30).
 
 Rules (pipeline-findings-todo.md, BUILD NEXT): ids are stable once a candidate exists; reviewer findings and validator
 errors point at unit ids; code maps findings to units, asks the planner for only the flagged units, merges them back by
@@ -30,7 +33,7 @@ def normalized(spec):
     spec = dict(DEFAULT_SPEC if spec is None else spec)
     spec.setdefault("lists", {}); spec.setdefault("fields", False)
     spec.setdefault("anchors", {}); spec.setdefault("operations", []); spec.setdefault("assign", {})
-    spec.setdefault("links", {})
+    spec.setdefault("links", {}); spec.setdefault("open", {})
     return spec
 
 
@@ -230,6 +233,15 @@ def merge(prior, response, flagged, spec=None):
                 result[unit] = fields[unit]
     for operation in response.get("operations") or [] if isinstance(response.get("operations"), list) else []:
         apply_operation(result, operation, flagged, spec)
+    for key, ident in spec["open"].items():
+        given = next((v for v in (response.get(key), partial.get(key), fields.get(key)) if isinstance(v, list)), None)
+        if given is None:
+            continue
+        by_id = {str(x.get(ident)): x for x in result.get(key) or [] if isinstance(x, dict)}
+        for item in given:
+            if isinstance(item, dict) and item.get(ident) not in (None, ""):
+                by_id[str(item[ident])] = item
+        result[key] = list(by_id.values())
     return result
 
 
@@ -298,6 +310,8 @@ def repair_request(prior, flagged, spec=None, simplify=(), extra="", abstract=No
     if ops:
         shape.append('"operations": [{"op": "insert_after"|"remove", "target": flagged id, "items": [new items, no id]}] '
                      "only when a finding requires adding or removing an item in " + ", ".join(ops))
+    for key, ident in spec["open"].items():
+        shape.append(f'"{key}": [items to add, or to replace by {ident}] only when a finding asks for one')
     text = ("\nTARGETED REPAIR. The prior candidate stays as it is except the flagged units below. "
             "Return ONLY {" + ", ".join(shape) + "} with exactly the flagged units; do not return, renumber or change "
             "any other unit (code merges your units back by id and re-validates the whole candidate).\n"

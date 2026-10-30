@@ -168,3 +168,20 @@ class OtherListPointerTests(unittest.TestCase):
                      "uncertainties": ["Ratios vary."], "narrative_priorities": ["Say it squeezes air.", "Open with thrust."]}
         self.assertEqual(ru.resolve("F16.narrative_priorities", candidate, EVIDENCE_UNITS), ["N01", "N02"])
         self.assertEqual(ru.resolve("F16.claim", candidate, EVIDENCE_UNITS), ["F16"])
+
+
+def test_a_repair_can_declare_a_source_gap_the_candidate_never_had():
+    # Fluids C2 (2026-10-30): the reviewer asked six times for source_gaps on K1; each repair could return only the
+    # flagged fact F06, so the declared gap never reached the candidate and the stage ran out of tries.
+    from infofilm.planning import EVIDENCE_UNITS
+    from infofilm.repair_units import merge, repair_request
+    prior = {"title": "t", "facts": [{"id": "F06", "claim": "old"}], "uncertainties": [], "narrative_priorities": []}
+    response = {"units": {"facts": [{"id": "F06", "claim": "new"}]},
+                "source_gaps": [{"coverage": "K1", "why": "the transmission is stated, not derived"}]}
+    merged = merge(prior, response, {"F06": ["declare the gap"]}, EVIDENCE_UNITS)
+    assert merged["facts"][0]["claim"] == "new"
+    assert merged["source_gaps"] == [{"coverage": "K1", "why": "the transmission is stated, not derived"}]
+    # a later repair replaces the same coverage's gap rather than repeating it
+    again = merge(merged, {"source_gaps": [{"coverage": "K1", "why": "better"}]}, {"F06": ["x"]}, EVIDENCE_UNITS)
+    assert again["source_gaps"] == [{"coverage": "K1", "why": "better"}]
+    assert '"source_gaps"' in repair_request(prior, {"F06": ["declare the gap"]}, EVIDENCE_UNITS)

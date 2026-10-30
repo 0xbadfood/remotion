@@ -57,7 +57,8 @@ def evidence_context(extraction, subject):
 
 
 # Smallest repairable units per stage (repair_units): code maps findings to these ids and repairs only them.
-EVIDENCE_UNITS = {"lists": {"facts": "id", "uncertainties": "@U", "narrative_priorities": "@N"}, "operations": ["facts"]}
+EVIDENCE_UNITS = {"lists": {"facts": "id", "uncertainties": "@U", "narrative_priorities": "@N"}, "operations": ["facts"],
+                  "open": {"source_gaps": "coverage"}}
 SCRIPT_UNITS = {"lists": {"points": "id"}, "operations": ["points"]}
 LIBRARY_UNITS = {"lists": {"assets": "id"}}
 STORYBOARD_UNITS = {"lists": {"scenes": "point_id"}, "anchors": {"scenes": ["point_id"]}}
