@@ -234,10 +234,17 @@ def anchor_errors(scenes, script, timing):
                       ", got " + " ".join(collapsed) + (f" (missing {', '.join(missing)})" if missing else ""))
     if indices != sorted(set(indices)):
         anchored = [s for s in scenes if s.get("start_word_id") in positions]
-        bad = [b.get("id") for a, b in zip(anchored, anchored[1:]) if positions[b["start_word_id"]] <= positions[a["start_word_id"]]]
-        order.append("Word anchors must increase strictly; no repeats or backward cuts" + (f" (at {', '.join(map(str, bad))})" if bad else "")
-                     + ": two beats never start at one sentence; show both in the one beat (an equation beat can show two "
-                       "results in turn), or start the second at a later sentence")
+        # Both beats of a clash are named, each as its own unit, with the field: a repair can then reach the one that is
+        # wrong (Temperature and Heat: an inserted beat took S09's sentence, and ten repairs of S09 alone could not move it)
+        pairs = [(a, b) for a, b in zip(anchored, anchored[1:]) if positions[b["start_word_id"]] <= positions[a["start_word_id"]]]
+        for a, b in pairs:
+            for one, other in ((a, b), (b, a)):
+                order.append(f"{one.get('id')}: start_word_id {one['start_word_id']} clashes with {other.get('id')} at {other['start_word_id']}. "
+                             "Word anchors must increase strictly; no repeats or backward cuts: two beats never start at "
+                             "one sentence; show both in the one beat (an equation beat can show two results in turn), or "
+                             "start the second at a later sentence, or remove one")
+        if not pairs:
+            order.append("Word anchors must increase strictly; no repeats or backward cuts")
     return errors, order
 
 

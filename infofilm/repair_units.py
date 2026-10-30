@@ -7,7 +7,8 @@ A stage declares its units in a spec:
 - an item list keyed by an id field ("id", "scene_key", ...);
 - a string list ("@U"): code gives entry i the id U01, U02, ...;
 - "fields": True makes every other top-level key of a single-object output a unit (e.g. a creative brief);
-- "anchors": fields a replaced item keeps from the prior candidate (its place in the timeline);
+- "anchors": fields a replaced item keeps from the prior candidate (its place in the timeline), unless a validation
+  error on that unit names the field;
 - "operations": lists where a repair may insert or remove items (code assigns the new ids);
 - "links": {subfield: {item id: [unit ids]}}: a pointer '<item>.<subfield>' naming something that lives in another
   unit is redirected to it (Cuba C04: 'A017.banner' means the banner unit of A017's scene, '160:S18').
@@ -222,8 +223,10 @@ def merge(prior, response, flagged, spec=None):
             unit = str(item.get(ident)) if isinstance(item, dict) else None
             if unit in flagged and unit in by_id:
                 replacement = dict(by_id[unit])
+                # an anchor holds unless a code check on this very unit names that field as what is wrong
+                named = " ".join(str(f.get("validation_error") or "") for f in flagged[unit] if isinstance(f, dict)) if isinstance(flagged, dict) else ""
                 for anchor in spec["anchors"].get(key, []):
-                    if anchor in item:
+                    if anchor in item and anchor not in named:
                         replacement[anchor] = item[anchor]
                 replacement[ident] = item[ident]
                 result[key][index] = replacement

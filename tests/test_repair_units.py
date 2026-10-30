@@ -185,3 +185,23 @@ def test_a_repair_can_declare_a_source_gap_the_candidate_never_had():
     again = merge(merged, {"source_gaps": [{"coverage": "K1", "why": "better"}]}, {"F06": ["x"]}, EVIDENCE_UNITS)
     assert again["source_gaps"] == [{"coverage": "K1", "why": "better"}]
     assert '"source_gaps"' in repair_request(prior, {"F06": ["declare the gap"]}, EVIDENCE_UNITS)
+
+
+def test_a_clash_of_anchors_reaches_both_beats_and_frees_the_anchor():
+    from infofilm import repair_units as ru
+    spec = {"lists": {"beats": "id"}, "anchors": {"beats": ["point_id", "start_word_id"]}, "operations": ["beats"]}
+    prior = {"beats": [{"id": "S08b", "point_id": "P07", "start_word_id": "w0279", "intent": "a"},
+                       {"id": "S09", "point_id": "P07", "start_word_id": "w0279", "intent": "b"}]}
+    errors = ["S08b: start_word_id w0279 clashes with S09 at w0279. Word anchors must increase",
+              "S09: start_word_id w0279 clashes with S08b at w0279. Word anchors must increase"]
+    flagged, stage = ru.flag(prior, errors, None, spec)
+    assert set(flagged) == {"S08b", "S09"} and not stage
+    moved = ru.merge(prior, {"units": {"beats": [{"id": "S09", "point_id": "P99", "start_word_id": "w0290", "intent": "b"}]}}, flagged, spec)
+    assert moved["beats"][1]["start_word_id"] == "w0290"
+    assert moved["beats"][1]["point_id"] == "P07"          # only the field the check names is freed
+    held = ru.merge(prior, {"units": {"beats": [{"id": "S09", "start_word_id": "w0290", "intent": "c"}]}},
+                    {"S09": [{"problem": "weak intent"}]}, spec)
+    assert held["beats"][1]["start_word_id"] == "w0279"    # a review finding moves nothing
+    removed = ru.merge(prior, {"operations": [{"op": "remove", "target": "S08b"}]}, flagged, spec)
+    assert [b["id"] for b in removed["beats"]] == ["S09"]
+
