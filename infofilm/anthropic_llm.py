@@ -39,8 +39,11 @@ def _image(path):
 
 # A stream cut off midway (2026-10-29, Stopping Distance: "peer closed connection without sending complete message
 # body") is past the SDK's own retries, which only cover a request that fails to start: the whole call starts again.
+# The same tries sit out a network outage (2026-10-31, Carnot Engine: amdserver timed out at the same time,
+# and five tries gave up after four minutes): an idle wait costs nothing, a stopped film costs a person's attention.
 DROPPED = (httpx.RemoteProtocolError, httpx.ReadError, httpx.ReadTimeout, anthropic.APIConnectionError)
-STREAM_TRIES = 5
+STREAM_TRIES = 12
+LONGEST_WAIT = 300
 
 
 def _final(cli, label, *, sleep=time.sleep, **params):
@@ -58,7 +61,7 @@ def _final(cli, label, *, sleep=time.sleep, **params):
         except DROPPED:
             if attempt == STREAM_TRIES - 1:
                 raise
-            sleep(10 * 2 ** attempt)
+            sleep(min(10 * 2 ** attempt, LONGEST_WAIT))
     if message.stop_reason == 'refusal':
         details = message.stop_details
         raise RuntimeError(f'{label} declined the request (refusal'

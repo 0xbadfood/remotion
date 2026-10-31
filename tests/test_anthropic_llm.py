@@ -121,3 +121,14 @@ class DroppedStreamTests(unittest.TestCase):
         cli.messages.stream.side_effect = [cut] * STREAM_TRIES
         with self.assertRaises(httpx.RemoteProtocolError):
             _final(cli, "beats", sleep=waits.append, model="m")
+
+    def test_the_tries_sit_out_a_half_hour_outage(self):
+        # 2026-10-31, Carnot Engine: a network outage stopped a film after four minutes of tries
+        from infofilm.anthropic_llm import LONGEST_WAIT, STREAM_TRIES, _final
+        cut = MagicMock(); cut.__enter__.return_value.get_final_message.side_effect = anthropic.APIConnectionError(request=MagicMock())
+        cli, waits = MagicMock(), []
+        cli.messages.stream.side_effect = [cut] * STREAM_TRIES
+        with self.assertRaises(anthropic.APIConnectionError):
+            _final(cli, "beats", sleep=waits.append, model="m")
+        self.assertGreaterEqual(sum(waits), 1800)
+        self.assertEqual(max(waits), LONGEST_WAIT)
