@@ -85,6 +85,19 @@ def out_of_credit(response):
     return isinstance(error, dict) and (error.get("code") in {"insufficient_quota", "credit_balance_exhausted"} or error.get("type") == "insufficient_quota")
 
 
+def openrouter_twin(config, connection):
+    """The same OpenAI model through OpenRouter, for when the OpenAI account can't pay (user, 2026-10-31): films keep the reviewer they were tuned against. Worked out here, not saved in settings, so a job resuming from its frozen settings has it too. None if there is no OpenRouter key."""
+    if connection.get("type") != "openai_responses" or not connection.get("model"):
+        return None
+    root = config.get("llm_secrets_root")
+    settings = Path(root) / "llm-settings.json" if root else None
+    for cid, other in (json.loads(settings.read_text()).get("connections", {}) if settings and settings.exists() else {}).items():
+        if other.get("type") == "openrouter" and api_key(root, cid, other):
+            return {**other, "id": cid, "label": f"{connection.get('label', 'OpenAI')} via OpenRouter", "model": "openai/" + connection["model"],
+                    "reasoning_effort": connection.get("reasoning_effort", "low"), "timeout": connection.get("timeout", 900)}
+    return None
+
+
 class ModelOutputError(ValueError):
     """A saved response failed the output contract; safe to retry within a budget."""
 
@@ -141,6 +154,7 @@ def review_decision(review, errors, experimental, config=None):
 
 class Models:
     def __init__(self, config, store):
+        self.fallen = {}     # role: the connection it moved to when its own account ran out of credit
         self.config, self.store = config, store
         self.identities = {}
 
@@ -151,6 +165,15 @@ class Models:
         the other role's model (2026-10-29: OpenAI flagged a Force and Inertia scene plan, a false positive, and the
         whole film stopped)."""
         try:
+            return self._call_escalating(role, name, prompt, image_path=image_path,
+                                         reference_image_paths=reference_image_paths, max_tokens=max_tokens, escalate=escalate)
+        except LLMBillingError as exc:
+            twin = None if role in self.fallen else openrouter_twin(self.config, endpoint(self.config, role))
+            if not twin:
+                raise
+            self.fallen[role] = twin
+            self.identities.pop(role, None)
+            self.store.event(name, "fallback", {"role": role, "connection": twin["label"], "error": str(exc)[:300]})
             return self._call_escalating(role, name, prompt, image_path=image_path,
                                          reference_image_paths=reference_image_paths, max_tokens=max_tokens, escalate=escalate)
         except ProviderRefusal as exc:
@@ -183,7 +206,7 @@ class Models:
         prefix = root / f"{name}-{signature[:12]}"
         if prefix.with_suffix(".result.json").exists():
             return read(prefix.with_suffix(".result.json"))
-        connection = endpoint(self.config, role)
+        connection = self.fallen.get(role) or endpoint(self.config, role)
         url = connection["url"]
         key = (os.environ.get("VLLM_API_KEY") if connection.get("legacy") else
                api_key(self.config.get("llm_secrets_root"), connection.get("id"), connection))
@@ -221,6 +244,9 @@ class Models:
                     {"role": "system", "content": system},
                     {"role": "user", "content": content}], "temperature": 0.15,
                     "max_tokens": max_tokens, "response_format": {"type": "json_object"}}
+                if connection.get("reasoning_effort") and connection["type"] == "openrouter":     # as the model's own API would have it: thinking gets its room
+                    body["reasoning"] = {"effort": connection["reasoning_effort"]}
+                    body["max_tokens"] = max(max_tokens * 3, 8000)
                 if connection["type"] == "openai_chat":     # llama.cpp / vLLM reasoning switch; hosted APIs reject it
                     body["chat_template_kwargs"] = {"enable_thinking": False}
                 else:

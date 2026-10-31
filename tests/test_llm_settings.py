@@ -10,7 +10,7 @@ from unittest.mock import Mock, patch
 import httpx
 
 from infofilm.core import Store, digest
-from infofilm.llm import Models, llm_slot, LLMBillingError, out_of_credit
+from infofilm.llm import Models, llm_slot, LLMBillingError, openrouter_twin, out_of_credit
 from infofilm.llm_settings import Registry, endpoint, llm_config
 
 CONFIG = {'planner_url': 'http://10.8.0.5:8001/v1', 'reviewer_url': 'http://10.8.0.4:8001/v1'}
@@ -134,12 +134,35 @@ class AdapterTests(unittest.TestCase):
         # 2026-10-31, Kinetic Theory C2: an empty account answers 429 too, and the job waited half an hour before stopping.
         empty = httpx.Response(429, json={'error': {'message': 'You have no credits remaining.', 'type': 'insufficient_quota', 'code': 'credit_balance_exhausted'}}, request=httpx.Request('POST', 'https://api.openai.com'))
         _, client = self.client(empty)
-        with patch('infofilm.llm.time.sleep') as sleep, self.assertRaisesRegex(LLMBillingError, 'top up'):
+        with patch('infofilm.llm.time.sleep') as sleep, patch('infofilm.llm.openrouter_twin', return_value=None), self.assertRaisesRegex(LLMBillingError, 'top up'):
             Models(self.config, self.store).call('reviewer', 'review', 'Prompt')
         sleep.assert_not_called()
         self.assertEqual(client.post.call_count, 1)
         limited = httpx.Response(429, json={'error': {'message': 'Slow down', 'code': 'rate_limit_exceeded'}}, request=httpx.Request('POST', 'https://api.openai.com'))
         self.assertFalse(out_of_credit(limited))
+
+    def test_the_review_carries_on_through_the_twin_and_stays_there(self):
+        empty = httpx.Response(429, json={'error': {'code': 'insufficient_quota'}}, request=httpx.Request('POST', 'https://api.openai.com'))
+        _, client = self.client(empty, reply('{"pass": true}'), reply('{"pass": false}'))
+        twin = {'type': 'openrouter', 'id': 'r', 'url': 'https://openrouter.ai/api/v1', 'label': 'twin', 'model': 'openai/gpt-6-luna', 'reasoning_effort': 'low', 'key_env': 'OPENROUTER_API_KEY', 'timeout': 9}
+        models = Models(self.config, self.store)
+        with patch('infofilm.llm.openrouter_twin', return_value=twin), patch.dict(os.environ, {'OPENROUTER_API_KEY': 'k'}):
+            self.assertEqual(models.call('reviewer', 'review', 'Prompt'), {'pass': True})
+            self.assertEqual(models.call('reviewer', 'review-2', 'Prompt 2'), {'pass': False})
+        self.assertEqual(client.post.call_count, 3)     # no second trip to the empty account
+        body = client.post.call_args.kwargs['json']
+        self.assertEqual((body['model'], body['reasoning']), ('openai/gpt-6-luna', {'effort': 'low'}))
+
+    def test_an_empty_openai_account_moves_to_the_same_model_through_openrouter(self):
+        (self.root / 'llm-settings.json').write_text(json.dumps({'connections': {'router': {'type': 'openrouter', 'url': 'https://openrouter.ai/api/v1', 'model': 'x', 'key_env': 'OPENROUTER_API_KEY'}}}))
+        config = dict(self.config); config['llm_secrets_root'] = str(self.root)
+        luna = {'type': 'openai_responses', 'url': 'https://api.openai.com/v1', 'model': 'gpt-6-luna', 'label': 'luna', 'reasoning_effort': 'low'}
+        with patch.dict(os.environ, {'OPENROUTER_API_KEY': 'k'}):
+            twin = openrouter_twin(config, luna)
+        self.assertEqual((twin['type'], twin['model'], twin['reasoning_effort']), ('openrouter', 'openai/gpt-6-luna', 'low'))
+        self.assertIsNone(openrouter_twin(config, {'type': 'anthropic', 'model': 'm'}))
+        with patch.dict(os.environ, {}, clear=True):
+            self.assertIsNone(openrouter_twin({'llm_secrets_root': str(self.root / 'nowhere')}, luna))
 
     def test_cloudflare_edge_error_on_responses_api_is_retried(self):
         # The first History Studio film died on a single OpenAI 520 (Cloudflare) during image-prompt review.
