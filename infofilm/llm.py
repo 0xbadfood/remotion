@@ -74,6 +74,17 @@ def llm_slot(connection):
         time.sleep(0.5)
 
 
+def out_of_credit(response):
+    """OpenAI reports an empty account as HTTP 429, like a rate limit (2026-10-31, Kinetic Theory C2: half an hour of waits before the job stopped). Waiting can't fix it."""
+    if getattr(response, "status_code", 200) != 429:
+        return False
+    try:
+        error = response.json().get("error") or {}
+    except (ValueError, AttributeError):
+        return False
+    return isinstance(error, dict) and (error.get("code") in {"insufficient_quota", "credit_balance_exhausted"} or error.get("type") == "insufficient_quota")
+
+
 class ModelOutputError(ValueError):
     """A saved response failed the output contract; safe to retry within a budget."""
 
@@ -226,8 +237,8 @@ class Models:
             self.store.event(name, "running", {"role": role, "model": model})
             start = time.monotonic()
             response = self._post(client, connection, url + path, body, name)
-            if response.status_code == 402:            # OpenRouter: out of credits; stop the job, don't retry
-                raise LLMBillingError(f"{connection.get('label', url)}: payment required (HTTP 402: {response.text[:200]}); "
+            if response.status_code == 402 or out_of_credit(response):   # out of credits; stop the job, don't retry
+                raise LLMBillingError(f"{connection.get('label', url)}: payment required (HTTP {response.status_code}: {response.text[:200]}); "
                                       "the job stops here: top up the credits, then resume the job")
             if connection["type"] == "openai_responses" and response.status_code < 500:
                 raw = response.json()
@@ -304,7 +315,7 @@ class Models:
                 with llm_slot(connection):
                     response = client.post(url, json=body)
                 status = getattr(response, "status_code", 200)
-                if status not in TRANSIENT_STATUS or time.monotonic() >= deadline:
+                if status not in TRANSIENT_STATUS or time.monotonic() >= deadline or out_of_credit(response):
                     return response
                 wait, reason = retry_after(response) or delay, f"HTTP {status}"
             except TRANSIENT_ERRORS as exc:

@@ -10,7 +10,7 @@ from unittest.mock import Mock, patch
 import httpx
 
 from infofilm.core import Store, digest
-from infofilm.llm import Models, llm_slot
+from infofilm.llm import Models, llm_slot, LLMBillingError, out_of_credit
 from infofilm.llm_settings import Registry, endpoint, llm_config
 
 CONFIG = {'planner_url': 'http://10.8.0.5:8001/v1', 'reviewer_url': 'http://10.8.0.4:8001/v1'}
@@ -129,6 +129,17 @@ class AdapterTests(unittest.TestCase):
         self.assertEqual([c.args[0] for c in sleep.call_args_list], [5, 2.0])
         retries = self.store.db.execute("SELECT COUNT(*) FROM events WHERE state='transient_retry'").fetchone()[0]
         self.assertEqual(retries, 2)
+
+    def test_an_empty_openai_account_stops_at_once_but_a_rate_limit_still_waits(self):
+        # 2026-10-31, Kinetic Theory C2: an empty account answers 429 too, and the job waited half an hour before stopping.
+        empty = httpx.Response(429, json={'error': {'message': 'You have no credits remaining.', 'type': 'insufficient_quota', 'code': 'credit_balance_exhausted'}}, request=httpx.Request('POST', 'https://api.openai.com'))
+        _, client = self.client(empty)
+        with patch('infofilm.llm.time.sleep') as sleep, self.assertRaisesRegex(LLMBillingError, 'top up'):
+            Models(self.config, self.store).call('reviewer', 'review', 'Prompt')
+        sleep.assert_not_called()
+        self.assertEqual(client.post.call_count, 1)
+        limited = httpx.Response(429, json={'error': {'message': 'Slow down', 'code': 'rate_limit_exceeded'}}, request=httpx.Request('POST', 'https://api.openai.com'))
+        self.assertFalse(out_of_credit(limited))
 
     def test_cloudflare_edge_error_on_responses_api_is_retried(self):
         # The first History Studio film died on a single OpenAI 520 (Cloudflare) during image-prompt review.
