@@ -168,6 +168,11 @@ class Sealed(unittest.TestCase):
                     pass
         self.assertEqual(reached[:2], ["audio-semantic-abc", "audio-semantic-def"])
 
+    def test_a_rendition_reaches_the_reviewer_a_queued_film_would(self):
+        from unittest import mock
+        with mock.patch("infofilm.llm_settings.Registry.freeze", lambda self, config: {**config, "reviewer_url": "frozen"}) as _:
+            self.assertEqual(rendition.film_config()["reviewer_url"], "frozen")
+
     def test_the_arbiters_name_is_the_one_the_audit_uses(self):
         source = Path(rendition.__file__).with_name("audio_audit.py").read_text()
         self.assertIn('"audio-semantic-" + identity', source)

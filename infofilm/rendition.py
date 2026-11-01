@@ -23,7 +23,7 @@ import sys
 import time
 from pathlib import Path
 
-from .core import Store, configuration as load_config, digest, read, resource_slot, write
+from .core import ROOT, Store, configuration as load_config, digest, read, resource_slot, write
 
 FORMAT = "infofilm.bundle.v1"
 # The passage every narrator reads. The consent sentence stays out of the voice reference: it is checked and kept apart.
@@ -347,13 +347,20 @@ def anchor_problems(storyboard, timing):
     return [s.get("id") for s in storyboard["scenes"] if s.get("start_word_id") and s["start_word_id"] not in known]
 
 
+def film_config():
+    """The engine's settings with the LLM endpoints a queued film gets: the audio arbiter needs a real reviewer."""
+    from .llm_settings import Registry
+    config = load_config()
+    return Registry(ROOT / "artifacts" / "interface", config).freeze(config)
+
+
 def render_film(bundle, out, *, voice, template="teal", logo=None, name=None, config=None):
     bundle, out = Path(bundle).resolve(), Path(out).resolve()
     manifest = verify(bundle)
     chosen = TEMPLATES[template]
     profile = read(Path(voice) / "voice.json")
     master = read(bundle / "master.json")
-    config = {**(config or load_config()), **profile, "tts_engine": "luxtts", "tts_fallback": "none", "width": master["width"], "height": master["height"],
+    config = {**(config or film_config()), **profile, "tts_engine": "luxtts", "tts_fallback": "none", "width": master["width"], "height": master["height"],
               "fps": master["fps"], "phrase_root": str(Path(voice).resolve() / "phrases")}
     store = Store(out)
     try:
