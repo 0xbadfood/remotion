@@ -233,3 +233,13 @@ def test_a_clash_of_anchors_reaches_both_beats_and_frees_the_anchor():
     removed = ru.merge(prior, {"operations": [{"op": "remove", "target": "S08b"}]}, flagged, spec)
     assert [b["id"] for b in removed["beats"]] == ["S09"]
 
+
+def test_a_bad_anchor_is_named_so_a_repair_may_change_it():
+    from infofilm.creative import anchor_errors
+    script = {"points": [{"id": "P1"}]}
+    timing = {"points": [{"point_id": "P1", "word_ids": ["w1", "w2"]}], "words": [{"id": "w1"}, {"id": "w2"}]}
+    clean = [{"id": "S1", "point_id": "P1", "start_word_id": "w1,"}]
+    assert not any("aligned word" in e for e in anchor_errors(clean, script, timing)[0])
+    assert clean[0]["start_word_id"] == "w1"
+    errors = anchor_errors([{"id": "S1", "point_id": "P1", "start_word_id": "w9"}], script, timing)[0]
+    assert "start_word_id" in errors[0] and "point_id" in errors[0]

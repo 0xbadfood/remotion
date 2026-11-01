@@ -199,9 +199,12 @@ def anchor_errors(scenes, script, timing):
     for scene in scenes:
         if not re.fullmatch(r"[A-Za-z0-9_-]{1,50}", str(scene.get("id", ""))):
             errors.append(f"{scene.get('id')!r}: use a short alphanumeric visual beat ID")
+        if isinstance(scene.get("start_word_id"), str):     # "w0623,": a stray comma, kept through ten repairs (Electric Field, 2026-11-02)
+            scene["start_word_id"] = scene["start_word_id"].strip(" \t\n,.;:'\"")
         point_id, anchor = scene.get("point_id"), scene.get("start_word_id")
         if point_id not in point_words or anchor not in point_words.get(point_id, []):
-            errors.append(f"{scene.get('id')}: anchor must be an aligned word in its point")
+            # names both fields: targeted repair keeps an anchor unless the error on that unit names it
+            errors.append(f"{scene.get('id')}: anchor must be an aligned word in its point: start_word_id {anchor!r} is not a word of point_id {point_id!r}")
             continue
         if point_id in spanned:
             errors.append(f"{scene.get('id')}: {point_id} is carried by {spanned[point_id]} (its through_point_id); "
