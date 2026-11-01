@@ -313,7 +313,9 @@ def score_english_transcript(*, expected_text, transcript_text,
                 result["reasons"].append("numeric_mismatch")
         # A whole omitted passage must not disappear inside the overall WER
         # allowance. Small substitutions remain ordinary ASR uncertainty.
-        if tag in {"delete", "replace"} and j-i >= 4 and l-k < (j-i)/2:
+        # Spelled symbols run together are not a passage ('m a x f y' heard as 'msx fy'): the sounds are still there.
+        if (tag in {"delete", "replace"} and j-i >= 4 and l-k < (j-i)/2
+                and len("".join(actual[k:l])) < len("".join(expected[i:j]))/2):
             reason = "incomplete_ending" if j == len(expected) else (
                 "incomplete_opening" if i == 0 else "missing_passage")
             if reason not in result["reasons"]:

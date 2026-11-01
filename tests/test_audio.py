@@ -133,6 +133,12 @@ class NumericAuditTests(unittest.TestCase):
         self.assertEqual(result["status"], "failed")
         self.assertIn("incomplete_ending", result["reasons"])
 
+    def test_spelled_symbols_run_together_are_not_a_missing_passage(self):
+        before = "The evidence connects the causes with their consequences. " * 20
+        after = "The account continues with a carefully explained outcome. " * 20
+        result = self.score(before+"F x equals m a x f y equals m a y. "+after, before+"F x equals msx fy equals mey. "+after)
+        self.assertNotIn("missing_passage", result["reasons"])
+
     def test_missing_internal_sentence_is_not_diluted_by_long_narration(self):
         before = "The evidence connects the causes with their consequences. " * 20
         after = "The account continues with a carefully explained outcome. " * 20
