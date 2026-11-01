@@ -152,6 +152,11 @@ def review_decision(review, errors, experimental, config=None):
     return False, "score_below_floor" if screened else "review_failed"
 
 
+def long_plan_rounds(size, grown, majors):
+    """One more round for a long plan close to done: 1 to 3 blocking findings left, and up to one round per 12 units beyond 30."""
+    return 1 <= majors <= 3 and grown < max(0, size - 30) // 12 + (1 if size > 30 else 0)
+
+
 class Models:
     def __init__(self, config, store):
         self.fallen = {}     # role: the connection it moved to when its own account ran out of credit
@@ -414,6 +419,7 @@ class Models:
                             json.dumps({"stage": stage_findings, "units": flagged}, ensure_ascii=False))
             self.store.event(stage, "seeded_repair", {"units": sorted(flagged), "stage_findings": len(stage_findings)})
         mechanical, mechanical_cap = 0, self.config.get("validation_rounds", 3)
+        grown = 0
         unchanged = []                                  # flagged units the planner returned unchanged last round
         reviewed, raised = None, set()                  # last reviewed candidate; units ever sent to the planner
         asked = []                                      # corrections earlier rounds gave for blocking findings
@@ -582,6 +588,12 @@ class Models:
             if errors and review is None and mechanical < mechanical_cap:
                 # A round lost only to code checks (no review) does not use up the review budget.
                 mechanical += 1; rounds += 1
+            # A long plan is reviewed whole each round and shows a fresh finding or two elsewhere each time, so it needs more
+            # rounds than a short one to run out of them (Electric Charge C1, 2026-11-02: 52 beats, one new major a round).
+            size, majors = len(ru.units(current, units)) if units else 0, len(ru.blocking(review or {}))
+            if long_plan_rounds(size, grown, majors):
+                grown += 1; rounds += 1
+                self.store.event(stage, "long_plan_round", {"attempt": attempt + 1, "units": size, "majors": majors, "max_attempts": rounds})
             for item in flagged:
                 strikes[item] = strikes.get(item, 0) + 1
             hard = {item for item in flagged if strikes[item] >= SIMPLIFY_AFTER} - simplify

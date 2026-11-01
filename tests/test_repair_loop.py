@@ -177,6 +177,15 @@ class ProviderRefusalTests(unittest.TestCase):
 class ReviewDecisionTests(unittest.TestCase):
     """Dandi C07: once code screened the moved targets, the reviewer's 78 (which still counted them) blocked the pass."""
 
+    def test_a_long_plan_close_to_done_earns_rounds_and_a_short_or_far_one_does_not(self):
+        from infofilm.llm import long_plan_rounds
+        self.assertTrue(long_plan_rounds(52, 0, 1))
+        self.assertTrue(long_plan_rounds(52, 1, 3))
+        self.assertFalse(long_plan_rounds(52, 2, 1))     # bounded
+        self.assertFalse(long_plan_rounds(52, 0, 4))     # far from done
+        self.assertFalse(long_plan_rounds(52, 0, 0))
+        self.assertFalse(long_plan_rounds(30, 0, 1))
+
     def test_decision(self):
         from infofilm.llm import review_decision
         clean = {"pass": True, "score": 84, "issues": [{"severity": "minor"}]}
