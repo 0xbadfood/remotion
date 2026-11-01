@@ -186,6 +186,8 @@ SECONDS = (8.0, 45.0)        # a shorter take gives the voice too little; a long
 MIN_SNR_DB = 25.0            # speech above the room. Our own recordings stand well over this
 MAX_CLIPPED = 0.001
 MIN_LEVEL_DB = -40.0         # a take too quiet for the room to matter is still too quiet
+VOICE_LUFS, VOICE_PEAK = -17.5, -1.5    # where nitin.wav and kaushal.wav sit
+FILM_LUFS = -17.0            # where our finished films sit
 MIN_MATCH = 0.7              # share of the passage's words heard (a correct clean take scored .86 on Whisper small)
 
 
@@ -242,14 +244,34 @@ def hear(path, config):
     return " ".join(s.text for s in segments)
 
 
+def loudness(path):
+    """(integrated LUFS, true peak dB) of a recording."""
+    text = subprocess.run(["ffmpeg", "-hide_banner", "-nostats", "-i", str(path), "-map", "0:a:0", "-af", "ebur128=peak=true", "-f", "null", "-"], capture_output=True, text=True, check=True).stderr
+    text = text[text.rfind("Summary:"):]
+    return float(re.search(r"I:\s*(-?[\d.]+) LUFS", text).group(1)), float(re.search(r"Peak:\s*(-?[\d.]+)", text).group(1))
+
+
+def voice_gain(lufs, peak):
+    """To the level of our own voices, as far as the peaks allow. LuxTTS scales its speech to its reference, so a quiet
+    reference makes a quiet film (2026-11-01: a -25 LUFS reference gave a film at -31)."""
+    return min(VOICE_LUFS - lufs, VOICE_PEAK - peak)
+
+
 def clean_voice(path, destination):
-    """The cleaning our own voices had: 80 Hz high-pass, light denoise, level. Only a take that passed reaches this."""
+    """The cleaning our own voices had: 80 Hz high-pass, light denoise, then their level. Only a take that passed reaches this."""
     destination = Path(destination)
     destination.parent.mkdir(parents=True, exist_ok=True)
+    raw = destination.with_name(destination.stem + "-denoised.wav")
     subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", str(path), "-ac", "1", "-ar", "48000", "-af",
-                    "highpass=f=80,afftdn=nr=10:nf=-50,loudnorm=I=-20:TP=-1.5:LRA=11,silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.1",
-                    "-c:a", "pcm_s16le", str(destination)], check=True)
+                    "highpass=f=80,afftdn=nr=10:nf=-50,silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.1",
+                    "-c:a", "pcm_s16le", str(raw)], check=True)
+    subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", str(raw), "-af", f"volume={voice_gain(*loudness(raw)):.2f}dB", "-c:a", "pcm_s16le", str(destination)], check=True)
     return destination
+
+
+def film_gain(lufs):
+    """What a film's narration needs to reach the level of our other films, whatever voice or engine made it."""
+    return max(-12.0, min(12.0, FILM_LUFS - lufs))
 
 
 def prepare_voice(recording, out, config=None, *, transcript=PASSAGE):
@@ -412,6 +434,8 @@ def _render_film(bundle, out, store, manifest, chosen, config, voice, template, 
             "requested_seconds": duration}
     (out / f"film-{duration}").mkdir(parents=True, exist_ok=True)
     give_room(config, store, [film])
+    config["delivery_gain_db"] = film_gain(loudness(film["audio"])[0])
+    store.event("rendition", "level", {"gain_db": round(config["delivery_gain_db"], 1)})
     film["music"] = prepare_music(config, store, film, read(bundle / "creative-brief.json"), "none")
     root, timeline = compile_timeline(config, store, script, film["timing"], storyboard, images, read(bundle / "evidence-final.json"), read(bundle / "sources.json"),
                                       duration, creative_brief=read(bundle / "creative-brief.json"), music=film["music"])
