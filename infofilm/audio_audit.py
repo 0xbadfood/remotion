@@ -127,6 +127,18 @@ ORDINAL_CARDINAL = {"first": "one", "second": "two", "third": "three", "fourth":
 NUMBER_HOMOPHONES = {"to": "two", "too": "two", "for": "four", "fore": "four", "ate": "eight", "won": "one"}
 
 
+# A subscript read digit by digit: "F one two" is written "F12" or "F twelve" on every take (the superposition film,
+# 2026-11-02). Only the script's reading is joined, so a script's "twelve" spoken as "one two" still fails.
+DIGIT_WORDS = {"zero": "0", "one": "1", "two": "2", "three": "3", "four": "4", "five": "5", "six": "6", "seven": "7",
+               "eight": "8", "nine": "9"}
+DIGIT_RUN = re.compile(r"\b(?:one|two|three|four|five|six|seven|eight|nine)(?:\s+(?:%s))+\b" % "|".join(DIGIT_WORDS), re.I)
+
+
+def joined_digits(value):
+    """'f one two' -> 'f 12'."""
+    return DIGIT_RUN.sub(lambda m: "".join(DIGIT_WORDS[w] for w in m.group().lower().split()), str(value))
+
+
 def same_number(difference):
     """Code check for a number written differently by ASR: both sides spell the same characters once numbers are words
     ('p nine' vs 'P9', 'u two hundred thirty five' vs 'U235', 'Phase IV' vs 'four', 'two a' vs 'to a'). A changed value
@@ -137,7 +149,8 @@ def same_number(difference):
         value = re.sub(r"(\d)(?=[a-z])(?!(?:st|nd|rd|th)\b)", r"\1 ", value, flags=re.I)   # "2y" = "two y"
         words = canonical_numeric_text(str(roman) if roman else value).lower().split()
         return re.sub(r"[^a-z]", "", "".join(NUMBER_HOMOPHONES.get(w, ORDINAL_CARDINAL.get(w, w)) for w in words))
-    return bool(compact(difference["expected"])) and compact(difference["expected"]) == compact(difference["observed"])
+    observed = compact(difference["observed"])
+    return bool(compact(difference["expected"])) and observed in (compact(difference["expected"]), compact(joined_digits(difference["expected"])))
 
 
 def adjudicate_transcript(config, store, audio, text, audit, repeated=None):
