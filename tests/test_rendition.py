@@ -116,6 +116,10 @@ class Level(unittest.TestCase):
         self.assertAlmostEqual(rendition.film_gain(-21.0), 4.0)
         self.assertEqual(rendition.film_gain(-40.0), 12.0)
 
+    def test_the_film_gets_the_levelled_master_though_it_has_no_music(self):
+        self.assertIn('"use_master": True', Path(rendition.__file__).read_text())
+        self.assertIn('music.get("use_master")', Path(rendition.__file__).with_name("video.py").read_text())
+
     def test_a_cleaned_voice_really_reaches_that_level(self):
         with tempfile.TemporaryDirectory() as t:
             source, out = Path(t) / "s.wav", Path(t) / "o.wav"

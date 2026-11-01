@@ -437,7 +437,7 @@ def _render_film(bundle, out, store, manifest, chosen, config, voice, template, 
     give_room(config, store, [film])
     config["delivery_gain_db"] = film_gain(loudness(film["audio"])[0])
     store.event("rendition", "level", {"gain_db": round(config["delivery_gain_db"], 1)})
-    film["music"] = prepare_music(config, store, film, read(bundle / "creative-brief.json"), "none")
+    film["music"] = {**prepare_music(config, store, film, read(bundle / "creative-brief.json"), "none"), "use_master": True}    # no music, but the level is in this master
     root, timeline = compile_timeline(config, store, script, film["timing"], storyboard, images, read(bundle / "evidence-final.json"), read(bundle / "sources.json"),
                                       duration, creative_brief=read(bundle / "creative-brief.json"), music=film["music"])
     value = read(timeline)

@@ -231,7 +231,7 @@ def compile_timeline(config, store, script, timing, storyboard, images, evidence
         raise ValueError("Audio snapshot hash mismatch")
     master = root / "master.wav"
     master_info = info
-    if music and music.get("engine") != "none":
+    if music and (music.get("engine") != "none" or music.get("use_master")):
         shutil.copyfile(music["master_audio"], master)
         master_info = music["master_audio_info"]
         if digest(master.read_bytes()) != master_info["audio_sha256"]:
