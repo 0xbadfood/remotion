@@ -109,9 +109,8 @@ class Voice(unittest.TestCase):
 
 
 class Level(unittest.TestCase):
-    def test_a_quiet_take_comes_up_to_our_voices_level_as_far_as_its_peaks_allow(self):
-        self.assertAlmostEqual(rendition.voice_gain(-25.3, -20.0), 7.8)
-        self.assertAlmostEqual(rendition.voice_gain(-25.3, -7.5), 6.0)
+    def test_a_quiet_take_comes_up_to_our_voices_level(self):
+        self.assertAlmostEqual(rendition.voice_gain(-25.3), 7.8)
 
     def test_a_film_is_levelled_to_our_films_within_the_engines_limits(self):
         self.assertAlmostEqual(rendition.film_gain(-21.0), 4.0)
@@ -124,7 +123,7 @@ class Level(unittest.TestCase):
             rendition.clean_voice(source, out)
             lufs, peak = rendition.loudness(out)
             self.assertLessEqual(peak, rendition.VOICE_PEAK + .5)
-            self.assertGreater(lufs, -24)
+            self.assertGreater(lufs, rendition.VOICE_LUFS - 2)
 
 
 class Look(unittest.TestCase):

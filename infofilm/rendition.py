@@ -251,10 +251,11 @@ def loudness(path):
     return float(re.search(r"I:\s*(-?[\d.]+) LUFS", text).group(1)), float(re.search(r"Peak:\s*(-?[\d.]+)", text).group(1))
 
 
-def voice_gain(lufs, peak):
-    """To the level of our own voices, as far as the peaks allow. LuxTTS scales its speech to its reference, so a quiet
-    reference makes a quiet film (2026-11-01: a -25 LUFS reference gave a film at -31)."""
-    return min(VOICE_LUFS - lufs, VOICE_PEAK - peak)
+def voice_gain(lufs):
+    """To the level of our own voices. LuxTTS scales its speech to its reference, so a quiet reference makes a quiet film
+    (2026-11-01: a -25 LUFS reference gave a film at -31). A limiter takes the few sharp peaks a recording without
+    automatic gain has."""
+    return VOICE_LUFS - lufs
 
 
 def clean_voice(path, destination):
@@ -265,7 +266,7 @@ def clean_voice(path, destination):
     subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", str(path), "-ac", "1", "-ar", "48000", "-af",
                     "highpass=f=80,afftdn=nr=10:nf=-50,silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.1",
                     "-c:a", "pcm_s16le", str(raw)], check=True)
-    subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", str(raw), "-af", f"volume={voice_gain(*loudness(raw)):.2f}dB", "-c:a", "pcm_s16le", str(destination)], check=True)
+    subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", str(raw), "-af", f"volume={voice_gain(loudness(raw)[0]):.2f}dB,alimiter=limit={10 ** (VOICE_PEAK / 20):.3f}:level=false", "-c:a", "pcm_s16le", str(destination)], check=True)
     return destination
 
 
