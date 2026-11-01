@@ -198,7 +198,7 @@ def _words(text):
 def voice_measures(path):
     """Decode to mono floats and measure: speech level (loud frames) against the room (quiet frames), clipping, length."""
     import numpy as np
-    raw = subprocess.run(["ffmpeg", "-v", "error", "-i", str(path), "-ac", "1", "-ar", "48000", "-f", "f32le", "-"], capture_output=True, check=True).stdout
+    raw = subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-i", str(path), "-ac", "1", "-ar", "48000", "-f", "f32le", "-"], capture_output=True, check=True).stdout
     samples = np.frombuffer(raw, dtype=np.float32)
     frame = 2400                # 50 ms
     count = len(samples) // frame
@@ -246,7 +246,7 @@ def hear(path, config):
 
 def loudness(path):
     """(integrated LUFS, true peak dB) of a recording."""
-    text = subprocess.run(["ffmpeg", "-hide_banner", "-nostats", "-i", str(path), "-map", "0:a:0", "-af", "ebur128=peak=true", "-f", "null", "-"], capture_output=True, text=True, check=True).stderr
+    text = subprocess.run(["ffmpeg", "-nostdin", "-hide_banner", "-nostats", "-i", str(path), "-map", "0:a:0", "-af", "ebur128=peak=true", "-f", "null", "-"], capture_output=True, text=True, check=True).stderr
     text = text[text.rfind("Summary:"):]
     return float(re.search(r"I:\s*(-?[\d.]+) LUFS", text).group(1)), float(re.search(r"Peak:\s*(-?[\d.]+)", text).group(1))
 
@@ -263,10 +263,10 @@ def clean_voice(path, destination):
     destination = Path(destination)
     destination.parent.mkdir(parents=True, exist_ok=True)
     raw = destination.with_name(destination.stem + "-denoised.wav")
-    subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", str(path), "-ac", "1", "-ar", "48000", "-af",
+    subprocess.run(["ffmpeg", "-nostdin", "-y", "-v", "error", "-i", str(path), "-ac", "1", "-ar", "48000", "-af",
                     "highpass=f=80,afftdn=nr=10:nf=-50,silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.1",
                     "-c:a", "pcm_s16le", str(raw)], check=True)
-    subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", str(raw), "-af", f"volume={voice_gain(loudness(raw)[0]):.2f}dB,alimiter=limit={10 ** (VOICE_PEAK / 20):.3f}:level=false", "-c:a", "pcm_s16le", str(destination)], check=True)
+    subprocess.run(["ffmpeg", "-nostdin", "-y", "-v", "error", "-i", str(raw), "-af", f"volume={voice_gain(loudness(raw)[0]):.2f}dB,alimiter=limit={10 ** (VOICE_PEAK / 20):.3f}:level=false", "-c:a", "pcm_s16le", str(destination)], check=True)
     return destination
 
 
