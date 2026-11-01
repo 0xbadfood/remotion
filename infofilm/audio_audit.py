@@ -122,15 +122,21 @@ ORDINAL_CARDINAL = {"first": "one", "second": "two", "third": "three", "fourth":
                     "eighteenth": "eighteen", "nineteenth": "nineteen", "twentieth": "twenty"}
 
 
+# Sound identical, so no recognizer can tell them apart and no retake can help: "equals two a" is written "equals to a"
+# on every take (the superposition film, 2026-11-02). Another number still fails.
+NUMBER_HOMOPHONES = {"to": "two", "too": "two", "for": "four", "fore": "four", "ate": "eight", "won": "one"}
+
+
 def same_number(difference):
     """Code check for a number written differently by ASR: both sides spell the same characters once numbers are words
-    ('p nine' vs 'P9', 'u two hundred thirty five' vs 'U235', 'Phase IV' vs 'four'). A changed value never passes."""
+    ('p nine' vs 'P9', 'u two hundred thirty five' vs 'U235', 'Phase IV' vs 'four', 'two a' vs 'to a'). A changed value
+    never passes."""
     def compact(value):
         value = re.sub(r"^the\s+", "", str(value).strip(), flags=re.I)     # regnal reading: "the second" = "II"
         roman = roman_value(value)
         value = re.sub(r"(\d)(?=[a-z])(?!(?:st|nd|rd|th)\b)", r"\1 ", value, flags=re.I)   # "2y" = "two y"
         words = canonical_numeric_text(str(roman) if roman else value).lower().split()
-        return re.sub(r"[^a-z]", "", "".join(ORDINAL_CARDINAL.get(w, w) for w in words))
+        return re.sub(r"[^a-z]", "", "".join(NUMBER_HOMOPHONES.get(w, ORDINAL_CARDINAL.get(w, w)) for w in words))
     return bool(compact(difference["expected"])) and compact(difference["expected"]) == compact(difference["observed"])
 
 
