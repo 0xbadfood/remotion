@@ -7,7 +7,7 @@ render, QA. Compiled scenes are rendered as they were approved; a Linkwork chang
 
 Usage: python -m infofilm.rendition export <run> <bundles>/<chapter>/<concept>
        python -m infofilm.rendition voice <recording> <out-dir>
-       python -m infofilm.rendition render <bundle> <out-dir> --voice <out-dir-of-voice> --template teal [--logo x.png] [--name "Asha Rao"]
+       python -m infofilm.rendition render <bundle> <out-dir> --voice <out-dir-of-voice> --template teal [--logo x.png] [--name "Asha Rao"] [--engine vibevoice]
 """
 from __future__ import annotations
 
@@ -26,6 +26,7 @@ from pathlib import Path
 from .core import ROOT, Store, configuration as load_config, digest, read, resource_slot, write
 
 FORMAT = "infofilm.bundle.v1"
+ENGINES = ("luxtts", "vibevoice")
 # The passage every narrator reads. The consent sentence stays out of the voice reference: it is checked and kept apart.
 PASSAGE = ("Mumbai is the financial, commercial and the entertainment capital of India. It is also one of the world's "
            "top ten centres of commerce in terms of global financial flow.")
@@ -354,13 +355,13 @@ def film_config():
     return Registry(ROOT / "artifacts" / "interface", config).freeze(config)
 
 
-def render_film(bundle, out, *, voice, template="teal", logo=None, name=None, config=None):
+def render_film(bundle, out, *, voice, template="teal", logo=None, name=None, config=None, engine="luxtts"):
     bundle, out = Path(bundle).resolve(), Path(out).resolve()
     manifest = verify(bundle)
     chosen = TEMPLATES[template]
     profile = read(Path(voice) / "voice.json")
     master = read(bundle / "master.json")
-    config = {**(config or film_config()), **profile, "tts_engine": "luxtts", "tts_fallback": "none", "width": master["width"], "height": master["height"],
+    config = {**(config or film_config()), **profile, "tts_engine": engine, "tts_fallback": "none", "speech_conditioning": False, "width": master["width"], "height": master["height"],
               "fps": master["fps"], "phrase_root": str(Path(voice).resolve() / "phrases")}
     store = Store(out)
     try:
@@ -389,13 +390,21 @@ def _render_film(bundle, out, store, manifest, chosen, config, voice, template, 
     if extras.get("backdrop"):
         write(out / "backdrop" / "current.json", extras["backdrop"])
     store.event("rendition", "voice", {"title": manifest["title"], "template": template})
-    audio, info = render_luxtts(config, store, script["points"], "rendition")
+    engine = config["tts_engine"]
+    if engine == "vibevoice":             # the pronunciation lexicon asks an LLM, so a rendition goes without it
+        from .vibe_media import align_vibevoice, render_vibevoice
+        audio, info = render_vibevoice(config, store, script["points"], "rendition")
+    else:
+        audio, info = render_luxtts(config, store, script["points"], "rendition")
     audit = point_audited(audit_audio(config, store, audio, script_text(script), points=script["points"]), info)
     write(out / "audit.json", audit)
     if audit["status"] != "passed":
         store.event("rendition", "audit_failed", {"reasons": audit.get("reasons"), "points": audit.get("failed_points")})
         raise RuntimeError("the narration in this voice did not pass its audit; no film was made")
-    timing = align_audio(config, store, audio, script, "rendition-alignment", spoken_points=info.get("spoken_points"))
+    if engine == "vibevoice" and info.get("point_clips"):
+        timing = align_vibevoice(config, store, audio, script, info, "rendition-alignment")
+    else:
+        timing = align_audio(config, store, audio, script, "rendition-alignment", spoken_points=info.get("spoken_points"))
     lost = anchor_problems(storyboard, timing)
     if lost:
         raise ValueError(f"scene anchors missing from this voice's words: {lost}")
@@ -411,7 +420,7 @@ def _render_film(bundle, out, store, manifest, chosen, config, voice, template, 
     write(timeline, value)
     with resource_slot("remotion-render", config.get("render_slots", 2)):    # shared with the concept films
         video = render(config, store, root, timeline)
-    result = {"video": str(video), "seconds": film["actual_seconds"], "qa": read(root / "qa.json")["passed"], "template": template, "bundle": manifest["concept"], "voice": str(voice)}
+    result = {"video": str(video), "seconds": film["actual_seconds"], "qa": read(root / "qa.json")["passed"], "template": template, "bundle": manifest["concept"], "voice": str(voice), "engine": engine}
     write(out / "rendition.json", result)
     store.event("rendition", "succeeded", result)
     return result
@@ -435,13 +444,14 @@ def main():
     a.add_argument("--template", default="teal", choices=sorted(TEMPLATES))
     a.add_argument("--logo")
     a.add_argument("--name")
+    a.add_argument("--engine", default="luxtts", choices=ENGINES)
     args = parser.parse_args()
     if args.command == "export":
         print(export(args.run, args.bundle, chapter=args.chapter, concept=args.concept))
     elif args.command == "voice":
         print(json.dumps(prepare_voice(args.recording, args.out)))
     else:
-        print(json.dumps(render_film(args.bundle, args.out, voice=args.voice, template=args.template, logo=args.logo, name=args.name)))
+        print(json.dumps(render_film(args.bundle, args.out, voice=args.voice, template=args.template, logo=args.logo, name=args.name, engine=args.engine)))
 
 
 if __name__ == "__main__":

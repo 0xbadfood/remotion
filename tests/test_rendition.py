@@ -173,6 +173,11 @@ class Sealed(unittest.TestCase):
         with mock.patch("infofilm.llm_settings.Registry.freeze", lambda self, config: {**config, "reviewer_url": "frozen"}) as _:
             self.assertEqual(rendition.film_config()["reviewer_url"], "frozen")
 
+    def test_a_vibevoice_rendition_turns_off_the_lexicon_that_asks_an_llm(self):
+        source = Path(rendition.__file__).read_text()
+        self.assertIn('"speech_conditioning": False', source)
+        self.assertEqual(rendition.ENGINES, ("luxtts", "vibevoice"))
+
     def test_the_arbiters_name_is_the_one_the_audit_uses(self):
         source = Path(rendition.__file__).with_name("audio_audit.py").read_text()
         self.assertIn('"audio-semantic-" + identity', source)
