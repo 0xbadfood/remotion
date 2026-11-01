@@ -11,7 +11,8 @@ export type Scene = {id:string; point_id:string; from:number; duration:number; k
   layers?:{base:string; highlight?:string|null; highlightAt:number; labels:{src:string; at:number}[]}};
 export type FilmData = {title:string;subject:string;width:number;height:number;fps:number;durationInFrames:number;transitionFrames?:number;depthStrength?:number;
   creativeBrief?:{resolved_mood:string;intensity:string;theme:{background:string;accent:string;text:string}};
-  scenes:Scene[]; captions:{start:number;end:number;text:string}[];credits?:string[];sources:{id:string;url:string;title:string}[]};
+  scenes:Scene[]; captions:{start:number;end:number;text:string}[];credits?:string[];sources:{id:string;url:string;title:string}[];
+  school?:{chrome:string;chromeDim:string;track:string;card:string;cardAlt:string;line:string;disclosure:string;logo?:string}};
 
 const clamp = {extrapolateLeft:'clamp',extrapolateRight:'clamp'} as const;
 const amber='var(--film-accent, #f3b85e)', ink='var(--film-text, #f7f3e9)', teal='var(--film-bg, #082d34)';
@@ -34,7 +35,7 @@ const Diagram:React.FC<{scene:Scene;progress:number;frame:number}> = ({scene,pro
       // Each card appears when the narration names it (reveals, frames from the scene start); older timelines: by progress.
       const show=scene.reveals?interpolate(frame,[scene.reveals[i]??0,(scene.reveals[i]??0)+12],[0,1],clamp):Math.min(1,Math.max(0,(progress*n-i*.65)*2+1));
       return <React.Fragment key={i}>
-        <div data-measure="diagram-card" style={{position:'relative',border:'2px solid #4a7c82',borderRadius:22,padding:'20px 30px',background:compare && i===1?'#483927':'#103e46',opacity:show,transform:`translateY(${(1-show)*18}px)`}}>
+        <div data-measure="diagram-card" style={{position:'relative',border:'2px solid var(--film-line, #4a7c82)',borderRadius:22,padding:'20px 30px',background:compare && i===1?'var(--film-card-alt, #483927)':'var(--film-card, #103e46)',opacity:show,transform:`translateY(${(1-show)*18}px)`}}>
           <div style={{position:'absolute',right:28,top:25,color:amber,fontSize:25,fontWeight:700}}>0{i+1}</div>
           <div data-measure="diagram-label" style={{fontSize:portrait?48:40,fontWeight:700,color:ink,maxWidth:'83%'}}>{label}</div>
           <div data-measure="diagram-detail" style={{fontSize:portrait?32:26,color:'#c5dadd',marginTop:8,lineHeight:1.25,maxWidth:'91%'}}>{scene.details[i]}</div>
@@ -152,14 +153,27 @@ const Chrome:React.FC<{data:FilmData}> = ({data}) => {
   const p=scene?Math.min(1,(frame-scene.from)/Math.max(1,scene.duration-1)):0;
   return <>
     {scene?.kind!=='animation' && <div style={{position:'absolute',top:64,left:96,right:100,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-      <div data-measure="series-label" style={{fontSize:portrait?20:23,fontWeight:700,letterSpacing:portrait?2:5,color:'#bfd5d5',textTransform:'uppercase',maxWidth:'80%'}}>{data.subject}</div>
-      <div style={{color:'#bfd5d5',fontSize:25,fontWeight:600}}> {String(index+1).padStart(2,'0')} <span style={{color:'#68898d'}}> / {String(total).padStart(2,'0')}</span></div>
+      <div data-measure="series-label" style={{fontSize:portrait?20:23,fontWeight:700,letterSpacing:portrait?2:5,color:'var(--film-chrome, #bfd5d5)',textTransform:'uppercase',maxWidth:'80%'}}>{data.subject}</div>
+      <div style={{color:'var(--film-chrome, #bfd5d5)',fontSize:25,fontWeight:600}}> {String(index+1).padStart(2,'0')} <span style={{color:'var(--film-chrome-dim, #68898d)'}}> / {String(total).padStart(2,'0')}</span></div>
     </div>}
-    <div style={{position:'absolute',bottom:0,left:0,right:0,height:6,background:'#183c42'}}>
+    <div style={{position:'absolute',bottom:0,left:0,right:0,height:6,background:'var(--film-track, #183c42)'}}>
       <div style={{height:'100%',width:`${((index+p)/Math.max(1,total))*100}%`,background:amber}}/>
     </div>
   </>;
 };
+
+// A school's rendition (infofilm/rendition.py): its logo in the corner outside the captions' band, and the line saying
+// the narration is an AI voice, for the film's last seconds.
+const School:React.FC<{school:NonNullable<FilmData['school']>;frame:number;fps:number;total:number}> = ({school,frame,fps,total}) => {
+  const left=total-frame, show=Math.min(1,Math.max(0,(DISCLOSURE_SECONDS*fps-left)/12));
+  return <>
+    {school.logo && <Img src={school.logo} style={{position:'absolute',right:30,bottom:26,width:96,height:96,objectFit:'contain'}}/>}
+    {show>0 && <div style={{position:'absolute',left:0,right:0,bottom:165,textAlign:'center',opacity:show}}>
+      <span style={{display:'inline-block',fontSize:26,fontWeight:500,color:'#ffffff',padding:'10px 22px',borderRadius:10,background:'rgba(3,19,23,.78)'}}>{school.disclosure}</span>
+    </div>}
+  </>;
+};
+const DISCLOSURE_SECONDS=8;
 
 export const InfoFilm:React.FC<{data:FilmData}> = ({data}) => {
   const frame=useCurrentFrame();
@@ -187,7 +201,8 @@ export const InfoFilm:React.FC<{data:FilmData}> = ({data}) => {
   const caption=data.captions.find(c=>frame/data.fps>=c.start && frame/data.fps<c.end);
   const theme=data.creativeBrief?.theme;
   return <AbsoluteFill style={{fontFamily:'InfoSans,sans-serif',background:teal,
-    '--film-bg':theme?.background||'#082d34','--film-accent':theme?.accent||'#f3b85e','--film-text':theme?.text||'#f7f3e9'} as React.CSSProperties}>
+    '--film-bg':theme?.background||'#082d34','--film-accent':theme?.accent||'#f3b85e','--film-text':theme?.text||'#f7f3e9',
+    ...(data.school?{'--film-chrome':data.school.chrome,'--film-chrome-dim':data.school.chromeDim,'--film-track':data.school.track,'--film-card':data.school.card,'--film-card-alt':data.school.cardAlt,'--film-line':data.school.line}:{})} as React.CSSProperties}>
     {data.scenes.map((scene,i)=>{
       // Crossfade: each scene after the first fades in over the last moments of the previous one (no hard cuts).
       const prev=data.scenes[i-1];
@@ -197,6 +212,7 @@ export const InfoFilm:React.FC<{data:FilmData}> = ({data}) => {
       </Sequence>;
     })}
     <Chrome data={data}/>
+    {data.school && <School school={data.school} frame={frame} fps={data.fps} total={data.durationInFrames}/>}
     {caption && <div style={{position:'absolute',left:'8%',right:'8%',bottom:46,textAlign:'center'}}>
       <span data-measure="caption" style={{display:'inline-block',fontSize:data.height>data.width?37:31,fontWeight:500,lineHeight:1.35,color:'#ffffff',padding:'12px 24px',borderRadius:12,background:'rgba(3,19,23,.84)',maxWidth:'100%'}}>{caption.text}</span>
     </div>}
