@@ -250,3 +250,22 @@ def test_a_bad_anchor_is_named_so_a_repair_may_change_it():
     assert clean[0]["start_word_id"] == "w1"
     errors = anchor_errors([{"id": "S1", "point_id": "P1", "start_word_id": "w9"}], script, timing)[0]
     assert "start_word_id" in errors[0] and "point_id" in errors[0]
+
+
+def test_a_finding_reaches_the_unit_holding_the_sentence_it_quotes():
+    candidate = {"facts": [{"id": "F1", "claim": "m is 10 A m2"}, {"id": "F2", "claim": "other"}],
+                 "uncertainties": ["The book is authoritative, so this brief reports the printed values as they stand.", "Another note."]}
+    issue = {"field": "F1", "severity": "major", "problem": "contradicts the task", "correction": "use the corrected values",
+             "evidence": "The uncertainty says “this brief reports the printed values.”"}
+    flagged, stage = flag(candidate, [], {"issues": [issue]}, EVIDENCE)
+    assert sorted(flagged) == ["F1", "U01"] and not stage
+    short = {**issue, "evidence": "It says “printed values”."}             # too short to be a passage
+    assert sorted(flag(candidate, [], {"issues": [short]}, EVIDENCE)[0]) == ["F1"]
+    stage_level = {**issue, "field": "stage"}                              # a stage finding stays a stage finding
+    assert flag(candidate, [], {"issues": [stage_level]}, EVIDENCE)[0] == {}
+
+
+def test_a_list_named_beside_a_unit_means_its_units():
+    candidate = {"facts": [{"id": "F1"}], "uncertainties": ["a", "b"]}
+    assert resolve("F1,uncertainties", candidate, EVIDENCE) == ["F1", "U01", "U02"]
+    assert resolve("uncertainties", candidate, EVIDENCE) == []

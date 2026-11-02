@@ -218,6 +218,18 @@ class PiecesTests(unittest.TestCase):
         plain = {"id": "P02", "narration": "A unit is a standard. We compare with it 2 times."}
         self.assertEqual(pieces(plain), [plain])
 
+    def test_a_long_point_is_recorded_in_runs_of_sentences_and_keeps_every_word(self):
+        from infofilm.lux_media import pieces
+        sentence = "The field at this place comes out to be small and it points along the axis of the wire. "
+        long = {"id": "P15", "narration": (sentence * 6).strip() + " Right."}
+        parts = pieces(long)
+        self.assertGreater(len(parts), 1)
+        self.assertLess(len(parts), 7)
+        self.assertTrue(all(p["part_of"] == "P15" for p in parts))
+        self.assertEqual(" ".join(p["narration"] for p in parts), long["narration"])
+        short = {"id": "P1", "narration": (sentence * 2).strip()}
+        self.assertEqual(pieces(short), [short])
+
 
 class WholeFilmAuditTests(unittest.TestCase):
     def test_point_audits_stand_against_a_number_misheard_in_the_whole_film(self):

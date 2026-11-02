@@ -110,6 +110,10 @@ def resolve(pointer, candidate, spec=None):
                 hits.append(ident)
         elif re.search(r"(?<![\w-])" + re.escape(ident) + r"(?![\w])", text):
             hits.append(ident)
+    tokens = [t.strip() for t in text.split(",")]
+    for key in spec["lists"]:                                               # a list named beside a unit: 'F10,uncertainties'
+        if len(tokens) > 1 and key in tokens:
+            hits.extend(i for i, (kind, list_key, _) in known.items() if list_key == key and kind != "field")
     for ident, subfield in re.findall(r"([\w:-]+)\.([A-Za-z_]+)", text):     # linked subfields
         if subfield in spec["lists"] and ident in hits and known.get(ident, ("", ""))[1] != subfield:
             # '<id>.<another list>' (jet engine C02: 'F16.narrative_priorities') means that list, not item <id>.
@@ -200,12 +204,34 @@ def error_units(error, candidate, spec=None):
     return resolve(head, candidate, spec) if head else []
 
 
+QUOTED = re.compile(r"[“\"]([^”\"]{12,})[”\"]")
+
+
+def quoted_units(issue, candidate, spec=None):
+    """Units holding, word for word, a passage the finding quotes. The reviewer named F10 and quoted the sentence at fault,
+    which sat in an uncertainty; seven repairs rewrote F10 and never saw it (Moving Charges C9, 2026-11-02)."""
+    flat = lambda value: " ".join(str(value).split()).lower()
+    text = " ".join(str(issue.get(k) or "") for k in ("problem", "evidence"))
+    quotes = [flat(q).rstrip(" .,;:") for q in QUOTED.findall(text)]
+    quotes = [q for q in quotes if len(q.split()) >= 4]
+    if not quotes:
+        return []
+    found = []
+    for ident in units(candidate, spec):
+        value = unit_value(candidate, ident, spec)
+        body = flat(json.dumps(value, ensure_ascii=False))
+        if any(q in body for q in quotes):
+            found.append(ident)
+    return found
+
+
 def flag(candidate, errors, review, spec=None):
     """(flagged {unit id: [findings]}, stage-level findings). Code decides; the planner never sees the raw review."""
     flagged, stage = {}, []
     for issue in blocking(review):
         finding = {k: issue.get(k) for k in ("field", "problem", "correction")}
         ids = resolve(issue.get("field"), candidate, spec)
+        ids = ids + [i for i in quoted_units(issue, candidate, spec) if ids and i not in ids]
         for ident in ids:
             flagged.setdefault(ident, []).append(finding)
         if not ids:

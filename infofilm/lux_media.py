@@ -173,6 +173,8 @@ def _join_wavs(paths, destination):
 
 NUMBER = re.compile(r"\d+(?:\.\d+)?|\b(?:zero|one|two|three|four|five|six|seven|eight|nine)\s+point\b|\bto the power\b", re.I)
 DENSE = 5           # numbers in a point from which it is recorded sentence by sentence
+LONG = 80           # words in a point from which it is recorded in shorter runs of sentences
+RUN = 40            # words such a run reaches before the next one starts
 
 
 def pieces(point):
@@ -180,8 +182,20 @@ def pieces(point):
     reading ten numbers every take slipped on one, a different one each time, and the whole point was taken again
     (the significant-figures film, 2026-10-29). Other points stay whole."""
     sentences = [x for x in re.split(r"(?<=[.!?])\s+(?=[A-Z0-9])", point["narration"].strip()) if x]
-    if len(NUMBER.findall(point["narration"])) < DENSE or len(sentences) < 2:
+    if len(sentences) < 2:
         return [point]
+    if len(NUMBER.findall(point["narration"])) < DENSE:
+        # A long point garbles towards its end, whatever the seed: half of first takes over 100 words failed against
+        # 1 in 80 under 40 (Moving Charges C4, 119 words, failed all four takes, 2026-11-02). A finished film keeps
+        # its audio, and a failed one resumes in place, so this is deliberately not part of the audio's identity.
+        if len(point["narration"].split()) < LONG:
+            return [point]
+        runs = [""]
+        for x in sentences:
+            runs[-1] = f"{runs[-1]} {x}".strip()
+            if len(runs[-1].split()) >= RUN:
+                runs.append("")
+        sentences = [x for x in runs if x]
     return [{**point, "id": f"{point['id']}-s{j + 1}", "narration": x, "part_of": point["id"]} for j, x in enumerate(sentences)]
 
 
