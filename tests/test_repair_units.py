@@ -213,6 +213,13 @@ def test_a_repair_can_declare_a_source_gap_the_candidate_never_had():
     again = merge(merged, {"source_gaps": [{"coverage": "K1", "why": "better"}]}, {"F06": ["x"]}, EVIDENCE_UNITS)
     assert again["source_gaps"] == [{"coverage": "K1", "why": "better"}]
     assert '"source_gaps"' in repair_request(prior, {"F06": ["declare the gap"]}, EVIDENCE_UNITS)
+    # Conductors (2026-11-02): the reviewer asked six times to remove two gaps; "source_gaps": [] was ignored.
+    two = {"facts": [{"id": "F06", "claim": "x"}], "source_gaps": [{"coverage": "K1", "why": "a"}, {"coverage": "K2", "why": "b"}]}
+    assert merge(two, {"units": {"facts": []}, "source_gaps": []}, {"F06": ["x"]}, EVIDENCE_UNITS)["source_gaps"] == []
+    one = merge(two, {"source_gaps": [{"coverage": "K1", "remove": True}]}, {"F06": ["x"]}, EVIDENCE_UNITS)
+    assert one["source_gaps"] == [{"coverage": "K2", "why": "b"}]
+    assert merge(two, {"units": {"facts": []}}, {"F06": ["x"]}, EVIDENCE_UNITS)["source_gaps"] == two["source_gaps"]
+    assert '"remove": true' in repair_request(two, {"F06": ["remove the gap"]}, EVIDENCE_UNITS)
 
 
 def test_a_clash_of_anchors_reaches_both_beats_and_frees_the_anchor():

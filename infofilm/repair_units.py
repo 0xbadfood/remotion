@@ -14,7 +14,8 @@ A stage declares its units in a spec:
   unit is redirected to it (Cuba C04: 'A017.banner' means the banner unit of A017's scene, '160:S18').
 - "open": {list: id field}: a top-level list any repair may add to or replace items of, matched by that field, even
   when the candidate has none yet (evidence's source_gaps: a reviewer asked six times for a declared gap and every
-  repair could return only the flagged fact, so the gap never landed; Fluids C2, 2026-10-30).
+  repair could return only the flagged fact, so the gap never landed; Fluids C2, 2026-10-30). A repair may take items
+  back too: a reviewer asked six times to remove two gaps, and the writer's "source_gaps": [] was ignored (Conductors, 2026-11-02).
 
 Rules (pipeline-findings-todo.md, BUILD NEXT): ids are stable once a candidate exists; reviewer findings and validator
 errors point at unit ids; code maps findings to units, asks the planner for only the flagged units, merges them back by
@@ -271,9 +272,14 @@ def merge(prior, response, flagged, spec=None):
         if given is None:
             continue
         by_id = {str(x.get(ident)): x for x in result.get(key) or [] if isinstance(x, dict)}
+        if not given:                                     # an empty list takes them all back
+            by_id = {}
         for item in given:
             if isinstance(item, dict) and item.get(ident) not in (None, ""):
-                by_id[str(item[ident])] = item
+                if item.get("remove") is True:
+                    by_id.pop(str(item[ident]), None)
+                else:
+                    by_id[str(item[ident])] = item
         result[key] = list(by_id.values())
     return result
 
@@ -344,7 +350,8 @@ def repair_request(prior, flagged, spec=None, simplify=(), extra="", abstract=No
         shape.append('"operations": [{"op": "insert_after"|"remove", "target": flagged id, "items": [new items, no id]}] '
                      "only when a finding requires adding or removing an item in " + ", ".join(ops))
     for key, ident in spec["open"].items():
-        shape.append(f'"{key}": [items to add, or to replace by {ident}] only when a finding asks for one')
+        shape.append(f'"{key}": [items to add, to replace by {ident}, or {{"{ident}": id, "remove": true}} to take one back] '
+                     "only when a finding asks for it")
     text = ("\nTARGETED REPAIR. The prior candidate stays as it is except the flagged units below. "
             "Return ONLY {" + ", ".join(shape) + "} with exactly the flagged units; do not return, renumber or change "
             "any other unit (code merges your units back by id and re-validates the whole candidate).\n"
