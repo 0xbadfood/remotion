@@ -283,3 +283,16 @@ class BigPlanTests(unittest.TestCase):
         models.loop("script-60", "Task", {}, lambda x: [], experimental=True, units=UNITS)
         writers = [c.args[0] for c in models.call.call_args_list if "-draft-" in c.args[1]]
         self.assertEqual(writers, ["planner", "planner", "planner"])
+
+
+def test_a_key_missing_its_closing_quote_is_mended_and_nothing_else_is():
+    import json
+    from infofilm.llm import lenient_json
+    assert lenient_json('{"pass":true,"strengths:["S13: a:b"]}') == {"pass": True, "strengths": ["S13: a:b"]}
+    assert lenient_json('{"a": "x, \\"y:1"}') == {"a": 'x, "y:1'}
+    try:
+        lenient_json('{"pass":true,"issues":[}')
+    except json.JSONDecodeError:
+        return
+    raise AssertionError("still broken JSON must not pass")
+

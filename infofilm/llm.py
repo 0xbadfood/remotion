@@ -98,6 +98,19 @@ def openrouter_twin(config, connection):
     return None
 
 
+def lenient_json(text):
+    """One JSON object, forgiving a key whose closing quote slipped: {"pass":true,"strengths:["a"]} came back on both
+    tries of a review, passing at 88, and stopped the film (Potential C3, 2026-11-02). Only a reply that parses after
+    the mend is taken."""
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        mended = re.sub(r'([{,]\s*)"(\w+):(?=\s*[\[{"\dtfn-])', r'\1"\2":', text)
+        if mended == text:
+            raise
+        return json.loads(mended)
+
+
 class ModelOutputError(ValueError):
     """A saved response failed the output contract; safe to retry within a budget."""
 
@@ -323,7 +336,7 @@ class Models:
         text = re.sub(r"<think>.*?</think>", "", text, flags=re.S).strip()
         text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text).strip()
         try:
-            value = json.loads(text)
+            value = lenient_json(text)
         except json.JSONDecodeError as exc:
             self.store.event(name, "failed", {"reason": "invalid JSON; raw response preserved"})
             raise ModelOutputError(f"LLM returned invalid JSON: {exc}; raw response preserved") from exc
