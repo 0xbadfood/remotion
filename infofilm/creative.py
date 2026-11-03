@@ -257,7 +257,9 @@ ON_SCREEN_NOTE = re.compile(r"\bflagged\s+(?:for|as|to)\b|\b(?:for|needs?|awaiti
                             # 2026-11-03, leph1-08 C3: "supplementary note, not book text" and "Supplementary inference"
                             # drawn on the wave; leph1-07 had "Teacher's note" and "Extension, idealised". Where a point
                             # comes from is for the narration to say, never a label on the picture
-                            r"|\bsupplementary\b|\bteacher[\u2019']?s\s+note\b|\bnot\s+(?:in\s+|from\s+)?(?:the\s+)?"
+                            # 2026-11-04, leph2-03 C2 "Teaching note"; leph2-04 C1 "Teacher's simplified estimate"
+                            r"|\bsupplementary\b|\bteach(?:er[\u2019']?s|ing)\s+(?:\w+\s+)?(?:note|estimate|aside)\b"
+                            r"|\bnot\s+(?:in\s+|from\s+)?(?:the\s+)?"
                             r"(?:book|textbook)(?:\s+text)?\b|\bbeyond\s+the\s+(?:book|textbook|syllabus)\b"
                             r"|\b(?:an?\s+)?inference\b|\bextension,\s*ideali[sz]ed\b", re.I)
 
@@ -325,7 +327,9 @@ def beat_errors(value, script, timing, figures=None, linkwork=None):
             elif note := ON_SCREEN_NOTE.search(scene[key]):
                 errors.append(f"{sid}: {key} carries a note for the team (\"{note.group(0)}\"); the viewer reads it on "
                               f"screen: state the subject's claim, and put review notes in the rationale")
-        for words in on_screen_texts(scene.get("linkwork")) if kind == "linkwork" else []:
+        cards = [w for w in (scene.get("labels") or []) + (scene.get("details") or []) if isinstance(w, str)] \
+            if isinstance(scene.get("labels") or [], list) and isinstance(scene.get("details") or [], list) else []
+        for words in cards + (on_screen_texts(scene.get("linkwork")) if kind == "linkwork" else []):
             if note := ON_SCREEN_NOTE.search(words):
                 errors.append(f"{sid}: the picture's text \"{words}\" is a note about the material (\"{note.group(0)}\"), "
                               "not the subject: the viewer reads it on screen; draw and label the physics, and let the "

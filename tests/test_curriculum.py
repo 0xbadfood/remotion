@@ -77,6 +77,11 @@ class CurriculumTests(unittest.TestCase):
         point['narration'] = 'Our sources place the fire at the Chinese Museum.'
         self.assertNotIn('speaks about its sources', ' '.join(script_errors({'points': [point]}, {'facts': [{'id': 'F01'}]})),
                          'a documentary may weigh its sources')
+        # 2026-11-04, leph2-04 C1: an addition titled "Teacher's note" was narrated as "A teacher's note gives ..."
+        point['narration'] = "A teacher's note gives a simplified estimate of the force."
+        self.assertIn('Beyond the book', ' '.join(script_errors({'points': [point]}, evidence)))
+        point['narration'] = 'Going beyond the book, a rough estimate gives the force.'
+        self.assertNotIn('speaks about its sources', ' '.join(script_errors({'points': [point]}, evidence)))
 
     def test_book_source_is_read_whole_and_task_names_the_concept(self):
         text = 'Unrelated opening words. ' * 400 + 'The end of the chapter.'

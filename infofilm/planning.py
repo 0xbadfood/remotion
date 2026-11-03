@@ -197,7 +197,10 @@ def max_points(duration=None):
 
 
 BACKSTAGE = re.compile(r"\b(?:the|these|our|supplied|available|given)\s+(?:sources|passages|excerpts)\b(?!\s+of\b)"
-                       r"|\bevidence\s+brief\b|\bsources?\s+(?:do|does|did)\s+not\s+(?:say|state|mention|give|explain|describe|tell)\b", re.I)
+                       r"|\bevidence\s+brief\b|\bsources?\s+(?:do|does|did)\s+not\s+(?:say|state|mention|give|explain|describe|tell)\b"
+                       # 2026-11-04, leph2-04 C1: "A teacher's note gives a simplified estimate", from an addition's
+                       # source title; the student has no note. An addition is said to go beyond the book
+                       r"|\bteach(?:er[’']?s|ing)\s+note\b", re.I)
 
 
 def script_errors(value, evidence, budget=None, duration=None):
@@ -220,7 +223,9 @@ def script_errors(value, evidence, budget=None, duration=None):
         # a documentary may weigh its sources in a historian's voice; a lesson's student hears only about the subject
         if evidence.get("curriculum") and BACKSTAGE.search(p.get("narration", "")):
             errors.append(f"{p.get('id')}: narration speaks about its sources (\"{BACKSTAGE.search(p['narration']).group(0)}\"); "
-                          "say what is known, or leave the point out; the viewer never sees the sources or the brief")
+                          "say what is known, or leave the point out; the viewer never sees the sources or the brief; "
+                          "a point from a 'Beyond the book' source may say so ('going beyond the book, a rough "
+                          "estimate shows ...')")
         # 2026-10-29, the significant-figures film: the voice garbled 311.299254 and 373.714754 in every take. A long
         # calculator value is shown on screen, never read out.
         long = [n for n in re.findall(r"\d[\d,]*\.\d+", p.get("narration", ""))
@@ -678,6 +683,7 @@ def make_image_prompts(models, library, films, evidence, orientations, experimen
                                       if isinstance(person, dict) and str(person.get('name', '')).casefold() not in cast_names)
                     if len(asset.get('prompt', '')) > 2600:
                         errors.append(f"{asset.get('id')}: leave prompt space for reference conditioning")
+            from .creative import ON_SCREEN_NOTE
             banners = value.get("banners", [])
             if not isinstance(banners, list) or any(not isinstance(b, dict) for b in banners):
                 errors.append("banners must be an array of objects")
@@ -695,6 +701,10 @@ def make_image_prompts(models, library, films, evidence, orientations, experimen
                         errors.append(f"{b.get('scene_key')}: banner {b['text']!r} counts {word_count(b['text'])} words "
                                       f"({' | '.join(word_tokens(b['text']))}); at most 8 "
                                       "(times like 10:30, abbreviations like p.m. and dates count each part); no source tags in banners")
+                    # 2026-11-04, leph2-04 C7: "TEACHER'S NOTE: TWO BODIES VERSUS THREE" over the picture
+                    elif note := ON_SCREEN_NOTE.search(b["text"]):
+                        errors.append(f"{b.get('scene_key')}: banner {b['text']!r} is a note about the material "
+                                      f"(\"{note.group(0)}\"); the viewer reads it: name what the picture shows")
             return errors
         return validate
 

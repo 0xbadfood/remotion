@@ -116,6 +116,23 @@ class VisualBeatTests(unittest.TestCase):
         self.assertEqual(second['narrated_seconds'],6)
         self.assertEqual(model.errors,[])
 
+    def test_a_banner_never_carries_a_note_about_the_material(self):
+        # 2026-11-04, leph2-04 C7: "TEACHER'S NOTE: TWO BODIES VERSUS THREE" was composited over the picture
+        script,timing,storyboard,brief=example()
+        films=[{'script':script,'storyboard':storyboard,'requested_seconds':60,'timing':timing}]
+        library=library_from_beats(films,brief)
+        class Model:
+            def loop(self, stage, task, context, validator, **kwargs):
+                value={'style':library['style'],'assets':context['used_assets'],
+                       'banners':[{'scene_key':f'60:S{i}','text':t} for i,t in enumerate(["Teacher's note: two bodies", 'Two bodies', ''],1)]}
+                self.errors=validator(value)
+                return value
+        model=Model()
+        make_image_prompts(model,library,films,{'title':'Puppies','facts':[{'id':'F1'}]},['landscape','portrait'])
+        self.assertEqual(len(model.errors),1)
+        self.assertIn('60:S1: banner',model.errors[0])
+        self.assertIn('note about the material',model.errors[0])
+
     def test_compiler_uses_shot_boundaries_and_selected_delivery_master_in_both_orientations(self):
         script,timing,storyboard,brief=example()
         library_from_beats([{'script':script,'storyboard':storyboard}],brief)

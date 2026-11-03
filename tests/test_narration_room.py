@@ -172,6 +172,23 @@ class SpanningBeatTests(unittest.TestCase):
             storyboard["scenes"][0]["linkwork"]["annotate"][0]["text"] = fine
             self.assertNotIn("note about the material", " ".join(beat_errors(storyboard, script, timing)), fine)
 
+    def test_a_compare_card_never_names_a_teachers_note(self):
+        # 2026-11-04: leph2-04 C1 drew a compare card "Teacher's simplified estimate" under the heading "A teacher's
+        # force estimate"; leph2-03 C2 drew "Teaching note". Card labels and details are read on screen too
+        from infofilm.creative import beat_errors
+        from test_creative import example
+        script, timing, storyboard, _ = example()
+        storyboard["scenes"][0]["heading"] = "A teacher's force estimate"
+        self.assertIn("carries a note for the team", " ".join(beat_errors(storyboard, script, timing)))
+        storyboard["scenes"][0].update(heading="Two models compared", kind="compare",
+                                       labels=["Thomson's uniform sphere", "Teacher's simplified estimate"],
+                                       details=["Force greatest at the surface", "Too small to turn an alpha back"])
+        self.assertIn("is a note about the material", " ".join(beat_errors(storyboard, script, timing)))
+        storyboard["scenes"][0]["labels"][1] = "Teaching note"
+        self.assertIn("is a note about the material", " ".join(beat_errors(storyboard, script, timing)))
+        storyboard["scenes"][0]["labels"][1] = "Rutherford's nucleus"
+        self.assertNotIn("note about the material", " ".join(beat_errors(storyboard, script, timing)))
+
 
 if __name__ == "__main__":
     unittest.main()
