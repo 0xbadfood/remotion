@@ -173,6 +173,12 @@ class NumericAuditTests(unittest.TestCase):
         self.assertIn("numeric_mismatch", self.score("The index is n two one, about one point three three.", "The index is N20, about 1.33.")["reasons"])
         self.assertEqual(self.score("Uranium two hundred thirty five, written U235, splits.", "Uranium 235, written U235, splits.")["status"], "passed")
 
+    def test_repetition_the_script_has_is_not_a_looping_voice(self):
+        script = "Visible light spans about 4 times 10 to the power 14 hertz to 7 times 10 to the power 14 hertz."
+        self.assertEqual(self.score(script, script)["status"], "passed")
+        looped = "Visible light spans about 4 times 10 to the power 14 hertz to the power 14 hertz to the power 14 hertz."
+        self.assertIn("repeated_text", self.score("Visible light spans about 4 times 10 to the power 14 hertz.", looped)["reasons"])
+
     def test_minor_proper_name_asr_error_remains_tolerated(self):
         result = self.score("The social breakdown also increased piracy in the Hooghly delta.",
                             "The social breakdown also increased piracy in the Hoogley delta.")
