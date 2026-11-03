@@ -157,6 +157,21 @@ class SpanningBeatTests(unittest.TestCase):
             storyboard["scenes"][0]["summary"] = fine
             self.assertNotIn("note for the team", " ".join(beat_errors(storyboard, script, timing)), fine)
 
+    def test_where_a_point_comes_from_is_never_drawn_on_the_picture(self):
+        # 2026-11-03, leph1-08 C3: "supplementary note, not book text" was annotated on the plane wave
+        from infofilm.creative import beat_errors
+        from test_creative import example
+        script, timing, storyboard, _ = example()
+        storyboard["scenes"][0]["heading"] = "Supplementary Outline Begins"
+        self.assertIn("carries a note for the team", " ".join(beat_errors(storyboard, script, timing)))
+        storyboard["scenes"][0]["heading"] = "A plane wave"
+        storyboard["scenes"][0].update(kind="linkwork", linkwork={"verb": "em_waves", "show": "plane", "annotate": [
+            {"text": "supplementary note, not book text", "at": "travel"}]})
+        self.assertIn("is a note about the material", " ".join(beat_errors(storyboard, script, timing)))
+        for fine in ("E along x", "Teacher holds the rod", "Extension of the spring", "one wavelength"):
+            storyboard["scenes"][0]["linkwork"]["annotate"][0]["text"] = fine
+            self.assertNotIn("note about the material", " ".join(beat_errors(storyboard, script, timing)), fine)
+
 
 if __name__ == "__main__":
     unittest.main()

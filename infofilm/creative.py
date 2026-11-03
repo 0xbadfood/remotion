@@ -252,7 +252,24 @@ def anchor_errors(scenes, script, timing):
 
 
 ON_SCREEN_NOTE = re.compile(r"\bflagged\s+(?:for|as|to)\b|\b(?:for|needs?|awaiting|under)\s+(?:(?:a|an|the)\s+)?"
-                            r"(?:teacher|expert|editor(?:ial)?|human|further|team)?\s*review\b|\bto be (?:checked|verified)\b", re.I)
+                            r"(?:teacher|expert|editor(?:ial)?|human|further|team)?\s*review\b|\bto be (?:checked|verified)\b"
+                            # 2026-11-03, leph1-08 C3: "supplementary note, not book text" and "Supplementary inference"
+                            # drawn on the wave; leph1-07 had "Teacher's note" and "Extension, idealised". Where a point
+                            # comes from is for the narration to say, never a label on the picture
+                            r"|\bsupplementary\b|\bteacher[\u2019']?s\s+note\b|\bnot\s+(?:in\s+|from\s+)?(?:the\s+)?"
+                            r"(?:book|textbook)(?:\s+text)?\b|\bbeyond\s+the\s+(?:book|textbook|syllabus)\b"
+                            r"|\b(?:an?\s+)?inference\b|\bextension,\s*ideali[sz]ed\b", re.I)
+
+
+def on_screen_texts(spec):
+    """The words a Linkwork spec puts on the picture: its title, labels and annotations, through compounds."""
+    if isinstance(spec, list):
+        return [t for v in spec for t in on_screen_texts(v)]
+    if not isinstance(spec, dict):
+        return []
+    found = [v for k, v in spec.items() if k in ("title", "text", "label", "caption") and isinstance(v, str)]
+    found += [v for v in spec.get("labels") or [] if isinstance(v, str)] if isinstance(spec.get("labels"), list) else []
+    return found + [t for k, v in spec.items() if isinstance(v, (dict, list)) for t in on_screen_texts(v)]
 
 
 def beat_errors(value, script, timing, figures=None, linkwork=None):
@@ -307,6 +324,11 @@ def beat_errors(value, script, timing, figures=None, linkwork=None):
             elif note := ON_SCREEN_NOTE.search(scene[key]):
                 errors.append(f"{sid}: {key} carries a note for the team (\"{note.group(0)}\"); the viewer reads it on "
                               f"screen: state the subject's claim, and put review notes in the rationale")
+        for words in on_screen_texts(scene.get("linkwork")) if kind == "linkwork" else []:
+            if note := ON_SCREEN_NOTE.search(words):
+                errors.append(f"{sid}: the picture's text \"{words}\" is a note about the material (\"{note.group(0)}\"), "
+                              "not the subject: the viewer reads it on screen; draw and label the physics, and let the "
+                              "narration say where a point comes from")
         if scene.get("motion") not in {"push", "pull", "drift", "hold"}:
             errors.append(f"{sid}: unsupported motion")
         if scene.get("copy_density") not in {"minimal", "standard"}:
