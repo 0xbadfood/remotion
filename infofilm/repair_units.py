@@ -225,10 +225,12 @@ def quoted_units(issue, candidate, spec=None):
     return found
 
 
-def flag(candidate, errors, review, spec=None):
-    """(flagged {unit id: [findings]}, stage-level findings). Code decides; the planner never sees the raw review."""
+def flag(candidate, errors, review, spec=None, minor=False):
+    """(flagged {unit id: [findings]}, stage-level findings). Code decides; the planner never sees the raw review.
+    `minor` takes every finding, for a round lost to its score with nothing above minor."""
     flagged, stage = {}, []
-    for issue in blocking(review):
+    issues = [i for i in (review or {}).get("issues", []) or [] if isinstance(i, dict)] if minor else blocking(review)
+    for issue in issues:
         finding = {k: issue.get(k) for k in ("field", "problem", "correction")}
         ids = resolve(issue.get("field"), candidate, spec)
         ids = ids + [i for i in quoted_units(issue, candidate, spec) if ids and i not in ids]

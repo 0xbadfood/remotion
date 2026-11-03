@@ -56,6 +56,15 @@ class RepairLoopTests(unittest.TestCase):
         self.assertIn("REPAIR the prior candidate as a whole", prompts[2][2]); self.assertIn("no causal arc", prompts[2][2])
         self.assertNotIn('"score": 60', prompts[2][2])                         # the raw review is never forwarded
 
+    def test_a_low_score_with_only_minor_findings_repairs_the_units_they_name(self):
+        review = {"pass": False, "score": 58, "issues": [{"field": "P02", "severity": "minor", "problem": "previews P03",
+                                                           "downgraded": "screened"}]}
+        result, prompts = self.run_loop([script("One.", "Two and three.", "Three."), review,
+                                         {"units": {"points": [{"id": "P02", "narration": "Two."}]}},
+                                         passing(), {"preferred": "A", "reasons": [], "regressions": []}])
+        self.assertEqual([p["narration"] for p in result["points"]], ["One.", "Two.", "Three."])
+        self.assertIn("FLAGGED UNITS", prompts[2][2]); self.assertNotIn("as a whole", prompts[2][2])
+
     def test_validator_errors_naming_a_unit_are_targeted(self):
         validator = lambda x: [f"{p['id']}: heading has 9 words; at most 7" for p in x["points"] if p["narration"] == "bad"]
         result, prompts = self.run_loop([script("One.", "bad"), {"units": {"points": [{"id": "P02", "narration": "good"}]}},

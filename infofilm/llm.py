@@ -597,6 +597,11 @@ class Models:
                 write(root / "current.json", {"input_hash": identity, "selected": str(selected), "evaluation": str(directory / "evaluation.json")})
                 return current
             flagged, stage_findings = ru.flag(current, errors, review, units)
+            if not flagged and not stage_findings and not errors and review:
+                # A round lost to its score with only minor findings repairs the units they name. With nothing flagged it
+                # was a full redraft with no findings, which renumbered the beats and lost their strikes (leph1-07 C6,
+                # 2026-11-03: the same three beats failed four rounds and never reached the ladder).
+                flagged, stage_findings = ru.flag(current, errors, review, units, minor=True)
             raised |= set(flagged)
             if errors and review is None and mechanical < mechanical_cap:
                 # A round lost only to code checks (no review) does not use up the review budget.
