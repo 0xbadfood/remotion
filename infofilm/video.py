@@ -66,7 +66,7 @@ def replace_audio(config, store, output, music):
         "picture_reused": True, "source_video": str(original), "source_video_sha256": old_qa["video_sha256"]})
     sys.path.insert(0, config["filmora_root"])
     from backend.mux import continuous_audio_command
-    from backend.qa import run_qa
+    from .delivery_qa import run_qa
     temporary = root / "video.pending.mp4"
     temporary.unlink(missing_ok=True)
     command = continuous_audio_command(original, root / "master.wav", temporary)
@@ -383,7 +383,7 @@ def render(config, store, root, timeline):
     sys.path.insert(0, config["filmora_root"])
     from backend.mux import continuous_audio_command
     subprocess.run(continuous_audio_command(picture, root / "master.wav", final), check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
-    from backend.qa import run_qa
+    from .delivery_qa import run_qa
     source = read(root / "source.json")
     package = write(root / "qa-package.json", {"source": source})
     data = read(timeline)["data"]

@@ -280,7 +280,7 @@ def assemble(config, store, plan, records, orientation, target):
         'delivery_master_sha256': music['master_audio_info']['audio_sha256'], 'full_coverage': True})
     sys.path.insert(0, config['filmora_root'])
     from backend.mux import continuous_audio_command
-    from backend.qa import run_qa
+    from .delivery_qa import run_qa
     final.unlink(missing_ok=True)
     subprocess.run(continuous_audio_command(picture_path, root / 'master.wav', final), check=True, capture_output=True)
     qa_path = root / 'qa.json'

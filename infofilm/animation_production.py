@@ -151,7 +151,7 @@ def package_video(config,store,animation,film,orientation,music):
     source={**audio_info(master),'audio_file':'master.wav'}
     write(root/'source.json',source)
     sys.path.insert(0,config['filmora_root'])
-    from backend.qa import run_qa
+    from .delivery_qa import run_qa
     package=write(root/'qa-package.json',{'source':source})
     qa_timeline=write(root/'qa-timeline.json',{'width':width,'height':height,'fps':fps,'durationInFrames':frames})
     qa_path.unlink(missing_ok=True)
