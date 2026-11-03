@@ -362,6 +362,24 @@ def read_symbol_digits(expected_text, transcript_text):
     return re.sub(r"\b([A-Za-z]{1,3})(\d{2,4})\b", spaced, str(transcript_text or ""))
 
 
+# An equation number read as a cardinal: the script's "six point twenty one" is written 6.21 and scored "six point two
+# one", which failed all four takes though every take said it right (the AC generator film, 2026-11-03). Both sides
+# come here, so 6.31 or 621 still fail.
+_POINT_TENS = {"twenty": "two", "thirty": "three", "forty": "four", "fifty": "five", "sixty": "six", "seventy": "seven",
+               "eighty": "eight", "ninety": "nine"}
+_POINT_TEENS = {"ten": "zero", "eleven": "one", "twelve": "two", "thirteen": "three", "fourteen": "four",
+                "fifteen": "five", "sixteen": "six", "seventeen": "seven", "eighteen": "eight", "nineteen": "nine"}
+POINT_CARDINAL = re.compile(r"\bpoint\s+(?:(%s)(?:[\s-]+(one|two|three|four|five|six|seven|eight|nine))?|(%s))\b"
+                            % ("|".join(_POINT_TENS), "|".join(_POINT_TEENS)), re.I)
+
+
+def point_digits(match):
+    tens, unit, teen = (g.lower() if g else g for g in match.groups())
+    if teen:
+        return f"point one {_POINT_TEENS[teen]}"
+    return f"point {_POINT_TENS[tens]} {unit or 'zero'}"
+
+
 def canonical_numeric_text(text):
     """Scoring-only equivalence: 'a thousand' and '1,000' name the same value.
 
@@ -372,8 +390,9 @@ def canonical_numeric_text(text):
     value = canonical_year_pairs(str(text or ""))
     value = re.sub(r"\ba\s+(hundred|thousand|million|billion|trillion)\b", r"one \1",
                    spoken_numeric_text(value), flags=re.I)
-    return re.sub(r"\b(hundred|thousand|million|billion)\s+and\s+(?=(?:" +
-                  "|".join(sorted(_NUMBER_WORDS)) + r")\b)", r"\1 ", value, flags=re.I)
+    value = re.sub(r"\b(hundred|thousand|million|billion)\s+and\s+(?=(?:" +
+                   "|".join(sorted(_NUMBER_WORDS)) + r")\b)", r"\1 ", value, flags=re.I)
+    return POINT_CARDINAL.sub(point_digits, value)
 
 
 def point_coverage(points, transcript_text):

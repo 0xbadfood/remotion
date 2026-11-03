@@ -472,6 +472,15 @@ if __name__ == "__main__":
 class RomanNumeralNumberTests(unittest.TestCase):
     """Tiger film C03: 'NTCA Phase IV' spoken as 'four'; the arbiter accepted, code's number check overruled it."""
 
+    def test_equation_number_read_as_a_cardinal_is_the_same_number(self):
+        from infofilm.audio_audit import canonical_numeric_text as c
+        self.assertEqual(c("six point twenty"), c("6.20"))
+        self.assertEqual(c("six point twenty one"), c("6.21"))
+        self.assertEqual(c("six point twelve"), c("6.12"))
+        self.assertNotEqual(c("six point twenty"), c("6.30"))
+        self.assertNotEqual(c("six point twenty"), c("620"))
+        self.assertNotEqual(c("six point twenty one"), c("6.2"))
+
     def test_roman_numerals_match_their_spoken_value(self):
         from infofilm.audio_audit import roman_value, same_number
         self.assertTrue(same_number({"expected": "iv", "observed": "four"}))
