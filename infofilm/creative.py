@@ -1,6 +1,7 @@
 """Subject-aware creative direction shared by scripts, visuals and music."""
 from __future__ import annotations
 
+import json
 import re
 
 MOODS = {
@@ -734,20 +735,57 @@ LADDER_IMAGE = ("A quiet abstract editorial backdrop: soft layered fields of lig
                 "no objects, no text.")
 
 
-def beat_ladder(rows):
+_WORDS = re.compile(r"[a-z][a-z-]{3,}")
+
+
+def verb_alternatives(row, verbs, limit=3):
+    """Other verbs whose cards fit a beat its sheet verb keeps failing, best first: a verb the failing card's not_when
+    sends such cases to counts most, then concepts the beat's heading, summary and intent name, then shared words."""
+    text = " ".join(str(row.get(k) or "") for k in ("heading", "summary", "intent")).lower()
+    have = set(_WORDS.findall(text))
+    failing = next((c for c in verbs if c.get("name") == row.get("verb")), {})
+    routed = set(re.findall(r"use ([a-z_]+)", str(failing.get("not_when") or "")))
+    scored = []
+    for card in verbs:
+        name = card.get("name")
+        if not name or name == row.get("verb"):
+            continue
+        concepts = [str(c).lower() for c in card.get("concepts") or []]
+        score = (5 if name in routed else 0) + sum(3 for c in concepts if c in text)
+        score += 0.5 * len(have & set(_WORDS.findall(" ".join(concepts)))) + 0.25 * len(have & set(_WORDS.findall(str(card.get("use_when") or "").lower())))
+        if score >= 2:
+            scored.append((score, name, card))
+    return [card for _, _, card in sorted(scored, key=lambda x: -x[0])[:limit]]
+
+
+def beat_ladder(rows, verbs=None):
+    """The beat stage's ladder. Rung 2 also offers other verbs (user, 2026-11-03: technical pictures are drawn as SVG,
+    not left to an image model): Class 12 C8 had six cell-combination beats fixed to `circuit`, which cannot draw two
+    cells in parallel; each failed review until rung 3 left an abstract backdrop where a circuit belonged, though
+    `current` draws exactly that. `ladder.free` holds, per beat, the verbs it may now switch to."""
     kinds = {r["id"]: r.get("kind") for r in rows}
+    by_id = {r["id"]: r for r in rows}
+    free: dict[str, set[str]] = {}
 
     def ladder(rung, ident, value):
         if not isinstance(value, dict) or kinds.get(value.get("id")) != "linkwork":
             return None
         if rung == 2:
-            return ("The sheet's verb has not carried this beat's intent after several tries: draw only what the verb can "
+            text = ("The sheet's verb has not carried this beat's intent after several tries: draw only what the verb can "
                     "show truly, and let the heading and summary state the rest in words.")
+            others = verb_alternatives(by_id.get(value.get("id"), {}), verbs or [])
+            if others:
+                free[value["id"]] = {c["name"] for c in others}
+                cards = [{k: c[k] for k in ("name", "use_when", "not_when", "fields", "anchors", "example") if c.get(k)} for c in others]
+                text += (" Or, if one of these verbs shows the beat's intent truly, change this beat's linkwork to it and "
+                         "write its spec from its card: " + json.dumps(cards, ensure_ascii=False))
+            return text
         keep = {k: value[k] for k in ("id", "point_id", "start_word_id", "through_point_id", "heading", "summary")
                 if value.get(k)}
         return {**keep, "kind": "image", "labels": [], "details": [], "motion": "drift", "copy_density": "minimal",
                 "camera": "still", "image_brief": LADDER_IMAGE, "fallback": "ladder",
                 "rationale": "Code fallback: the verb could not show this point; the heading, summary and narration carry it."}
+    ladder.free = free
     return ladder
 
 
@@ -763,7 +801,7 @@ def sheet_ladder(rung, ident, value):
     return dict(value)
 
 
-def match_errors(value, rows):
+def match_errors(value, rows, free=None):
     """A pass-2 batch keeps its sheet rows: same beats, anchors, kinds and choices (a compound keeps the sheet's verb
     among its parts)."""
     from .linkwork_beats import spec_verbs
@@ -778,7 +816,8 @@ def match_errors(value, rows):
         for key in ("id", "point_id", "start_word_id", "through_point_id") + (() if fallback else ("kind",)):
             if (scene.get(key) or None) != (row.get(key) or None):
                 errors.append(f"{row['id']}: keep the sheet's {key} {row.get(key)!r} (got {scene.get(key)!r})")
-        if row.get("kind") == "linkwork" and not fallback and row.get("verb") not in (spec_verbs(scene.get("linkwork")) or []):
+        allowed = {row.get("verb")} | set((free or {}).get(row["id"], ()))
+        if row.get("kind") == "linkwork" and not fallback and not allowed & set(spec_verbs(scene.get("linkwork")) or []):
             errors.append(f"{row['id']}: the sheet chose the verb {row.get('verb')!r}; write its spec")
         if row.get("kind") == "figure" and isinstance(scene.get("figure"), dict):
             figure = scene["figure"]
@@ -839,11 +878,13 @@ def staged_beats(models, film, evidence, task, context, figures, experimental, l
             part_context["linkwork_options"] = {**context["linkwork_options"], "verbs": [
                 v for v in context["linkwork_options"]["verbs"] if v["name"] in used]}
 
-        def validate(x, part_script=part_script, part_timing=part_timing, batch=batch):
+        ladder = beat_ladder(batch, (context.get("linkwork_options") or {}).get("verbs") or [])
+
+        def validate(x, part_script=part_script, part_timing=part_timing, batch=batch, ladder=ladder):
             return (beat_errors(x, part_script, part_timing, figures, linkwork) + camera_errors(x, motion_on(config))
-                    + match_errors(x, batch))
+                    + match_errors(x, batch, ladder.free))
         part = models.loop(f"visual-beats-{film['requested_seconds']}-p{number}", task + STAGED_SCENES_TASK,
-                           part_context, validate, experimental=experimental, units=BEAT_UNITS, ladder=beat_ladder(batch))
+                           part_context, validate, experimental=experimental, units=BEAT_UNITS, ladder=ladder)
         for scene, row in zip(part["scenes"], batch):
             scene.update({k: row[k] for k in ("importance", "room", "intent") if row.get(k)})
         scenes.extend(part["scenes"])

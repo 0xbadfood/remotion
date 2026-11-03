@@ -87,6 +87,28 @@ class LinkworkBeatTests(unittest.TestCase):
         self.assertTrue(1 <= len(built["image_brief"]) <= 1800)          # what beat_errors asks of an image beat
         self.assertIsNone(beat_ladder([{**row, "kind": "figure"}])(3, "S15", written))   # only a verb steps down
 
+    def test_a_beat_its_verb_cannot_draw_may_change_verb_before_it_goes_blank(self):
+        # 2026-11-02, Class 12 cells in series and parallel: six beats fixed to circuit (it cannot draw two cells in
+        # parallel) failed review until the ladder left abstract backdrops; current draws them (user: technical
+        # pictures are SVG, not image-model work)
+        from infofilm.creative import beat_ladder, match_errors, verb_alternatives
+        verbs = [{"name": "circuit", "concepts": ["resistors in series", "ammeter"], "use_when": "a circuit with a battery",
+                  "not_when": "cells joined in series or in parallel (use current cells)"},
+                 {"name": "current", "concepts": ["combination of cells", "cells in parallel", "internal resistance"],
+                  "use_when": "cells: kind series or parallel, cells [{e, r}]", "fields": {"show": "cells"}},
+                 {"name": "pendulum", "concepts": ["simple pendulum"], "use_when": "a bob on a string"}]
+        row = {"id": "S16", "point_id": "P12", "start_word_id": "w0411", "kind": "linkwork", "verb": "circuit",
+               "intent": "two cells in parallel share their terminals"}
+        self.assertEqual([c["name"] for c in verb_alternatives(row, verbs)], ["current"])
+        ladder = beat_ladder([row], verbs)
+        written = {**row, "heading": "Parallel cells", "summary": "Two cells side by side.", "linkwork": {"verb": "circuit"}}
+        self.assertIn('"name": "current"', ladder(2, "S16", written))
+        switched = {**written, "linkwork": {"verb": "current", "show": "cells", "kind": "parallel"}}
+        self.assertEqual([e for e in match_errors({"scenes": [switched]}, [row], ladder.free) if "chose the verb" in e], [])
+        # without the ladder's leave, the sheet's verb still holds; and an unrelated verb is never offered
+        self.assertTrue([e for e in match_errors({"scenes": [switched]}, [row]) if "chose the verb" in e])
+        self.assertTrue([e for e in match_errors({"scenes": [{**written, "linkwork": {"verb": "pendulum"}}]}, [row], ladder.free) if "chose the verb" in e])
+
     def test_a_sheet_row_that_keeps_failing_is_kept_and_a_fallback_image_is_judged_as_a_backdrop(self):
         # 2026-10-29: Stopping Distance's sheet ran out of rounds on one row; Equations of Motion's ladder image was
         # reviewed against the passage it stood in for and carried "needs expert review" into the film
