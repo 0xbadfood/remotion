@@ -359,7 +359,13 @@ def read_symbol_digits(expected_text, transcript_text):
         letters, digits = m.group(1), m.group(2)
         reading = " ".join([letters.lower(), *(_DIGIT_WORDS[d] for d in digits)])
         return f"{letters} {' '.join(digits)}" if f" {reading} " in script else m.group(0)
-    return re.sub(r"\b([A-Za-z]{1,3})(\d{2,4})\b", spaced, str(transcript_text or ""))
+    transcript = re.sub(r"\b([A-Za-z]{1,3})(\d{2,4})\b", spaced, str(transcript_text or ""))
+    # A power of ten the script has: Whisper writes "ten to the power seventeen" as 1017 and "ten cubed" as 103
+    # (leph2-05 C3, 2026-11-04: every take of "about 10³ kilograms" and "2.29 × 10¹⁷" failed as a changed number)
+    from .numeric_speech import ten_power_words
+    for sign, exp in set(re.findall(r"\b10 to the power (minus )?(\d{1,2})\b", ten_power_words(expected_text))):
+        transcript = re.sub(rf"(?<![\d.,])10{'(?:-|−)' if sign else ''}{exp}(?![\d,]|\.\d)", f"10 to the power {sign}{exp}", transcript)
+    return transcript
 
 
 # An equation number read as a cardinal: the script's "six point twenty one" is written 6.21 and scored "six point two

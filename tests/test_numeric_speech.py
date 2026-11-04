@@ -129,3 +129,16 @@ class TenPowerTests(unittest.TestCase):
         # the sign still counts, and a range is not a power
         self.assertNotEqual(canonical_numeric_text("about 4.6 times 10 to the 15 metres"), script)
         self.assertEqual(canonical_numeric_text("pages 10-15"), "pages ten to fifteen")
+
+    def test_whisper_joining_a_power_of_ten_is_not_a_changed_number(self):
+        # leph2-05 C3, 2026-11-04: "10³" heard as 103 and "2.29 × 10¹⁷" as "2.29 times 1017", in every take
+        for script, heard in [("Water is about 10³ kilograms per cubic metre.", "Water is about 103 kilograms per cubic meter."),
+                              ("A density of about 2.29 × 10¹⁷ kilograms.", "A density of about 2.29 times 1017 kilograms."),
+                              ("About 4.6 × 10⁻¹⁵ metres.", "About 4.6 times 10-15 metres.")]:
+            result = score_english_transcript(expected_text=script, transcript_text=heard, audio_duration_seconds=5,
+                                              speech_span_seconds=5)
+            self.assertNotIn('numeric_mismatch', result['reasons'], heard)
+        # a number that is no power in the script stays a number
+        result = score_english_transcript(expected_text="About 10³ kilograms.", transcript_text="About 1017 kilograms.",
+                                          audio_duration_seconds=3, speech_span_seconds=3)
+        self.assertIn('numeric_mismatch', result['reasons'])
