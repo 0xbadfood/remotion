@@ -23,6 +23,7 @@ from pathlib import Path
 from .core import Store, digest, read, write
 
 POLICY = "narration-room-v1"
+MAX_PHRASES = 3     # spoken cues per film besides replays: 2026-11-04, leph2-06 C6 said "Notice what changes." six times
 PHRASES = {"look": "Look carefully.", "notice": "Notice what changes.", "replay": "Watch it once more."}
 ROOMS = ("hold", "look", "notice", "replay")
 GAP = 0.5           # seconds of quiet between the narration and a phrase, and between a phrase and the replay
@@ -95,6 +96,8 @@ def plan(scenes, words, base_seconds, room, phrases):
         motion = _scene_seconds(scene)
         finish = max(0.0, motion - TAIL - length) if motion else 0.0
         kind = scene.get("room") if scene.get("room") in ROOMS else None
+        if kind == "notice" and not motion:
+            kind = "look"                           # nothing moves on a still picture: there is nothing to see change
         if kind in ("look", "notice", "replay") and (kind not in phrases or kind == "replay" and not motion):
             kind = "hold"                           # no phrase in this voice, or nothing to replay: a plain pause
         insert = {"scene": scene["id"], "at": round(at, 3), "after_word": last["id"], "seconds": finish,
@@ -125,6 +128,18 @@ def plan(scenes, words, base_seconds, room, phrases):
             continue
         budget -= insert["seconds"]
         out.append(insert)
+    # A cue said again and again becomes a tic: past MAX_PHRASES, or straight after the same cue, the room stays
+    # but in silence. A replay keeps its phrase: it introduces the second play.
+    spoken, last = 0, None
+    for insert in sorted(out, key=lambda i: i["at"]):
+        phrase = insert.get("phrase")
+        if phrase in ("look", "notice"):
+            if spoken >= MAX_PHRASES or phrase == last:
+                insert.pop("phrase"), insert.pop("phrase_at")
+                continue
+            spoken += 1
+        if phrase:
+            last = phrase
     return sorted(out, key=lambda i: i["at"])
 
 

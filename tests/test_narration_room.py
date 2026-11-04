@@ -104,6 +104,24 @@ class NarrationRoomTests(unittest.TestCase):
         inserts = narration_room.plan(self.resolved(), self.timing["words"], 100.0, narration_room.settings(), {})
         self.assertEqual([(i["scene"], i["seconds"], i.get("phrase")) for i in inserts][1], ("S02", 2.5, None))
 
+    def test_cues_are_few_never_repeat_back_to_back_and_notice_needs_motion(self):
+        # 2026-11-04, leph2-06 C6: "Notice what changes." after six beats, over an open question and the closing photo
+        words, scenes = [], []
+        for n in range(8):
+            words.append({"id": f"w{n}", "word": f"word{n}", "start": n * 10.0, "end": n * 10.0 + 1.0})
+            scenes.append({"id": f"S{n:02d}", "start": n * 10.0, "end": n * 10.0 + 4.0, "kind": "image",
+                           "room": "notice", "importance": "core"})
+        phrases = {k: {"seconds": 1.0} for k in ("look", "notice")}
+        inserts = narration_room.plan(scenes, words, 100.0, narration_room.settings(), phrases)
+        self.assertEqual(len(inserts), 8, "every room keeps its time")
+        said = [i.get("phrase") for i in inserts]
+        self.assertNotIn("notice", said, "a still picture shows nothing changing")
+        self.assertEqual(said, ["look", None, None, None, None, None, None, None], "never the same cue twice running")
+        for n, scene in enumerate(scenes):                  # moving scenes and stills, turn about
+            scene.update({"room": "notice", "kind": "linkwork", "linkwork_file": str(self.root / "scene.json")} if n % 2 == 0 else {"room": "look"})
+        said = [i.get("phrase") for i in narration_room.plan(scenes, words, 100.0, narration_room.settings(), phrases)]
+        self.assertEqual(sum(1 for p in said if p), narration_room.MAX_PHRASES)
+
     def test_off_means_off(self):
         film = self.film()
         narration_room.apply({"narration_room": False}, Store(self.root / "project"), [film])
