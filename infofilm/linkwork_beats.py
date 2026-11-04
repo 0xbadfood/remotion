@@ -157,6 +157,16 @@ def speed_to_fit(scene_seconds, beat_seconds):
     return round(min(FIT, (scene_seconds - TAIL) / room), 3)
 
 
+def skip_to_fit(scene_seconds, beat_seconds):
+    """Seconds of a scene's start to leave out when even FIT speed cannot end its motion SEEN s inside the beat, so the
+    beat shows the scene's end, its result, rather than its start cut off half-drawn. 0 when it fits. (2026-11-05:
+    published films had a Kirchhoff loop walk stopped mid-way and a g graph cut halfway, scenes 2-4x their beat.)"""
+    room = beat_seconds - SEEN
+    if room <= 0:
+        return 0.0
+    return round(max(0.0, (scene_seconds - TAIL) - FIT * room), 3)
+
+
 def spec_verbs(spec):
     """The verbs a linkwork spec uses: [its verb], or its parts' verbs for a compound; None when it is neither."""
     if not isinstance(spec, dict):

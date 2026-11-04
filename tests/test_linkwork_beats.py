@@ -160,6 +160,14 @@ class LinkworkBeatTests(unittest.TestCase):
         self.assertEqual(linkwork_beats.speed_to_fit(4.0, 4.8), 1.0)
         self.assertEqual(linkwork_beats.speed_to_fit(30.0, 4.8), linkwork_beats.FIT)
 
+    def test_a_scene_far_too_long_shows_its_end_not_a_cut_off_start(self):
+        # leph1-03 C9 S32: a 14.7 s loop walk in a 3.2 s beat stopped mid-way even at FIT speed
+        self.assertEqual(linkwork_beats.skip_to_fit(6.8, 4.8), 0.0)            # FIT speed is enough
+        skip = linkwork_beats.skip_to_fit(14.7, 3.2)
+        self.assertAlmostEqual(skip, 13.2 - 1.6 * 2.4, places=3)
+        # at FIT speed from that second, the motion ends SEEN before the cut
+        self.assertAlmostEqual(skip + linkwork_beats.FIT * (3.2 - linkwork_beats.SEEN), 14.7 - linkwork_beats.TAIL, places=3)
+
 
 if __name__ == "__main__":
     unittest.main()

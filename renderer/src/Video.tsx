@@ -6,7 +6,7 @@ import type {Scene as LinkworkData} from './linkwork/index.ts';
 
 // A Linkwork scene's lowest text (96% down) lands at 88.5%, clear of a one-line caption: (0.885 - 0.095) / (0.96 - 0.095).
 export const LINKWORK_FIT = 0.913;
-export type Scene = {id:string; point_id:string; from:number; duration:number; kind:'image'|'flow'|'compare'|'cycle'|'figure'|'animation'|'linkwork'; linkwork?:LinkworkData; linkworkSpeed?:number; linkworkRestart?:number; src?:string; credit?:string; depth?:string; clip?:string; clipSeconds?:number; backdrop?:string;
+export type Scene = {id:string; point_id:string; from:number; duration:number; kind:'image'|'flow'|'compare'|'cycle'|'figure'|'animation'|'linkwork'; linkwork?:LinkworkData; linkworkSpeed?:number; linkworkRestart?:number; linkworkSkip?:number; src?:string; credit?:string; depth?:string; clip?:string; clipSeconds?:number; backdrop?:string;
   heading:string; summary:string; labels:string[]; details:string[]; banner?:string; needs_review?:boolean; review_tag?:string; copy_density?:'minimal'|'standard'; motion:'push'|'pull'|'drift'|'hold'; index:number; source_ids:string[]; reveals?:number[];
   layers?:{base:string; highlight?:string|null; highlightAt:number; labels:{src:string; at:number}[]}};
 export type FilmData = {title:string;subject:string;width:number;height:number;fps:number;durationInFrames:number;transitionFrames?:number;depthStrength?:number;
@@ -103,7 +103,7 @@ const SceneView:React.FC<{scene:Scene;lead:number;brief?:FilmData['creativeBrief
   // axis names, the earth plate's label and a coil's readout were hidden).
   if (scene.kind==='linkwork' && scene.linkwork) return <AbsoluteFill style={{background:teal,overflow:'hidden',opacity:fade}}>
     <AbsoluteFill style={{transform:`scale(${LINKWORK_FIT})`,transformOrigin:'50% 9.5%'}}>
-      <Sequence from={lead}><LinkworkScene scene={scene.linkwork} transparent speed={scene.linkworkSpeed ?? 1} restart={scene.linkworkRestart}/></Sequence>
+      <Sequence from={lead}><LinkworkScene scene={scene.linkwork} transparent speed={scene.linkworkSpeed ?? 1} restart={scene.linkworkRestart} skip={scene.linkworkSkip}/></Sequence>
     </AbsoluteFill>
   </AbsoluteFill>;
   if (scene.kind==='animation') return <AbsoluteFill style={{background:teal,overflow:'hidden',opacity:fade}}>

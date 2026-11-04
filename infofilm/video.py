@@ -300,9 +300,12 @@ def compile_timeline(config, store, script, timing, storyboard, images, evidence
                                    "highlightAt": lit,
                                    "labels": [{"src": staged(label), "at": t} for label, t in zip(layers["labels"], times)]}
         if scene["kind"] == "linkwork":                # drawn frame by frame in the renderer from its checked scene
-            from .linkwork_beats import speed_to_fit
+            from .linkwork_beats import skip_to_fit, speed_to_fit
             value["linkwork"] = read(scene["linkwork_file"])
             value["linkworkSpeed"] = speed_to_fit(value["linkwork"]["duration"], (end - start) / fps)
+            skip = skip_to_fit(value["linkwork"]["duration"], (end - start) / fps)
+            if skip:                                   # too long even at FIT: the beat shows the scene's end
+                value["linkworkSkip"] = skip
             if scene.get("linkwork_restart"):          # a replay: the scene plays again from this second of its beat
                 value["linkworkRestart"] = scene["linkwork_restart"]
         if scene["kind"] == "animation":
