@@ -386,8 +386,8 @@ def canonical_numeric_text(text):
     Leave MFA orthography and the frozen script unchanged. Explicit coefficients,
     units, signs and qualifiers such as 'over' still have to match.
     """
-    from .numeric_speech import canonical_year_pairs
-    value = canonical_year_pairs(str(text or ""))
+    from .numeric_speech import canonical_ten_powers, canonical_year_pairs
+    value = canonical_year_pairs(canonical_ten_powers(str(text or "")))
     value = re.sub(r"\ba\s+(hundred|thousand|million|billion|trillion)\b", r"one \1",
                    spoken_numeric_text(value), flags=re.I)
     value = re.sub(r"\b(hundred|thousand|million|billion)\s+and\s+(?=(?:" +

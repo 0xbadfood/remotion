@@ -15,6 +15,7 @@ from pathlib import Path
 from .audio_audit import AUDIT_POLICY
 from .core import digest, read, write
 from .media import audio_info, audit_audio, mfa_numeric_text
+from .numeric_speech import ten_power_words
 from .planning import word_count
 
 WORKER = Path(__file__).with_name("lux_worker.py")
@@ -75,7 +76,7 @@ def _run_remote(config, store, manifest, name):
     return True
 
 
-SPEAKABLE = 5       # the version of speakable(): part of a recording's identity, so a change records again
+SPEAKABLE = 6       # the version of speakable(): part of a recording's identity, so a change records again
 SAID_AS_WORDS = {"NASA", "ISRO", "LASER", "RADAR", "SONAR", "UNESCO", "UNICEF", "NATO", "SCUBA", "AIDS", "COVID", "OPEC",
                  "SEBI", "NITI", "ASEAN", "SAARC", "BRICS", "GATT", "FIFA", "OK"}
 ROMAN = re.compile(r"^[IVXLCDM]+$")
@@ -91,7 +92,7 @@ def speakable(text):
         if word in SAID_AS_WORDS or ROMAN.match(word):
             return word
         return ".".join(word) + "."
-    text = re.sub(r"\b[A-Z]{2,5}\b", acronym, text)
+    text = re.sub(r"\b[A-Z]{2,5}\b", acronym, ten_power_words(text))
     # The digits after a point, five or more, are said one by one with commas between: the voice ran long decimals
     # together ("three hundred seventy three point seven one four seven five four" came out "3 meters, 307, 17.5" in
     # every take of the significant-figures film, 2026-10-29).

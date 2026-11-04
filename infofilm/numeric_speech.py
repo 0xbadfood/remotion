@@ -126,3 +126,31 @@ def canonical_year_pairs(text):
         return num2words(century * 100 + last, lang="en")
 
     return _PAIR.sub(expand, value)
+
+
+_SUPER = str.maketrans("⁰¹²³⁴⁵⁶⁷⁸⁹⁻⁺", "0123456789-+")
+_TEN_POWER = re.compile(r"\b10([⁻⁺]?[⁰¹²³⁴⁵⁶⁷⁸⁹]+)")
+_TIMES_TEN = re.compile(r"(\d)\s*[×x]\s*(?=10\b|10[⁻⁺⁰¹²³⁴⁵⁶⁷⁸⁹])")
+# What Whisper writes for "times ten to the power minus fifteen": "x 10-15", "times 10 minus 15", "10 to the minus 15",
+# "10 to the power of minus 15". After "times", each is the same power of ten.
+_HEARD_POWER = re.compile(r"\b(times\s+10)\s*(?:(-)\s*|\s+(?:to\s+)?(?:the\s+)?(?:power\s+)?(?:of\s+)?(?=minus\b|plus\b|\d))"
+                          r"(minus\s+|plus\s+)?(\d+)\b", re.I)
+
+
+def ten_power_words(text):
+    """Scientific notation in words: "4.6 × 10⁻¹⁵" -> "4.6 times 10 to the power minus 15". A script that wrote the
+    symbols left the voice to improvise their reading, and Whisper wrote each take differently ("x 10-15", "times 10
+    minus 15"), so every take of the nuclear-size film failed its audit (leph2-05 C3, 2026-11-04)."""
+    text = _TIMES_TEN.sub(r"\1 times ", str(text or ""))
+
+    def power(m):
+        exp = m.group(1).translate(_SUPER)
+        sign = "minus " if exp.startswith("-") else ""
+        return f"10 to the power {sign}{exp.lstrip('+-')}"
+    return _TEN_POWER.sub(power, text)
+
+
+def canonical_ten_powers(text):
+    """Both the script and a transcript, scored alike: every reading of "times 10 to the power minus 15" is one."""
+    text = re.sub(r"(\d)\s+x\s+(?=10\b)", r"\1 times ", ten_power_words(text))
+    return _HEARD_POWER.sub(lambda m: f"{m.group(1)} to the power {'minus ' if m.group(2) or (m.group(3) or '').lower().startswith('minus') else ''}{m.group(4)}", text)

@@ -115,3 +115,17 @@ class NumericSpeechTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TenPowerTests(unittest.TestCase):
+    def test_scientific_notation_is_read_and_scored_one_way(self):
+        from infofilm.lux_media import speakable
+        self.assertEqual(speakable("about 4.6 × 10⁻¹⁵ metres"), "about 4.6 times 10 to the power minus 15 metres")
+        self.assertIn("10 to the power 17", speakable("2.29 × 10¹⁷ kg"))
+        script = canonical_numeric_text("about 4.6 × 10⁻¹⁵ metres")
+        for heard in ("about 4.6 x 10-15 metres", "about 4.6 times 10 minus 15 metres",
+                      "about 4.6 times 10 to the minus 15 metres", "about 4.6 times 10 to the power of minus 15 metres"):
+            self.assertEqual(canonical_numeric_text(heard), script, heard)
+        # the sign still counts, and a range is not a power
+        self.assertNotEqual(canonical_numeric_text("about 4.6 times 10 to the 15 metres"), script)
+        self.assertEqual(canonical_numeric_text("pages 10-15"), "pages ten to fifteen")

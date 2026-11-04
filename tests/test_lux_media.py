@@ -185,9 +185,9 @@ class SpeakableTests(unittest.TestCase):
         import hashlib, json
         from infofilm.lux_media import SPEAKABLE, speakable
         samples = ["The SI unit is written m s to the power minus two.", "Air is one point zero zero zero three.",
-                   "It is three hundred seventy three point seven one four seven five four cubic metres.", "A z k-hat", "DNA in Class XI."]
+                   "It is three hundred seventy three point seven one four seven five four cubic metres.", "A z k-hat", "DNA in Class XI.", "about 4.6 × 10⁻¹⁵ metres"]
         seen = hashlib.sha256(json.dumps([speakable(x) for x in samples]).encode()).hexdigest()[:16]
-        self.assertEqual((SPEAKABLE, seen), (5, "98e3bbfdf600f300"))
+        self.assertEqual((SPEAKABLE, seen), (6, "c8ec7fd80fa3d7ab"))
         self.assertEqual(speakable("One one-hundredth of it."), "One one-hundredth of it.")
 
 
