@@ -85,9 +85,20 @@ class CurriculumTests(unittest.TestCase):
         # 2026-11-04, leph2-05 C1: "Supplementary note S4 explains ..." named a source by the brief's id
         point['narration'] = "Supplementary note S4 explains that the atom's mass is the proton's plus the electron's."
         self.assertIn('speaks about its sources', ' '.join(script_errors({'points': [point]}, evidence)))
+        # 2026-11-04, leph2-05 C10: the brief's scope was spoken to the student
+        for said in ('The material used for this film does not cover energy generation in stars.',
+                     'Our material does not cover stars, so this film makes no claim about them.'):
+            point['narration'] = said
+            self.assertIn('speaks about its sources', ' '.join(script_errors({'points': [point]}, evidence)), said)
+        point['narration'] = 'Fissile material in this reactor is uranium-235; the film of oil on water is thin.'
+        self.assertNotIn('speaks about its sources', ' '.join(script_errors({'points': [point]}, evidence)))
         from infofilm.creative import ON_SCREEN_NOTE
         self.assertTrue(ON_SCREEN_NOTE.search('The proton value agrees with the subtraction; source S4.'))
         self.assertFalse(ON_SCREEN_NOTE.search('Sulphur-32 has 16 protons; S2 minus is an ion'))
+        for note in ('Not covered: stars', 'Covered: reactors', 'Energy generation in stars is outside these sources'):
+            self.assertTrue(ON_SCREEN_NOTE.search(note), note)
+        for fine in ('The plate is covered with zinc sulphide', 'Outside the nucleus, the force is zero'):
+            self.assertFalse(ON_SCREEN_NOTE.search(fine), fine)
 
     def test_book_source_is_read_whole_and_task_names_the_concept(self):
         text = 'Unrelated opening words. ' * 400 + 'The end of the chapter.'

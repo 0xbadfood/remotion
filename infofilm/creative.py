@@ -264,7 +264,10 @@ ON_SCREEN_NOTE = re.compile(r"\bflagged\s+(?:for|as|to)\b|\b(?:for|needs?|awaiti
                             r"(?:book|textbook)(?:\s+text)?\b|\bbeyond\s+the\s+(?:book|textbook|syllabus)\b"
                             r"|\b(?:an?\s+)?inference\b|\bextension,\s*ideali[sz]ed\b"
                             # 2026-11-04, leph2-05 C1: a summary ending "source S4."
-                            r"|\b(?:sources?|notes?|references?|passages?|excerpts?)\s+S\d{1,2}\b", re.I)
+                            r"|\b(?:sources?|notes?|references?|passages?|excerpts?)\s+S\d{1,2}\b"
+                            # 2026-11-04, leph2-05 C10: cards "Covered: reactors", "Not covered: stars" and "outside
+                            # these sources": the brief's scope, not the subject
+                            r"|\b(?:not\s+)?covered\s*:|\boutside\s+(?:these|the|our)\s+(?:sources|material)\b", re.I)
 
 
 def on_screen_texts(spec):

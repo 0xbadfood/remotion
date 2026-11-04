@@ -202,7 +202,12 @@ BACKSTAGE = re.compile(r"\b(?:the|these|our|supplied|available|given)\s+(?:sourc
                        # source title; the student has no note. An addition is said to go beyond the book
                        r"|\bteach(?:er[’']?s|ing)\s+note\b"
                        # 2026-11-04, leph2-05 C1: "Supplementary note S4 explains...": a source's id is the brief's, not the student's
-                       r"|\b(?:sources?|notes?|references?|passages?|excerpts?)\s+S\d{1,2}\b", re.I)
+                       r"|\b(?:sources?|notes?|references?|passages?|excerpts?)\s+S\d{1,2}\b"
+                       # 2026-11-04, leph2-05 C10: "The material used for this film does not cover energy generation
+                       # in stars, so this film makes no claim about that case": the brief's scope, said to the student
+                       r"|\b(?:the|our)\s+material\s+(?:used\s+)?(?:for|in)\s+this\s+(?:film|video)\b"
+                       r"|\b(?:the|our)\s+material\s+(?:does|did)\s+not\s+cover\b"
+                       r"|\bthis\s+(?:film|video)\s+makes\s+no\s+claims?\b", re.I)
 
 
 def script_errors(value, evidence, budget=None, duration=None):
