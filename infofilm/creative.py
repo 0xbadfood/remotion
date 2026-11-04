@@ -758,22 +758,30 @@ LADDER_IMAGE = ("A quiet abstract editorial backdrop: soft layered fields of lig
 
 
 _WORDS = re.compile(r"[a-z][a-z-]{3,}")
+# a beat about how one quantity goes with another: graph plots any such relation
+_TREND = re.compile(r"\b(rises|rising|rise|trend|curve|plotted|graph|increases with|decreases with|varies with)\b")
 
 
-def verb_alternatives(row, verbs, limit=3):
+def verb_alternatives(row, verbs, limit=3, near=()):
     """Other verbs whose cards fit a beat its sheet verb keeps failing, best first: a verb the failing card's not_when
-    sends such cases to counts most, then concepts the beat's heading, summary and intent name, then shared words."""
-    text = " ".join(str(row.get(k) or "") for k in ("heading", "summary", "intent")).lower()
+    sends such cases to counts most, then a verb the film's neighbouring beats draw with (`near`), then concepts the
+    beat's heading, summary, intent and narration (when the caller has it) name, then shared words. 2026-11-04, the
+    rebeat of blank beats: seven found no verb though one fitted: electric and elastic drew the beats on either side, a
+    heat capacity rising with temperature is a graph, and "one coulomb flows through its cross-section every second"
+    is circuit's wire view, but the heading alone shared too few words with the card to offer it."""
+    text = " ".join(str(row.get(k) or "") for k in ("heading", "summary", "intent", "narration")).lower()
     have = set(_WORDS.findall(text))
     failing = next((c for c in verbs if c.get("name") == row.get("verb")), {})
     routed = set(re.findall(r"use ([a-z_]+)", str(failing.get("not_when") or "")))
+    trend = bool(_TREND.search(text))
     scored = []
     for card in verbs:
         name = card.get("name")
         if not name or name == row.get("verb"):
             continue
         concepts = [str(c).lower() for c in card.get("concepts") or []]
-        score = (5 if name in routed else 0) + sum(3 for c in concepts if c in text)
+        score = (5 if name in routed else 0) + (4 if name in near else 0) + (3 if trend and name == "graph" else 0)
+        score += sum(3 for c in concepts if c in text)
         score += 0.5 * len(have & set(_WORDS.findall(" ".join(concepts)))) + 0.25 * len(have & set(_WORDS.findall(str(card.get("use_when") or "").lower())))
         if score >= 2:
             scored.append((score, name, card))
@@ -795,7 +803,9 @@ def beat_ladder(rows, verbs=None):
         if rung == 2:
             text = ("The sheet's verb has not carried this beat's intent after several tries: draw only what the verb can "
                     "show truly, and let the heading and summary state the rest in words.")
-            others = verb_alternatives(by_id.get(value.get("id"), {}), verbs or [])
+            i = next((n for n, r in enumerate(rows) if r["id"] == value.get("id")), 0)
+            near = {r.get("verb") for r in rows[max(0, i - 2):i + 3] if r.get("kind") == "linkwork" and r.get("verb")}
+            others = verb_alternatives(by_id.get(value.get("id"), {}), verbs or [], near=near)
             if others:
                 free[value["id"]] = {c["name"] for c in others}
                 cards = [{k: c[k] for k in ("name", "use_when", "not_when", "fields", "anchors", "example") if c.get(k)} for c in others]

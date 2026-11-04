@@ -109,6 +109,23 @@ class LinkworkBeatTests(unittest.TestCase):
         self.assertTrue([e for e in match_errors({"scenes": [switched]}, [row]) if "chose the verb" in e])
         self.assertTrue([e for e in match_errors({"scenes": [{**written, "linkwork": {"verb": "pendulum"}}]}, [row], ladder.free) if "chose the verb" in e])
 
+    def test_the_verbs_beside_a_beat_and_graph_for_a_trend_are_offered_though_few_words_match(self):
+        # 2026-11-04, rebeat of blank beats: "q1 among several charges" (electric drew S02 and S04) and "diamond's heat
+        # capacity rising with temperature" (a graph) found no verb, as neither card shared enough words with the beat
+        from infofilm.creative import beat_ladder, verb_alternatives
+        verbs = [{"name": "electric", "concepts": ["Coulomb's law"], "use_when": "point charges and the forces between them"},
+                 {"name": "graph", "concepts": ["v–t graph"], "use_when": "one quantity plotted against another"},
+                 {"name": "pendulum", "concepts": ["simple pendulum"], "use_when": "a bob on a string"}]
+        q1 = {"id": "S03", "heading": "Charges Around q1", "intent": "q1 among several charges, no arrows yet"}
+        self.assertEqual(verb_alternatives(q1, verbs), [])
+        self.assertEqual([c["name"] for c in verb_alternatives(q1, verbs, near={"electric"})], ["electric"])
+        diamond = {"heading": "Diamond Heat Capacity Rises", "intent": "heat capacity shown rising with temperature"}
+        self.assertEqual([c["name"] for c in verb_alternatives(diamond, verbs)], ["graph"])
+        # the ladder reads the neighbours from the sheet rows around the failing beat
+        rows = [{"id": f"S0{n}", "point_id": "P1", "kind": "linkwork", "verb": v} for n, v in ((2, "electric"), (3, "pendulum"), (4, "electric"))]
+        ladder = beat_ladder(rows, verbs)
+        self.assertIn('"name": "electric"', ladder(2, "S03", {**q1, "id": "S03", "linkwork": {"verb": "pendulum"}}))
+
     def test_a_sheet_row_that_keeps_failing_is_kept_and_a_fallback_image_is_judged_as_a_backdrop(self):
         # 2026-10-29: Stopping Distance's sheet ran out of rounds on one row; Equations of Motion's ladder image was
         # reviewed against the passage it stood in for and carried "needs expert review" into the film
