@@ -171,3 +171,15 @@ class TenPowerTests(unittest.TestCase):
         result = score_english_transcript(expected_text="About 10³ kilograms.", transcript_text="About 1017 kilograms.",
                                           audio_duration_seconds=3, speech_span_seconds=3)
         self.assertIn('numeric_mismatch', result['reasons'])
+
+    def test_whisper_splitting_a_long_decimal_at_a_pause_is_not_a_changed_number(self):
+        # leph2-05 C1, 2026-11-04: "1.0078 u" heard as "1.007, 8u" and "99.985%" as "99.9, 85%", in every take
+        script = "Masses of about 1.0078 u and 2.0141 u, with an abundance of 99.985 percent."
+        heard = "Masses of about 1.007, 8u and 2.014, 1u, with an abundance of 99.9, 85 percent."
+        result = score_english_transcript(expected_text=script, transcript_text=heard, audio_duration_seconds=6,
+                                          speech_span_seconds=6)
+        self.assertNotIn('numeric_mismatch', result['reasons'])
+        # other digits are still a changed number
+        result = score_english_transcript(expected_text=script, transcript_text=heard.replace("99.9, 85", "99.9, 58"),
+                                          audio_duration_seconds=6, speech_span_seconds=6)
+        self.assertIn('numeric_mismatch', result['reasons'])

@@ -365,6 +365,12 @@ def read_symbol_digits(expected_text, transcript_text):
     from .numeric_speech import ten_power_words
     for sign, exp in set(re.findall(r"\b10 to the power (minus )?(\d{1,2})\b", ten_power_words(expected_text))):
         transcript = re.sub(rf"(?<![\d.,])10{'(?:-|−)' if sign else ''}{exp}(?![\d,]|\.\d)", f"10 to the power {sign}{exp}", transcript)
+    # A long decimal the script has, read with a pause among its digits: Whisper splits "1.0078" into "1.007, 8" and
+    # "99.985" into "99.9, 85", which then score as other numbers (leph2-05 C1, 2026-11-04: all four takes said it right).
+    # Only the script's own digits, in its order, are joined
+    for whole, frac in set(re.findall(r"(?<![\d.])(\d+)\.(\d{2,})(?!\d)", str(expected_text or ""))):
+        for cut in range(1, len(frac)):
+            transcript = re.sub(rf"(?<![\d.]){whole}\.{frac[:cut]},?\s+{frac[cut:]}(?![\d.])", f"{whole}.{frac}", transcript)
     return transcript
 
 
