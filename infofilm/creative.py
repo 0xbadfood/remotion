@@ -252,6 +252,7 @@ def anchor_errors(scenes, script, timing):
     return errors, order
 
 
+CARD_PLOT = re.compile(r"\b(?:curves?|graphs?|plots?|plotted|axis|axes)\b", re.IGNORECASE)
 ON_SCREEN_NOTE = re.compile(r"\bflagged\s+(?:for|as|to)\b|\b(?:for|needs?|awaiting|under)\s+(?:(?:a|an|the)\s+)?"
                             r"(?:teacher|expert|editor(?:ial)?|human|further|team)?\s*review\b|\bto be (?:checked|verified)\b"
                             # 2026-11-03, leph1-08 C3: "supplementary note, not book text" and "Supplementary inference"
@@ -308,6 +309,14 @@ def beat_errors(value, script, timing, figures=None, linkwork=None):
                 errors.append(f"{sid}: {kind} needs {n} labels and details")
             if any(not isinstance(v, str) or len(v.split()) > 4 for v in labels) or any(not isinstance(v, str) or len(v.split()) > 10 for v in details):
                 errors.append(f"{sid}: diagram labels/details are too long")
+            # 2026-11-04, Radioactivity: "Half-Life on the Decay Curve" was two text cards ("T½ marks this point on
+            # the curve") with no curve anywhere on screen. Cards draw no plot
+            words = [scene.get("heading"), scene.get("summary"), *labels, *details]
+            if plot := next((m for w in words if isinstance(w, str) and (m := CARD_PLOT.search(w))), None):
+                errors.append(f"{sid}: a {kind} beat is text cards and draws no plot, yet its words name a "
+                              f"\"{plot.group(0)}\": draw it as a graph or figure beat"
+                              + (" (Linkwork 'graph' plots a formula or the book's data)" if linkwork else "")
+                              + ", or keep the cards and leave the plot out of their words")
         elif kind == "figure":
             from .figures import scene_errors
             errors.extend(scene_errors(scene, figures))

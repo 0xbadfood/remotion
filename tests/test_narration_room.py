@@ -189,6 +189,23 @@ class SpanningBeatTests(unittest.TestCase):
         storyboard["scenes"][0]["labels"][1] = "Rutherford's nucleus"
         self.assertNotIn("note about the material", " ".join(beat_errors(storyboard, script, timing)))
 
+    def test_text_cards_never_promise_a_curve_they_cannot_draw(self):
+        # 2026-11-04, leph2-05 C7: "Half-Life on the Decay Curve" was two cards, "T½ marks this point on the curve",
+        # with no curve on screen
+        from infofilm.creative import beat_errors
+        from test_creative import example
+        script, timing, storyboard, _ = example()
+        storyboard["scenes"][0].update(heading="Half-Life on the Decay Curve", kind="compare",
+                                       labels=["Half decayed", "Half remaining"],
+                                       details=["Half-life T½ marks this point", "Half of the nuclei have decayed"])
+        self.assertIn("draws no plot", " ".join(beat_errors(storyboard, script, timing)))
+        storyboard["scenes"][0]["heading"] = "Half-life"
+        self.assertNotIn("draws no plot", " ".join(beat_errors(storyboard, script, timing)))
+        storyboard["scenes"][0]["details"][0] = "Read where the graph halves"
+        self.assertIn("draws no plot", " ".join(beat_errors(storyboard, script, timing)))
+        storyboard["scenes"][0]["details"][0] = "A curved path bends the ray"
+        self.assertNotIn("draws no plot", " ".join(beat_errors(storyboard, script, timing)))
+
 
 if __name__ == "__main__":
     unittest.main()
