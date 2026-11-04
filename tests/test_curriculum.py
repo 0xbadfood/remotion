@@ -90,12 +90,21 @@ class CurriculumTests(unittest.TestCase):
                      'Our material does not cover stars, so this film makes no claim about them.'):
             point['narration'] = said
             self.assertIn('speaks about its sources', ' '.join(script_errors({'points': [point]}, evidence)), said)
+        for said in ('This film has covered energy per reaction, not how fast reactions happen.',
+                     'It does not explain how stars produce energy; this film does not cover reactors.',
+                     'That is beyond the scope of this film.',
+                     'Supplementary notes, beyond the book, explain that each chlorine atom is one isotope.'):
+            point['narration'] = said
+            self.assertIn('speaks about its sources', ' '.join(script_errors({'points': [point]}, evidence)), said)
+        point['narration'] = 'In this film we look at fission; going beyond the book, each atom is one isotope.'
+        self.assertNotIn('speaks about its sources', ' '.join(script_errors({'points': [point]}, evidence)))
         point['narration'] = 'Fissile material in this reactor is uranium-235; the film of oil on water is thin.'
         self.assertNotIn('speaks about its sources', ' '.join(script_errors({'points': [point]}, evidence)))
         from infofilm.creative import ON_SCREEN_NOTE
         self.assertTrue(ON_SCREEN_NOTE.search('The proton value agrees with the subtraction; source S4.'))
         self.assertFalse(ON_SCREEN_NOTE.search('Sulphur-32 has 16 protons; S2 minus is an ion'))
-        for note in ('Not covered: stars', 'Covered: reactors', 'Energy generation in stars is outside these sources'):
+        for note in ('Not covered: stars', 'Covered: reactors', 'Energy generation in stars is outside these sources',
+                     'What This Film Covers', 'Outside This Film'):
             self.assertTrue(ON_SCREEN_NOTE.search(note), note)
         for fine in ('The plate is covered with zinc sulphide', 'Outside the nucleus, the force is zero'):
             self.assertFalse(ON_SCREEN_NOTE.search(fine), fine)

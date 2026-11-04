@@ -207,7 +207,12 @@ BACKSTAGE = re.compile(r"\b(?:the|these|our|supplied|available|given)\s+(?:sourc
                        # in stars, so this film makes no claim about that case": the brief's scope, said to the student
                        r"|\b(?:the|our)\s+material\s+(?:used\s+)?(?:for|in)\s+this\s+(?:film|video)\b"
                        r"|\b(?:the|our)\s+material\s+(?:does|did)\s+not\s+cover\b"
-                       r"|\bthis\s+(?:film|video)\s+makes\s+no\s+claims?\b", re.I)
+                       r"|\bthis\s+(?:film|video)\s+makes\s+no\s+claims?\b"
+                       # 2026-11-04, its re-run: "This film has covered energy per reaction... It does not explain how stars
+                       # produce energy"; and leph2-05 C1: "Supplementary notes, beyond the book, explain..."
+                       r"|\bthis\s+(?:film|video)\s+(?:has\s+covered|(?:does|did|will|can)\s*(?:not|n[’']t)\s+(?:cover|explain|discuss|address|include|treat))\b"
+                       r"|\b(?:outside|beyond)\s+(?:the\s+scope\s+of\s+)?this\s+(?:film|video)\b"
+                       r"|\bsupplementary\s+(?:notes?|material|sources?|reading)\b", re.I)
 
 
 def script_errors(value, evidence, budget=None, duration=None):

@@ -267,7 +267,9 @@ ON_SCREEN_NOTE = re.compile(r"\bflagged\s+(?:for|as|to)\b|\b(?:for|needs?|awaiti
                             r"|\b(?:sources?|notes?|references?|passages?|excerpts?)\s+S\d{1,2}\b"
                             # 2026-11-04, leph2-05 C10: cards "Covered: reactors", "Not covered: stars" and "outside
                             # these sources": the brief's scope, not the subject
-                            r"|\b(?:not\s+)?covered\s*:|\boutside\s+(?:these|the|our)\s+(?:sources|material)\b", re.I)
+                            r"|\b(?:not\s+)?covered\s*:|\boutside\s+(?:these|the|our)\s+(?:sources|material)\b"
+                            # its re-run: compare cards "What This Film Covers" and "Outside This Film"
+                            r"|\b(?:outside|beyond)\s+(?:the\s+scope\s+of\s+)?this\s+(?:film|video)\b|\bwhat\s+this\s+(?:film|video)\s+covers\b", re.I)
 
 
 def on_screen_texts(spec):
