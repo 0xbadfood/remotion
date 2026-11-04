@@ -33,9 +33,13 @@ def mfa_numeric_text(text, *, context=None, offset=0, natural_years=True):
     """
     from num2words import num2words
     from .audio_audit import spoken_numeric_text
-    from .numeric_speech import year_text
+    from .numeric_speech import ten_power_words, year_text
 
-    value = unicodedata.normalize("NFKC", str(text or ""))
+    # Powers of ten in words, as the voice said them (speakable): NFKC would make 10¹⁴ "1014", and a superscript
+    # reached int() as a year (leph2-05 C3, 2026-11-04)
+    if context is not None:
+        offset, context = len(ten_power_words(context[:offset])), ten_power_words(context)
+    value = unicodedata.normalize("NFKC", ten_power_words(text))
     # A hyphen in mid-1970s joins a compound; it is not a negative number.
     value = re.sub(r"(?<=[A-Za-z])[-–—](?=[12]\d{2}0s\b)", " ", value, flags=re.I)
 

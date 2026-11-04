@@ -130,6 +130,13 @@ class TenPowerTests(unittest.TestCase):
         self.assertNotEqual(canonical_numeric_text("about 4.6 times 10 to the 15 metres"), script)
         self.assertEqual(canonical_numeric_text("pages 10-15"), "pages ten to fifteen")
 
+    def test_alignment_reads_a_power_of_ten_as_the_voice_did(self):
+        # leph2-05 C3, 2026-11-04: '10¹⁴' reached int() as a year and failed both alignment attempts
+        context = 'Nuclear matter is about 10¹⁴ times denser than water, as found in 1932.'
+        self.assertEqual(mfa_numeric_text('10¹⁴', context=context, offset=context.index('10')), 'ten to the power fourteen')
+        self.assertEqual(mfa_numeric_text('1932.', context=context, offset=context.index('1932')), 'nineteen thirty two.')
+        self.assertIn('two point two nine times ten to the power minus fifteen', mfa_numeric_text('2.29 × 10⁻¹⁵ m'))
+
     def test_whisper_joining_a_power_of_ten_is_not_a_changed_number(self):
         # leph2-05 C3, 2026-11-04: "10³" heard as 103 and "2.29 × 10¹⁷" as "2.29 times 1017", in every take
         for script, heard in [("Water is about 10³ kilograms per cubic metre.", "Water is about 103 kilograms per cubic meter."),

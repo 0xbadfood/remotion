@@ -6,7 +6,7 @@ import re
 from num2words import num2words
 
 
-_YEAR = re.compile(r"(?<![\w.,+])\d{1,4}(?!\w|[.,]\d)")
+_YEAR = re.compile(r"(?<![\w.,+])[0-9]{1,4}(?!\w|[.,]\d)")
 _DATE_BEFORE = re.compile(
     r"\b(?:in|since|by|before|after|around|circa|during|from|through|until|between|"
     r"year|years|dated|born|died)\s+(?:about\s+)?$", re.I)
