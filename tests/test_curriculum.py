@@ -82,6 +82,12 @@ class CurriculumTests(unittest.TestCase):
         self.assertIn('Beyond the book', ' '.join(script_errors({'points': [point]}, evidence)))
         point['narration'] = 'Going beyond the book, a rough estimate gives the force.'
         self.assertNotIn('speaks about its sources', ' '.join(script_errors({'points': [point]}, evidence)))
+        # 2026-11-04, leph2-05 C1: "Supplementary note S4 explains ..." named a source by the brief's id
+        point['narration'] = "Supplementary note S4 explains that the atom's mass is the proton's plus the electron's."
+        self.assertIn('speaks about its sources', ' '.join(script_errors({'points': [point]}, evidence)))
+        from infofilm.creative import ON_SCREEN_NOTE
+        self.assertTrue(ON_SCREEN_NOTE.search('The proton value agrees with the subtraction; source S4.'))
+        self.assertFalse(ON_SCREEN_NOTE.search('Sulphur-32 has 16 protons; S2 minus is an ion'))
 
     def test_book_source_is_read_whole_and_task_names_the_concept(self):
         text = 'Unrelated opening words. ' * 400 + 'The end of the chapter.'

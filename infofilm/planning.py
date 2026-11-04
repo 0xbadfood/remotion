@@ -200,7 +200,9 @@ BACKSTAGE = re.compile(r"\b(?:the|these|our|supplied|available|given)\s+(?:sourc
                        r"|\bevidence\s+brief\b|\bsources?\s+(?:do|does|did)\s+not\s+(?:say|state|mention|give|explain|describe|tell)\b"
                        # 2026-11-04, leph2-04 C1: "A teacher's note gives a simplified estimate", from an addition's
                        # source title; the student has no note. An addition is said to go beyond the book
-                       r"|\bteach(?:er[’']?s|ing)\s+note\b", re.I)
+                       r"|\bteach(?:er[’']?s|ing)\s+note\b"
+                       # 2026-11-04, leph2-05 C1: "Supplementary note S4 explains...": a source's id is the brief's, not the student's
+                       r"|\b(?:sources?|notes?|references?|passages?|excerpts?)\s+S\d{1,2}\b", re.I)
 
 
 def script_errors(value, evidence, budget=None, duration=None):

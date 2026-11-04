@@ -261,7 +261,9 @@ ON_SCREEN_NOTE = re.compile(r"\bflagged\s+(?:for|as|to)\b|\b(?:for|needs?|awaiti
                             r"|\bsupplementary\b|\bteach(?:er[\u2019']?s|ing)\s+(?:\w+\s+)?(?:note|estimate|aside)\b"
                             r"|\bnot\s+(?:in\s+|from\s+)?(?:the\s+)?"
                             r"(?:book|textbook)(?:\s+text)?\b|\bbeyond\s+the\s+(?:book|textbook|syllabus)\b"
-                            r"|\b(?:an?\s+)?inference\b|\bextension,\s*ideali[sz]ed\b", re.I)
+                            r"|\b(?:an?\s+)?inference\b|\bextension,\s*ideali[sz]ed\b"
+                            # 2026-11-04, leph2-05 C1: a summary ending "source S4."
+                            r"|\b(?:sources?|notes?|references?|passages?|excerpts?)\s+S\d{1,2}\b", re.I)
 
 
 def on_screen_texts(spec):
