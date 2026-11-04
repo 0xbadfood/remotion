@@ -137,6 +137,11 @@ class TenPowerTests(unittest.TestCase):
         self.assertEqual(mfa_numeric_text('10¹⁴', context=context, offset=context.index('10')), 'ten to the power fourteen')
         self.assertEqual(mfa_numeric_text('1932.', context=context, offset=context.index('1932')), 'nineteen thirty two.')
         self.assertIn('two point two nine times ten to the power minus fifteen', mfa_numeric_text('2.29 × 10⁻¹⁵ m'))
+        # word by word, as the aligner maps the script, the words are those of the whole point
+        import re as _re
+        point_text = 'The 4.0 × 10⁻¹⁴ metre figure applies, and 2.29 × 10¹⁷ kg.'
+        parts = [mfa_numeric_text(m.group(0), context=point_text, offset=m.start()) for m in _re.finditer(r'\S+', point_text)]
+        self.assertEqual(' '.join(parts).split(), mfa_numeric_text(point_text).split())
         # wording saved with a recording made before still names its point
         from infofilm.media import align_audio
         from unittest.mock import patch

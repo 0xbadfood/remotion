@@ -40,8 +40,12 @@ def mfa_numeric_text(text, *, context=None, offset=0, natural_years=True, ten_po
     # ten_powers=False: the wording saved with recordings made before 2026-11-04
     words = ten_power_words if ten_powers else (lambda t: str(t or ""))
     if context is not None:
-        offset, context = len(words(context[:offset])), words(context)
+        # the word itself stays in view: "4.0 × " becomes "4.0 times " only before its 10
+        ahead = context[offset:offset + 2]
+        offset, context = len(words(context[:offset] + ahead)) - len(ahead), words(context)
     value = unicodedata.normalize("NFKC", words(text))
+    if ten_powers and value.strip() == "×":   # the sign as one word of the script: the "times" of the whole
+        value = "times"
     # A hyphen in mid-1970s joins a compound; it is not a negative number.
     value = re.sub(r"(?<=[A-Za-z])[-–—](?=[12]\d{2}0s\b)", " ", value, flags=re.I)
 
