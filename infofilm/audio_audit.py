@@ -12,7 +12,7 @@ from num2words import num2words
 
 from .core import read
 
-AUDIT_POLICY = "english-completeness-symbol-digits-v8"   # v7: subscripts read digit by digit (2026-10-29); v8: a power of
+AUDIT_POLICY = "english-completeness-symbol-digits-v9"   # v7: subscripts read digit by digit (2026-10-29); v8, v9: a power of
 # ten Whisper joins (1017) or a long decimal it splits at a pause (1.007, 8) reads as the script's number (2026-11-04)
 DEFAULT_FALLBACK_MODELS = ("Systran/faster-whisper-small", "openai/whisper-large-v3-turbo")
 
@@ -368,11 +368,12 @@ def read_symbol_digits(expected_text, transcript_text):
         transcript = re.sub(rf"(?<![\d.,])10{'(?:-|−)' if sign else ''}{exp}(?![\d,]|\.\d)", f"10 to the power {sign}{exp}", transcript)
     # A long decimal the script has, read with a pause among its digits: Whisper splits "1.0078" into "1.007, 8" and
     # "99.985" into "99.9, 85", which then score as other numbers (leph2-05 C1, 2026-11-04: all four takes said it right).
-    # Only the script's own digits, in its order, are joined
-    for whole, frac in set(re.findall(r"(?<![\d.])(\d+)\.(\d{2,})(?!\d)", str(expected_text or ""))):
-        for cut in range(1, len(frac)):
-            transcript = re.sub(rf"(?<![\d.]){whole}\.{frac[:cut]},?\s+{frac[cut:]}(?![\d.])", f"{whole}.{frac}", transcript)
-    return transcript
+    # Only a joined number whose reading the script has (in digits or in words) is joined
+    def joined(m):
+        number = f"{m.group(1)}.{m.group(2)}{m.group(3)}"
+        reading = " ".join(re.sub(r"[^a-z0-9]+", " ", canonical_numeric_text(number).lower()).split())
+        return number if f" {reading} " in script else m.group(0)
+    return re.sub(r"(?<![\d.])(\d+)\.(\d+),?\s+(\d+)(?![\d.])", joined, transcript)
 
 
 # An equation number read as a cardinal: the script's "six point twenty one" is written 6.21 and scored "six point two

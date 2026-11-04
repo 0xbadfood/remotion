@@ -179,6 +179,13 @@ class TenPowerTests(unittest.TestCase):
         result = score_english_transcript(expected_text=script, transcript_text=heard, audio_duration_seconds=6,
                                           speech_span_seconds=6)
         self.assertNotIn('numeric_mismatch', result['reasons'])
+        # the script as the planner writes it, in words; and split elsewhere ("1.0, 078")
+        words = ("Masses of about one point zero zero seven eight u and two point zero one four one u, with an abundance of "
+                 "ninety-nine point nine eight five percent.")
+        for said in (heard, heard.replace("1.007, 8u", "1.0, 078u").replace("99.9, 85 percent", "99.9, 85%")):
+            result = score_english_transcript(expected_text=words, transcript_text=said, audio_duration_seconds=6,
+                                              speech_span_seconds=6)
+            self.assertNotIn('numeric_mismatch', result['reasons'], said)
         # other digits are still a changed number
         result = score_english_transcript(expected_text=script, transcript_text=heard.replace("99.9, 85", "99.9, 58"),
                                           audio_duration_seconds=6, speech_span_seconds=6)
