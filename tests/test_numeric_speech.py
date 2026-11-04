@@ -1,6 +1,7 @@
 import re
 import sys
 import unittest
+from pathlib import Path
 
 from infofilm.audio_audit import canonical_numeric_text, point_coverage, score_english_transcript
 from infofilm.core import configuration
@@ -136,6 +137,22 @@ class TenPowerTests(unittest.TestCase):
         self.assertEqual(mfa_numeric_text('10¹⁴', context=context, offset=context.index('10')), 'ten to the power fourteen')
         self.assertEqual(mfa_numeric_text('1932.', context=context, offset=context.index('1932')), 'nineteen thirty two.')
         self.assertIn('two point two nine times ten to the power minus fifteen', mfa_numeric_text('2.29 × 10⁻¹⁵ m'))
+        # wording saved with a recording made before still names its point
+        from infofilm.media import align_audio
+        from unittest.mock import patch
+        point = {'id': 'P01', 'narration': 'Water is about 10³ kilograms per cubic metre.'}
+        saved = mfa_numeric_text(point['narration'], ten_powers=False)
+        self.assertNotEqual(saved, mfa_numeric_text(point['narration']))
+        import tempfile, types
+        def error(recorded):
+            with tempfile.TemporaryDirectory() as root, patch('infofilm.media.digest', return_value='0' * 40):
+                try:
+                    align_audio({}, types.SimpleNamespace(root=Path(root)), __file__, {'points': [point]}, 'x',
+                                spoken_points={'P01': recorded})
+                except Exception as exc:
+                    return str(exc)
+        self.assertIn('does not match its source point', error('something else entirely'))
+        self.assertNotIn('does not match its source point', str(error(saved)))
 
     def test_whisper_joining_a_power_of_ten_is_not_a_changed_number(self):
         # leph2-05 C3, 2026-11-04: "10³" heard as 103 and "2.29 × 10¹⁷" as "2.29 times 1017", in every take

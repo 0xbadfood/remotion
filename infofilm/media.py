@@ -25,7 +25,7 @@ class AlignmentError(RuntimeError):
     """The bounded MFA attempts could not produce validated word timing."""
 
 
-def mfa_numeric_text(text, *, context=None, offset=0, natural_years=True):
+def mfa_numeric_text(text, *, context=None, offset=0, natural_years=True, ten_powers=True):
     """Shared explicit numeric wording for English synthesis and MFA.
 
     Only provider/alignment input is expanded; source scripts and captions retain
@@ -37,9 +37,11 @@ def mfa_numeric_text(text, *, context=None, offset=0, natural_years=True):
 
     # Powers of ten in words, as the voice said them (speakable): NFKC would make 10¹⁴ "1014", and a superscript
     # reached int() as a year (leph2-05 C3, 2026-11-04)
+    # ten_powers=False: the wording saved with recordings made before 2026-11-04
+    words = ten_power_words if ten_powers else (lambda t: str(t or ""))
     if context is not None:
-        offset, context = len(ten_power_words(context[:offset])), ten_power_words(context)
-    value = unicodedata.normalize("NFKC", ten_power_words(text))
+        offset, context = len(words(context[:offset])), words(context)
+    value = unicodedata.normalize("NFKC", words(text))
     # A hyphen in mid-1970s joins a compound; it is not a negative number.
     value = re.sub(r"(?<=[A-Za-z])[-–—](?=[12]\d{2}0s\b)", " ", value, flags=re.I)
 
@@ -256,9 +258,11 @@ def align_audio(config, store, audio, script, name, *, spoken_points=None):
         recorded = (spoken_points or {}).get(point["id"])
         current = mfa_numeric_text(source)
         prior = mfa_numeric_text(source, natural_years=False)
-        if recorded is not None and recorded not in {source, current, prior, point["narration"]}:
+        # wording saved before powers of ten were put in words (7cf125c) still names this point
+        before = {mfa_numeric_text(source, ten_powers=False), mfa_numeric_text(source, natural_years=False, ten_powers=False)}
+        if recorded is not None and recorded not in {source, current, prior, point["narration"], *before}:
             raise ValueError("Saved synthesis wording does not match its source point")
-        year_styles[point["id"]] = recorded is None or recorded == current
+        year_styles[point["id"]] = recorded is None or recorded in {current, mfa_numeric_text(source, ten_powers=False)}
     expanded = "\n\n".join(mfa_numeric_text(speech_apply(p["narration"], p.get("speech")),
                                              natural_years=year_styles[p["id"]]) for p in script["points"])
     expanded = "".join(c for c in unicodedata.normalize("NFKD", expanded) if not unicodedata.combining(c))
