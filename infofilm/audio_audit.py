@@ -12,7 +12,8 @@ from num2words import num2words
 
 from .core import read
 
-AUDIT_POLICY = "english-completeness-symbol-digits-v7"   # v7: subscripts read digit by digit (2026-10-29)
+AUDIT_POLICY = "english-completeness-symbol-digits-v8"   # v7: subscripts read digit by digit (2026-10-29); v8: a power of
+# ten Whisper joins (1017) or a long decimal it splits at a pause (1.007, 8) reads as the script's number (2026-11-04)
 DEFAULT_FALLBACK_MODELS = ("Systran/faster-whisper-small", "openai/whisper-large-v3-turbo")
 
 
