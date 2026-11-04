@@ -204,12 +204,22 @@ def heard_errors(script, evidence):
     return out
 
 
+# 2026-11-04, leph2-05 C10, three plans running: the brief's gaps ("no supplied source teaches how stars produce
+# energy") came out as "this film makes no claim about stars", "Outside This Film" and "the evidence here does not
+# establish which one powers stars". A gap is a note for the writer, never a line for the student
+GAPS_TASK = (
+    " evidence.uncertainties and evidence.source_gaps are notes for you, not for the student: where the evidence "
+    "cannot support a claim, leave the claim out. Never tell the viewer what this film, the book, the sources or the "
+    "evidence does not cover, explain or establish, and never name notes or sources; an addition from beyond the "
+    "book is introduced as going beyond the book.")
+
+
 def script_task(curriculum):
     if is_key_idea(curriculum):
-        return KEY_IDEA_SCRIPT_TASK.format(**idea_context(curriculum), equations=KEY_IDEA_EQUATIONS) + HEARD_TASK
+        return KEY_IDEA_SCRIPT_TASK.format(**idea_context(curriculum), equations=KEY_IDEA_EQUATIONS) + GAPS_TASK + HEARD_TASK
     if curriculum.get('topic'):
-        return TOPIC_SCRIPT_TASK.format(**context(curriculum)) + HEARD_TASK
-    return SCRIPT_TASK.format(**context(curriculum)) + HEARD_TASK
+        return TOPIC_SCRIPT_TASK.format(**context(curriculum)) + GAPS_TASK + HEARD_TASK
+    return SCRIPT_TASK.format(**context(curriculum)) + GAPS_TASK + HEARD_TASK
 
 
 def key_idea_script_errors(script, evidence):

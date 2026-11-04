@@ -269,7 +269,8 @@ ON_SCREEN_NOTE = re.compile(r"\bflagged\s+(?:for|as|to)\b|\b(?:for|needs?|awaiti
                             # these sources": the brief's scope, not the subject
                             r"|\b(?:not\s+)?covered\s*:|\boutside\s+(?:these|the|our)\s+(?:sources|material)\b"
                             # its re-run: compare cards "What This Film Covers" and "Outside This Film"
-                            r"|\b(?:outside|beyond)\s+(?:the\s+scope\s+of\s+)?this\s+(?:film|video)\b|\bwhat\s+this\s+(?:film|video)\s+covers\b", re.I)
+                            r"|\b(?:outside|beyond)\s+(?:the\s+scope\s+of\s+)?this\s+(?:film|video)\b|\bwhat\s+this\s+(?:film|video)\s+covers\b"
+                            r"|\bwhat\s+the\s+evidence\s+(?:does\s+not|doesn[’']t)\b", re.I)
 
 
 def on_screen_texts(spec):

@@ -212,7 +212,9 @@ BACKSTAGE = re.compile(r"\b(?:the|these|our|supplied|available|given)\s+(?:sourc
                        # produce energy"; and leph2-05 C1: "Supplementary notes, beyond the book, explain..."
                        r"|\bthis\s+(?:film|video)\s+(?:has\s+covered|(?:does|did|will|can)\s*(?:not|n[’']t)\s+(?:cover|explain|discuss|address|include|treat))\b"
                        r"|\b(?:outside|beyond)\s+(?:the\s+scope\s+of\s+)?this\s+(?:film|video)\b"
-                       r"|\bsupplementary\s+(?:notes?|material|sources?|reading)\b", re.I)
+                       r"|\bsupplementary\s+(?:notes?|material|sources?|reading)\b"
+                       r"|\b(?:the|this|our)\s+evidence\b[^.]{0,80}?\b(?:does|did|can)\s*(?:not|n[’']t)\s+"
+                       r"(?:establish|show|cover|explain|say|support|identify)\b", re.I)
 
 
 def script_errors(value, evidence, budget=None, duration=None):
