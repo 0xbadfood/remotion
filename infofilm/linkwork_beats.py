@@ -144,13 +144,17 @@ def check_specs(config, specs):
 
 FIT = 1.6           # a scene up to this much longer than its beat plays faster to fit it (a graph's own pacing)
 TAIL = 1.5          # and every scene may run this far past its beat (its last frame holds; the cut ends it)
+SEEN = 0.8          # the motion (all but that held tail) ends this long before the cut, so its result is seen
 
 
 def speed_to_fit(scene_seconds, beat_seconds):
-    """How much faster a Linkwork scene plays so its motion ends inside its beat: 1 when it fits, at most FIT."""
-    if beat_seconds <= 0 or scene_seconds <= beat_seconds + TAIL:
+    """How much faster a Linkwork scene plays so its motion ends SEEN seconds inside its beat: 1 when it fits, at most
+    FIT. (2026-11-04: a vector_add 6.4 s long in a 4.9 s beat played at 1.0 and drew its r2 − r1, the beat's point,
+    just as the cut came.)"""
+    room = beat_seconds - SEEN
+    if room <= 0 or scene_seconds - TAIL <= room:
         return 1.0
-    return round(min(FIT, (scene_seconds - TAIL) / beat_seconds), 3)
+    return round(min(FIT, (scene_seconds - TAIL) / room), 3)
 
 
 def spec_verbs(spec):

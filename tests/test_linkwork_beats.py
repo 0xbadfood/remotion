@@ -153,7 +153,10 @@ class LinkworkBeatTests(unittest.TestCase):
     def test_a_scene_a_little_long_plays_faster_instead_of_failing(self):
         # A graph's own drawing pace (6.8 s) in a 4.8 s beat failed nine repairs: nothing in its spec could shorten it.
         self.assertEqual(linkwork_beats.beat_errors({}, [self.beat(self.spec, 0.0, 2.5)], self.cards), [])
-        self.assertEqual(linkwork_beats.speed_to_fit(6.8, 4.8), 1.104)
+        self.assertEqual(linkwork_beats.speed_to_fit(6.8, 4.8), 1.325)
+        # the motion ends SEEN before the cut: leph1-01 C2 S26's r2 − r1 was drawn as the cut came at speed 1.0
+        self.assertEqual(linkwork_beats.speed_to_fit(6.4, 4.94), 1.184)
+        self.assertEqual(linkwork_beats.speed_to_fit(5.5, 4.8), 1.0)
         self.assertEqual(linkwork_beats.speed_to_fit(4.0, 4.8), 1.0)
         self.assertEqual(linkwork_beats.speed_to_fit(30.0, 4.8), linkwork_beats.FIT)
 
