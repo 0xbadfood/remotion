@@ -309,9 +309,14 @@ def _vibevoice(text, dst, reference, lang, seed):
             staged = c.post("/stage-speaker", data={"speaker_id": f"lang_{Path(reference).stem}"},
                             files={"file": (Path(reference).name, f, "audio/wav")}).raise_for_status().json()
         job_id = f"lang_{digest(text)[:10]}_{seed}_{int(time.time())}"
-        c.post("/render-batch", json={"job_id": job_id, "lang_key": model, "cfg_scale": 1.3, "seed": seed,
-                                      "items": [{"script": "Speaker 1: " + text, "voice_samples": [staged["voice_ref"]],
-                                                 "output_name": "take.wav", "chunk_index": 0}]}).raise_for_status()
+        body = {"job_id": job_id, "lang_key": model, "cfg_scale": 1.3, "seed": seed,
+                "items": [{"script": "Speaker 1: " + text, "voice_samples": [staged["voice_ref"]], "output_name": "take.wav", "chunk_index": 0}]}
+        for _ in range(90):                  # 409: the adapter is still on another job (one at a time); wait for it
+            r = c.post("/render-batch", json=body)
+            if r.status_code != 409:
+                break
+            time.sleep(10)
+        r.raise_for_status()
         while (job := c.get(f"/jobs/{job_id}").json()).get("status") not in ("success", "failed"):
             time.sleep(2)
         if job["status"] != "success":
