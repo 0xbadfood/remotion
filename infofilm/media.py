@@ -91,7 +91,14 @@ def wait_job(config, service, path, success, failure, store, name, timeout=1800)
     start = time.monotonic()
     last_notice = -30
     while time.monotonic() - start < timeout:
-        job = request(config, service, "GET", path)
+        try:
+            job = request(config, service, "GET", path)
+        except httpx.TransportError as exc:
+            # a status poll is only a look: one that times out or drops is missed, not the job (2026-11-06: one 90 s
+            # poll of a busy image server stopped the pulmonary valvuloplasty film)
+            store.event(name, "poll_missed", {"error": f"{type(exc).__name__}: {exc}"[:200]})
+            time.sleep(10)
+            continue
         state = job.get("status")
         if state in success:
             return job

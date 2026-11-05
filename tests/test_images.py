@@ -289,3 +289,16 @@ class ImageRecoveryTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class StatusPollTests(unittest.TestCase):
+    def test_a_status_poll_that_times_out_is_missed_not_the_job(self):
+        # 2026-11-06, the pulmonary valvuloplasty film: one 90 s poll of a busy image server stopped the film
+        import httpx
+        from infofilm import media
+        store = Mock()
+        answers = [httpx.ReadTimeout("timed out"), {"status": "running"}, {"status": "complete", "url": "/x.png"}]
+        with patch.object(media, "request", side_effect=answers), patch.object(media.time, "sleep"):
+            job = media.wait_job({}, "image", "/api/jobs/1", {"complete"}, {"error"}, store, "A001")
+        self.assertEqual(job["url"], "/x.png")
+        self.assertIn("poll_missed", [c.args[1] for c in store.event.call_args_list])
