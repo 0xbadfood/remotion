@@ -122,6 +122,20 @@ class DroppedStreamTests(unittest.TestCase):
         with self.assertRaises(httpx.RemoteProtocolError):
             _final(cli, "beats", sleep=waits.append, model="m")
 
+    def test_the_sdks_own_transport_errors_count_as_a_cut_stream(self):
+        # 2026-11-06, the pulmonary valvuloplasty film: the SDK raised httpx2.RemoteProtocolError, not httpx's
+        from infofilm.anthropic_llm import _final
+        httpx2 = __import__("importlib").import_module("httpx2") if __import__("importlib").util.find_spec("httpx2") else None
+        if httpx2 is None:
+            self.skipTest("the SDK here has no httpx2")
+        message = MagicMock(stop_reason="end_turn")
+        good = MagicMock(); good.__enter__.return_value.get_final_message.return_value = message
+        cut = MagicMock(); cut.__enter__.return_value.get_final_message.side_effect = httpx2.RemoteProtocolError("peer closed")
+        cli, waits = MagicMock(), []
+        cli.messages.stream.side_effect = [cut, good]
+        self.assertIs(_final(cli, "beats", sleep=waits.append, model="m"), message)
+        self.assertEqual(waits, [10])
+
     def test_the_tries_sit_out_a_half_hour_outage(self):
         # 2026-10-31, Carnot Engine: a network outage stopped a film after four minutes of tries
         from infofilm.anthropic_llm import LONGEST_WAIT, STREAM_TRIES, _final

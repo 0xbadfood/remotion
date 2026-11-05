@@ -14,6 +14,12 @@ from pathlib import Path
 import anthropic
 import httpx
 
+try:        # the SDK streams over its own fork, httpx2, whose errors are not httpx's (2026-11-06: a cut stream
+    import httpx2                                    # stopped the pulmonary valvuloplasty film, past every retry)
+    SDK_DROPPED = (httpx2.RemoteProtocolError, httpx2.ReadError, httpx2.ReadTimeout)
+except ImportError:
+    SDK_DROPPED = ()
+
 MEDIA = {'.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.gif': 'image/gif'}
 
 
@@ -41,7 +47,7 @@ def _image(path):
 # body") is past the SDK's own retries, which only cover a request that fails to start: the whole call starts again.
 # The same tries sit out a network outage (2026-10-31, Carnot Engine: amdserver timed out at the same time,
 # and five tries gave up after four minutes): an idle wait costs nothing, a stopped film costs a person's attention.
-DROPPED = (httpx.RemoteProtocolError, httpx.ReadError, httpx.ReadTimeout, anthropic.APIConnectionError)
+DROPPED = (httpx.RemoteProtocolError, httpx.ReadError, httpx.ReadTimeout, anthropic.APIConnectionError) + SDK_DROPPED
 STREAM_TRIES = 12
 LONGEST_WAIT = 300
 
