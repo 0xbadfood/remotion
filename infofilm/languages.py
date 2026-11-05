@@ -476,9 +476,26 @@ def render_language(bundle, out, *, lang="hi", voice="gautam-hi", log=print):
         store.db.close()
 
 
+def make(run, lang="hi", voice="gautam-hi", log=print):
+    """A finished film run in another language, end to end: its bundle (exported once), the translation (once), the
+    render in this voice. Returns the render's result; everything is kept, so a second voice reuses the rest."""
+    from .rendition import export
+    run = Path(run).resolve()
+    bundle = ROOT / "artifacts" / "bundles" / "films" / run.name
+    if not (bundle / "bundle.json").exists():
+        export(run, bundle)
+    if not (bundle / lang / "storyboard.json").exists():
+        translate(bundle, lang)
+    return render_language(bundle, ROOT / "artifacts" / "languages" / f"{run.name}-{lang}-{voice}", lang=lang, voice=voice, log=log)
+
+
 def main():
     parser = argparse.ArgumentParser(prog="infofilm.languages")
     sub = parser.add_subparsers(dest="command", required=True)
+    a = sub.add_parser("make")
+    a.add_argument("run")
+    a.add_argument("--lang", default="hi", choices=sorted(LANGUAGES))
+    a.add_argument("--voice", default="gautam-hi", choices=sorted(VOICES))
     a = sub.add_parser("translate")
     a.add_argument("bundle")
     a.add_argument("--lang", default="hi", choices=sorted(LANGUAGES))
@@ -488,7 +505,9 @@ def main():
     a.add_argument("--lang", default="hi", choices=sorted(LANGUAGES))
     a.add_argument("--voice", default="gautam-hi", choices=sorted(VOICES))
     args = parser.parse_args()
-    if args.command == "translate":
+    if args.command == "make":
+        print(json.dumps(make(args.run, args.lang, args.voice), ensure_ascii=False))
+    elif args.command == "translate":
         print(translate(args.bundle, args.lang))
     else:
         print(json.dumps(render_language(args.bundle, args.out, lang=args.lang, voice=args.voice), ensure_ascii=False))
