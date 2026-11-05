@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import os
 import re
 import shutil
 import subprocess
@@ -98,6 +99,18 @@ def replace_audio(config, store, output, music):
         "video": str(final), "qa_passed": True, "picture_reused": True, "remotion_rendered": False})
     store.event("remux", "succeeded", {"video": str(final), "qa": True, "picture_reused": True})
     return final
+
+
+NODE_DIR = Path.home() / ".local/node-v24.4.0/bin"      # node is not on a background job's PATH
+
+
+def node_env():
+    """The environment for the renderer's node tools (measure.cjs, remotion's #!/usr/bin/env node): node on PATH even
+    when the caller's PATH lacks it (2026-11-06: two renditions started from a shell script stopped at the render)."""
+    env = dict(os.environ)
+    if not shutil.which("node", path=env.get("PATH")) and (NODE_DIR / "node").exists():
+        env["PATH"] = f"{NODE_DIR}{os.pathsep}{env.get('PATH', '')}"
+    return env
 
 
 def point_captions(timing):
@@ -365,7 +378,7 @@ def render(config, store, root, timeline):
     if not (layout / "layout-results.json").exists():
         with (root / "layout.log").open("w") as log:
             subprocess.run(["node", str(renderer / "measure.cjs"), str(snapshot), str(timeline),
-                            config["browser"], str(layout)], cwd=snapshot, stdout=log, stderr=subprocess.STDOUT, check=True)
+                            config["browser"], str(layout)], cwd=snapshot, stdout=log, stderr=subprocess.STDOUT, check=True, env=node_env())
     if not read(layout / "layout-results.json")["passed"]:
         raise RuntimeError(f"Browser measurements found layout defects; inspect {layout}")
     if final.exists() and (root / "qa.json").exists() and read(root / "qa.json")["passed"]:
@@ -380,7 +393,7 @@ def render(config, store, root, timeline):
         "executed_snapshot": str(snapshot)})
     store.event("render", "running", {"output": str(final)})
     with (root / "render.log").open("w") as log:
-        subprocess.run(command, cwd=snapshot, stdout=log, stderr=subprocess.STDOUT, check=True)
+        subprocess.run(command, cwd=snapshot, stdout=log, stderr=subprocess.STDOUT, check=True, env=node_env())
     # Reuse Filmora's direct-source audio mux and waveform synchronization QA.
     import sys
     sys.path.insert(0, config["filmora_root"])

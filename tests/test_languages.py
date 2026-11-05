@@ -65,3 +65,14 @@ class Captions(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class NodeForRenders(unittest.TestCase):
+    def test_render_tools_find_node_without_it_on_path(self):
+        import os
+        from unittest import mock
+        from infofilm import video
+        with mock.patch.dict(os.environ, {"PATH": "/usr/bin:/bin"}):
+            env = video.node_env()
+        if (video.NODE_DIR / "node").exists():
+            self.assertTrue(env["PATH"].startswith(str(video.NODE_DIR)))
