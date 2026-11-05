@@ -108,7 +108,7 @@ def point_captions(timing):
         for word_id in point["word_ids"]:
             word = words[word_id]
             group.append(word)
-            if len(group) >= 10 or word["end"]-group[0]["start"] > 3 or word["word"].endswith((".","?","!",";")):
+            if len(group) >= 10 or word["end"]-group[0]["start"] > 3 or word["word"].endswith((".","?","!",";","।")):
                 captions.append({"start":group[0]["start"], "end":group[-1]["end"], "text":" ".join(w["word"] for w in group)})
                 group = []
         if group:
