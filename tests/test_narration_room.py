@@ -315,8 +315,8 @@ class StagedPlanningTests(unittest.TestCase):
         rows[1].update(stage="stage-healed")
         self.assertIn("S02: stage is one of the figure's stage ids", " ".join(sheet_errors({"beats": rows}, script, timing, figures)))
         # pass 2 draws the stage the sheet chose
-        rows[1].update(stage="stage-left-disc-opens")
-        scenes = [{**{k: r.get(k) for k in ("id", "point_id", "start_word_id", "kind")},
+        rows[0].update(stage="stage-measure"); rows[1].update(stage="stage-left-disc-opens")
+        scenes =[{**{k: r.get(k) for k in ("id", "point_id", "start_word_id", "kind")},
                    "figure": {"type": "biology", "id": r["figure"], "stage": "stage-measure"}} for r in rows[:2]]
         self.assertEqual([e[:3] for e in match_errors({"scenes": scenes}, rows[:2])], ["S02"])
 
