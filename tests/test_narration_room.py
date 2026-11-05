@@ -295,6 +295,28 @@ class StagedPlanningTests(unittest.TestCase):
         rows[0].update(figure="equation"); rows[1].update(figure="equation")    # equations are written per beat
         self.assertNotIn("shows whole", " ".join(sheet_errors({"beats": rows}, script, timing, figures)))
 
+    def test_a_staged_figure_runs_on_beats_in_a_row_one_later_stage_each(self):
+        # 2026-11-06, the VSD closure film: the device's eight drawn stages were refused as a whole book figure on
+        # beats in a row, twelve tries running
+        from infofilm.creative import match_errors, sheet_errors
+        script, timing, _, rows = self.sheet()
+        steps = [{"id": "stage-measure"}, {"id": "stage-left-disc-opens"}, {"id": "stage-release"}]
+        figures = {"library": [{"id": "vsd-occluder-steps", "stages": steps}]}
+        rows[0].update(kind="figure", figure="vsd-occluder-steps", stage="stage-measure")
+        rows[1].update(kind="figure", figure="vsd-occluder-steps", stage="stage-left-disc-opens")
+        self.assertEqual(sheet_errors({"beats": rows}, script, timing, figures), [])
+        rows[1].update(stage="stage-measure")
+        self.assertIn("a later one each time", " ".join(sheet_errors({"beats": rows}, script, timing, figures)))
+        rows[1].pop("stage")
+        self.assertIn("a later one each time", " ".join(sheet_errors({"beats": rows}, script, timing, figures)))
+        rows[1].update(stage="stage-healed")
+        self.assertIn("S02: stage is one of the figure's stage ids", " ".join(sheet_errors({"beats": rows}, script, timing, figures)))
+        # pass 2 draws the stage the sheet chose
+        rows[1].update(stage="stage-left-disc-opens")
+        scenes = [{**{k: r.get(k) for k in ("id", "point_id", "start_word_id", "kind")},
+                   "figure": {"type": "biology", "id": r["figure"], "stage": "stage-measure"}} for r in rows[:2]]
+        self.assertEqual([e[:3] for e in match_errors({"scenes": scenes}, rows[:2])], ["S02"])
+
     def test_two_beats_at_one_sentence_say_to_share_the_beat(self):
         # 2026-10-29, the electric power film: P = I²R and P = V²/R in one sentence; the planner sees only sentence
         # starts, so "a later word" was advice it could not take, and the reviewer kept asking for the second beat

@@ -633,18 +633,21 @@ SHEET_TASK = (
     "sentence; when it is not the point's first sentence, open the point with another beat before it "
     "(2026-10-29: Fleming's rule figure, its fingers labelled, opened the point at 'stretch your fingers', five "
     "tries running, before the narration named what each finger shows). A library figure shows whole, all its parts at once: "
-    "never ask it to withhold a part, and never put the same figure on beats in a row. "
+    "never ask it to withhold a part, and never put the same figure on beats in a row, except a staged one (a library "
+    "figure with stages shows one stage at a time): it may run on beats in a row, each row giving stage, one of its "
+    "stage ids, later than the row before, from the sentence that names that step. "
     "Reviewing: judge the film's shape: vector first, one beat per idea, whether every core idea gets the time and "
     "room it needs, and whether each beat's choice fits its passage. A room's cue ('Look carefully.', 'Notice what "
     "changes.', 'Watch it once more.') is spoken by code when the film is voiced, so it is never in the narration "
     "you see: never report it missing. "
     "Return ONLY {beats:[{id, point_id, start_word_id, through_point_id (optional), kind, verb (linkwork), figure "
-    "(figure), intent, importance, room (optional)}]}; the scene shape above is for pass 2, not this call.")
+    "(figure), stage (optional, a staged figure's), intent, importance, room (optional)}]}; the scene shape above is "
+    "for pass 2, not this call.")
 
 STAGED_SCENES_TASK = (
     " THIS CALL IS PASS 2: write the full beats for exactly the rows of context.beat_sheet, one beat per row in the "
     "same order, keeping each row's id, point_id, start_word_id, through_point_id, kind and its verb (the linkwork "
-    "spec's verb) or figure. The row's intent is what the beat must show: write its heading, summary, rationale and "
+    "spec's verb) or figure (and its stage, when the row gives one).The row's intent is what the beat must show: write its heading, summary, rationale and "
     "its spec or brief for that. Code keeps the rows' importance and room (the narration waits for a core beat's "
     "room). Continue naturally from context.previous_scenes; context.next_beats come after this batch, so do not "
     "show their ideas yet. The film's other beats are planned in other calls. Reviewing: each beat's point, start "
@@ -724,13 +727,25 @@ def sheet_errors(value, script, timing, figures=None, linkwork=None, typical=Non
             errors.append(f"{sid}: only a linkwork beat can replay; give a {kind} beat 'hold' or 'look'")
     # a book figure shows whole: the same one on beats in a row can't withhold its later parts from the earlier beats,
     # and pass 2 may not change the figure (2026-10-30: C9 of keph1-06 put Fig. 6.25 on three beats, hiding the second
-    # suspension, then the intersection; every pass-2 try failed)
+    # suspension, then the intersection; every pass-2 try failed). A staged diagram shows one stage at a time, so it
+    # may run on beats in a row, each naming a later stage (2026-11-06: the VSD closure film's device steps, eight
+    # stages drawn for it, failed twelve tries under the rule meant for whole book figures).
+    stages = {f["id"]: [s.get("id") for s in f.get("stages") or []] for f in (figures or {}).get("library", [])}
+    for r in rows:
+        own = stages.get(text(r.get("figure")) or "") or []
+        if r.get("stage") not in (None, "") and (r.get("kind") != "figure" or r.get("stage") not in own):
+            errors.append(f"{r.get('id')}: stage is one of the figure's stage ids ({', '.join(own[:8]) or 'it has none'})")
     for a, b in zip(rows, rows[1:]):
         fa = text(a.get("figure"))
         if a.get("kind") == b.get("kind") == "figure" and fa in library and fa == text(b.get("figure")):
-            errors.append(f"{a.get('id')}, {b.get('id')}: {fa} is a book figure and shows whole; give it one beat, "
-                          "carried on with through_point_id, starting where the narration has named what it shows "
-                          "(draw the steps before that with a verb or an image)")
+            own = stages.get(fa) or []
+            if len(own) < 2:
+                errors.append(f"{a.get('id')}, {b.get('id')}: {fa} is a book figure and shows whole; give it one beat, "
+                              "carried on with through_point_id, starting where the narration has named what it shows "
+                              "(draw the steps before that with a verb or an image)")
+            elif a.get("stage") not in own or b.get("stage") not in own or own.index(b["stage"]) <= own.index(a["stage"]):
+                errors.append(f"{a.get('id')}, {b.get('id')}: {fa} is staged; on beats in a row give each its stage, "
+                              f"a later one each time ({', '.join(own)})")
     replays = [r.get("id") for r in rows if r.get("room") == "replay"]
     if len(replays) > room["max_replays"]:
         errors.append(f"{', '.join(map(str, replays))}: at most {room['max_replays']} replays in a film; keep them for "
@@ -856,6 +871,8 @@ def match_errors(value, rows, free=None):
             chosen = "equation" if figure.get("type") == "equation" else figure.get("id")
             if row.get("figure") and chosen != row.get("figure"):
                 errors.append(f"{row['id']}: the sheet chose the figure {row.get('figure')!r}; draw that one")
+            elif row.get("stage") and figure.get("stage") != row["stage"]:
+                errors.append(f"{row['id']}: the sheet chose the stage {row['stage']!r}; draw that one")
     return errors
 
 

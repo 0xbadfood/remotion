@@ -49,6 +49,15 @@ class Hearing(unittest.TestCase):
         self.assertLess(languages.heard_score(self.TEXT, half), languages.MIN_HEARD)
         self.assertLess(languages.heard_score(self.TEXT, tail), languages.MIN_HEARD)
 
+    def test_whisper_hears_in_short_windows(self):
+        # 2026-11-06, P16 of the Hindi BAV film: a 30 s window ran out of tokens mid-word on every take
+        from unittest import mock
+        model = mock.Mock()
+        model.transcribe.return_value = ([mock.Mock(text=" छेद है। ")], None)
+        with mock.patch.object(languages, "_whisper", model):
+            self.assertEqual(languages.hear("x.wav", "hi"), "छेद है।")
+        self.assertLessEqual(model.transcribe.call_args.kwargs["chunk_length"], 15)
+
     def test_romanize_for_the_aligner(self):
         self.assertEqual(languages.romanize("दिल"), "dil")
         self.assertEqual(languages.romanize("stent"), "stent")
