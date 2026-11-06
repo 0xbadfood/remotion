@@ -58,6 +58,8 @@ class Hearing(unittest.TestCase):
         with mock.patch.object(languages, "_whisper", model), mock.patch.object(languages, "seconds", return_value=21.4):
             self.assertEqual(languages.hear("x.wav", "hi"), "छेद है।")
         self.assertLessEqual(model.transcribe.call_args.kwargs["chunk_length"], 15)
+        # the Hindi coarctoplasty film's P02: conditioned on the opening sentence, Whisper heard it twice
+        self.assertIs(model.transcribe.call_args.kwargs["condition_on_previous_text"], False)
 
     def test_windows_leave_no_scrap_for_whisper_to_fill(self):
         # 2026-11-06, P18 of the Hindi PDA closure film: 10 s windows left 0.1 s of a 10.1 s take, heard as made-up words

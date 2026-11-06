@@ -338,7 +338,9 @@ def hear(path, lang):
         from faster_whisper import WhisperModel
         _whisper = WhisperModel("large-v3", device="cpu", compute_type="int8", cpu_threads=12)
     segments, _ = _whisper.transcribe(str(path), language=LANGUAGES[lang]["whisper"], beam_size=5, vad_filter=True,
-                                      chunk_length=hear_window(seconds(path)))
+                                      chunk_length=hear_window(seconds(path)), condition_on_previous_text=False)
+    # not conditioned on what it heard before: it wrote the opening sentence again in place of an English phrase
+    # (2026-11-06, P02 of the Hindi coarctoplasty film, "Coarctation of the aorta": 0.68, then 0.87)
     return " ".join(s.text.strip() for s in segments)
 
 
