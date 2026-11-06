@@ -1,3 +1,4 @@
+import math
 import unittest
 
 from infofilm import languages
@@ -54,9 +55,17 @@ class Hearing(unittest.TestCase):
         from unittest import mock
         model = mock.Mock()
         model.transcribe.return_value = ([mock.Mock(text=" छेद है। ")], None)
-        with mock.patch.object(languages, "_whisper", model):
+        with mock.patch.object(languages, "_whisper", model), mock.patch.object(languages, "seconds", return_value=21.4):
             self.assertEqual(languages.hear("x.wav", "hi"), "छेद है।")
         self.assertLessEqual(model.transcribe.call_args.kwargs["chunk_length"], 15)
+
+    def test_windows_leave_no_scrap_for_whisper_to_fill(self):
+        # 2026-11-06, P18 of the Hindi PDA closure film: 10 s windows left 0.1 s of a 10.1 s take, heard as made-up words
+        for length in (4.0, 10.1, 11.3, 21.4, 24.0, 37.0):
+            window = languages.hear_window(length)
+            self.assertLessEqual(window, 15)
+            pieces = math.ceil(length / window)
+            self.assertGreater(length - (pieces - 1) * window, window / 2)
 
     def test_romanize_for_the_aligner(self):
         self.assertEqual(languages.romanize("दिल"), "dil")

@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import re
 import subprocess
@@ -57,7 +58,7 @@ TRANSLATOR = {"model": "claude-opus-5-5", "reasoning_effort": "medium", "timeout
 POINT_GAP = 0.7            # seconds of silence between points
 TAKES = 4                  # takes per point before the film stops
 MIN_HEARD = 0.8            # share of the point's letters Whisper must hear back (romanised); see heard_score
-HEAR_WINDOW = 10           # seconds of audio Whisper decodes at a time; see hear
+HEAR_WINDOW = 12           # about the most seconds of audio Whisper decodes at a time; see hear_window
 SR = 48000
 MARK = re.compile(r"«(S\d+)»")
 
@@ -336,11 +337,17 @@ def hear(path, lang):
     if _whisper is None:
         from faster_whisper import WhisperModel
         _whisper = WhisperModel("large-v3", device="cpu", compute_type="int8", cpu_threads=12)
-    # 10 s windows: Devanagari costs Whisper several tokens a letter, and a 30 s window ran out of tokens mid-word,
-    # so every take of a long point was heard cut short (2026-11-06, P16 of the Hindi BAV film: 0.77, then 0.94)
     segments, _ = _whisper.transcribe(str(path), language=LANGUAGES[lang]["whisper"], beam_size=5, vad_filter=True,
-                                      chunk_length=HEAR_WINDOW)
+                                      chunk_length=hear_window(seconds(path)))
     return " ".join(s.text.strip() for s in segments)
+
+
+def hear_window(length):
+    """Equal windows of at most about HEAR_WINDOW s. Devanagari costs Whisper several tokens a letter, and a 30 s window
+    ran out of tokens mid-word (2026-11-06, P16 of the Hindi BAV film: 0.77, then 0.94); fixed 10 s windows left a
+    scrap of a 10.1 s take, which Whisper filled with invented words (P18 of the Hindi PDA closure film: 0.72, then 0.88)."""
+    pieces = math.ceil(length / HEAR_WINDOW)
+    return math.ceil(length / pieces) + (1 if pieces == 1 else 0)     # a second's slack only when one window holds it
 
 
 def seconds(path):
