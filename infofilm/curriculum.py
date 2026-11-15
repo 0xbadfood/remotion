@@ -70,7 +70,13 @@ KEY_IDEA_SCRIPT_TASK = (
     "number, and only if it helps the idea land, exactly as the evidence gives it. Never state something false to "
     "make it simpler. Each point also carries uses_analogy: true when the analogy carries or is mapped in that "
     "point; at least half the points must use it. evidence.idea_plan is the film's plan: narrate its beats in order "
-    "(a beat may take one or two points), with its analogy and mapping; keep to it.")
+    "(a beat may take one or two points), with its analogy and mapping; keep to it. Tell each of the plan's examples "
+    "(evidence.idea_plan.examples) at its beat, as the real idea happening in the learner's own life, and mark those "
+    "points example: 'E1' (the example's id; empty elsewhere); a worked example goes one easy step per point with "
+    "small round numbers, which do not count as equations. Go slowly and simply, like a patient older friend: short "
+    "sentences (most under {short} words, none over {longest} words), one new thing per point, and after the 'aha' "
+    "and after each example say the idea once more in other words. A slower film that teaches less is better than "
+    "a quick one that teaches more.")
 
 KEY_IDEA_CREATIVE_TASK = (
     " This is a short simplified explainer of one key idea for students. Choose a warm, playful, curious mood and a "
@@ -95,7 +101,9 @@ KEY_IDEA_BEATS_TASK = (
     "analogy's characters or its setting in an animation beat (those are image and motion beats). Each animation "
     "names the real thing it shows in animation.real (e.g. 'ethanol as framework, ball-and-stick and space-filling "
     "models', 'hydrogen energy levels n=1 to 4'). Once the analogy has played out, show the real thing it maps to in "
-    "at least one animation beat, ideally the moment the analogy turns into it. Plain image beats: "
+    "at least one animation beat, ideally the moment the analogy turns into it. A point telling an everyday example "
+    "(example: 'E1') gets a beat that shows that real moment (the cricket ball, the bus, the fan), drawn exactly where "
+    "a prop can, otherwise as a simple image. Plain image beats: "
     "a still moment. Few words on screen; at most one equation figure in the whole film, built up slowly. Keep "
     "every image_brief simple: the guide in one pose in the plan's setting, nothing more. Never ask an image for "
     "brackets, dashed lines, arrows, labels, numbers, counted steps or measured gaps: an image model cannot draw them "
@@ -129,6 +137,11 @@ TOPIC_SCRIPT_TASK = (
     "and close by drawing it together and pointing them to their own child's doctors for their child's details.")
 
 KEY_IDEA_ANALOGY_SHARE = .5      # points that must use the analogy
+# Students' feedback (2026-11-15): "slower, simpler explanations"; the NCERT book is too dense. The benchmark film (a
+# curve's slope as velocity) averaged 11 words a sentence; the denser Bohr I4 v3 averaged 16, with sentences of 27.
+KEY_IDEA_SENTENCE = (12, 25)     # most sentences under the first; none over the second (words)
+KEY_IDEA_MEAN_SENTENCE = 13      # the narration's average sentence (words)
+SENTENCE = re.compile(r"(?<=[.!?])\s+")
 KEY_IDEA_FIGURES = 1             # equation figures on screen
 SPOKEN_MATHS = re.compile(r"\b(equals|divided by|to the power|times 10|squared|multiplied by|joules?|hertz|"
                           r"nanometres?|nanometers?)\b|=|\d+\.\d+", re.I)
@@ -216,19 +229,24 @@ GAPS_TASK = (
 
 def script_task(curriculum):
     if is_key_idea(curriculum):
-        return KEY_IDEA_SCRIPT_TASK.format(**idea_context(curriculum), equations=KEY_IDEA_EQUATIONS) + GAPS_TASK + HEARD_TASK
+        return KEY_IDEA_SCRIPT_TASK.format(**idea_context(curriculum), equations=KEY_IDEA_EQUATIONS,
+                                           short=KEY_IDEA_SENTENCE[0], longest=KEY_IDEA_SENTENCE[1]) + GAPS_TASK + HEARD_TASK
     if curriculum.get('topic'):
         return TOPIC_SCRIPT_TASK.format(**context(curriculum)) + GAPS_TASK + HEARD_TASK
     return SCRIPT_TASK.format(**context(curriculum)) + GAPS_TASK + HEARD_TASK
 
 
 def key_idea_script_errors(script, evidence):
-    """Key-idea films: few spoken equations, and the analogy carries at least half the points."""
+    """Key-idea films: few spoken equations, the analogy carries at least half the points, every planned example is
+    told, and the sentences are short."""
     if not is_key_idea(evidence.get('curriculum')):
         return []
     points = script.get('points') or []
     errors = []
-    maths = [p.get('id') for p in points if SPOKEN_MATHS.search(str(p.get('narration', '')))]
+    examples = (evidence.get('idea_plan') or {}).get('examples') or []
+    worked = {e.get('id') for e in examples if isinstance(e, dict) and e.get('worked') is True}
+    maths = [p.get('id') for p in points if SPOKEN_MATHS.search(str(p.get('narration', '')))
+             and p.get('example') not in worked]
     if len(maths) > KEY_IDEA_EQUATIONS:
         errors.append(f'{", ".join(maths)}: {len(maths)} points speak equations or calculations; at most '
                       f'{KEY_IDEA_EQUATIONS} may. Tell the rest through the analogy in everyday words')
@@ -236,6 +254,23 @@ def key_idea_script_errors(script, evidence):
     if points and len(analogy) < KEY_IDEA_ANALOGY_SHARE * len(points):
         errors.append(f'only {len(analogy)} of {len(points)} points use the analogy (uses_analogy: true); at least '
                       f'half must: let the analogy carry the explanation, not only open it')
+    told = {p.get('example') for p in points}
+    missing = [e['id'] for e in examples if isinstance(e, dict) and e.get('id') and e['id'] not in told]
+    if missing:
+        errors.append(f'{", ".join(missing)}: tell each planned example (evidence.idea_plan.examples) at its beat and '
+                      f'mark the point example: "{missing[0]}"')
+    lengths = {}
+    for p in points:
+        for sentence in SENTENCE.split(str(p.get('narration', '')).strip()):
+            if sentence:
+                lengths.setdefault(p.get('id'), []).append(len(sentence.split()))
+    long = [pid for pid, ls in lengths.items() if max(ls) > KEY_IDEA_SENTENCE[1]]
+    if long:
+        errors.append(f'{", ".join(long)}: a sentence over {KEY_IDEA_SENTENCE[1]} words; split it, one thing at a time')
+    every = [n for ls in lengths.values() for n in ls]
+    if every and sum(every) / len(every) > KEY_IDEA_MEAN_SENTENCE:
+        errors.append(f'sentences average {sum(every) / len(every):.0f} words; keep them short (most under '
+                      f'{KEY_IDEA_SENTENCE[0]}) so a struggling student can follow at listening speed')
     return errors
 
 
@@ -311,7 +346,8 @@ STUDENT_REVIEW_TASK = (
     "rules beyond that, so never ask for more content. Report as major only: (1) a point where you got lost or could "
     "not follow the step from the one before; (2) a place where the analogy stops making sense, changes, or seems to "
     "say something the film later contradicts; (3) a statement, number or equation that is actually wrong (check it "
-    "against the facts given). A word you did not know that the film never explained is a minor issue, unless it "
+    "against the facts given); (4) a step that came too fast: two new things at once, or a new idea with no picture "
+    "or everyday example to hold on to. A word you did not know that the film never explained is a minor issue, unless it "
     "made you lose the thread. Everything else (wording, pace, what you would have liked to hear more about) is minor. "
     "Score how well you followed and could explain the idea back (0-100). Point each issue at the point id.")
 
@@ -342,7 +378,8 @@ JUDGE_TASK = (
     "learner's explanation capture the understanding wanted, with no wrong belief (for example an analogy taken "
     "literally)? simple: did the film reach this learner without losing it in symbols, formulas and terms? Do NOT "
     "ask for completeness, more facts or more of the book; ask for less when less would help. Suggest "
-    "simplifications: a clearer analogy, a missing everyday step, an equation or term to drop or explain. "
+    "simplifications: a clearer analogy, a missing everyday step or example, a step to slow down, an equation or term "
+    "to drop or explain. "
     "Return {{understood:0..100, simple:0..100, wrong_beliefs:[string], fixes:[{{point_id:'P03', problem, suggestion}}]}}.")
 
 LANDING = {'understood': 75, 'simple': 70, 'confusing': 2}     # what "the idea landed" means

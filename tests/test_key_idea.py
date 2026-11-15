@@ -179,7 +179,11 @@ class IdeaPlanAndMotionTests(unittest.TestCase):
                 'mapping': [{'analogy': 'step', 'real': 'energy level'}, {'analogy': 'step height', 'real': 'energy gap'}],
                 'world': {'guide': 'a small round robot with big blue eyes and a yellow scarf',
                           'setting': 'a tall staircase of five wide pale-yellow landings on a plain dark navy background',
-                          'style': 'flat cartoon'}, 'beats': beats, **change}
+                          'style': 'flat cartoon'}, 'beats': beats,
+                'examples': [{'id': 'E1', 'situation': 'a street lamp glowing orange at night', 'shows': 'one colour',
+                              'beat': 'B6'},
+                             {'id': 'E2', 'situation': 'fireworks of many colours at Diwali', 'shows': 'many gaps',
+                              'beat': 'B7'}], **change}
 
     def test_the_idea_plan_needs_an_analogy_that_carries_the_film(self):
         from infofilm import idea_plan
@@ -194,6 +198,43 @@ class IdeaPlanAndMotionTests(unittest.TestCase):
         for takeaway in ('Delta E equals the energy gap between steps.', 'Each drop gives light of 434 nm colour.'):
             self.assertIn('no symbols, formulas or numbers', ' '.join(idea_plan.errors(self.plan(takeaway=takeaway), 1)))
         self.assertIn('book_terms: at most 3', ' '.join(idea_plan.errors(self.plan(book_terms=['a', 'b', 'c', 'd']), 1)))
+
+    def test_the_plan_has_everyday_examples_each_with_its_own_beat(self):
+        # Students' feedback (2026-11-15): slower, simpler explanations with examples
+        from infofilm import idea_plan
+        examples = [{'id': 'E1', 'situation': 'a street lamp glowing orange at night', 'shows': 'one gap, one colour',
+                     'beat': 'B6', 'worked': False},
+                    {'id': 'E2', 'situation': 'fireworks of different colours at Diwali', 'shows': 'other gaps',
+                     'beat': 'B7', 'worked': False}]
+        self.assertEqual(idea_plan.errors(self.plan(examples=examples), 1), [])
+        self.assertIn('examples: give 2-3', ' '.join(idea_plan.errors(self.plan(examples=examples[:1]), 1)))
+        same = [examples[0], {**examples[1], 'beat': 'B6'}]
+        self.assertIn('E2: each example has its own beat', ' '.join(idea_plan.errors(self.plan(examples=same), 1)))
+        nowhere = [examples[0], {**examples[1], 'beat': 'B40'}]
+        self.assertIn('E2: beat must name the beat', ' '.join(idea_plan.errors(self.plan(examples=nowhere), 1)))
+        worked = [{**e, 'worked': True} for e in examples]
+        self.assertIn('at most one worked example', ' '.join(idea_plan.errors(self.plan(examples=worked), 1)))
+        self.assertIn('everyday examples', idea_plan.TASK)
+
+    def test_the_script_goes_slowly_and_tells_every_example(self):
+        examples = [{'id': 'E1', 'situation': 'a cricket ball hit for six', 'shows': 'x', 'beat': 'B6', 'worked': True},
+                    {'id': 'E2', 'situation': 'water from a garden hose', 'shows': 'y', 'beat': 'B7'}]
+        evidence = {'curriculum': IDEA, 'idea_plan': {'examples': examples}}
+        story = [{'id': f'P0{n}', 'narration': 'The ball moves across. It falls at the same time.', 'uses_analogy': True}
+                 for n in range(1, 4)]
+        worked = [{'id': f'P1{n}', 'narration': 'It falls 5 metres in 1 second, so 0.5 seconds takes it 1.25 metres.',
+                   'uses_analogy': False, 'example': 'E1'} for n in range(1, 3)]
+        hose = [{'id': 'P20', 'narration': 'The hose water does the same thing.', 'uses_analogy': True, 'example': 'E2'}]
+        self.assertEqual(key_idea_script_errors({'points': story + worked + hose}, evidence), [],
+                         'a worked example\'s numbers are not counted as equations')
+        self.assertIn('E2: tell each planned example', ' '.join(key_idea_script_errors({'points': story + worked}, evidence)))
+        rambling = [{'id': 'P30', 'uses_analogy': True, 'example': 'E2', 'narration': ' '.join(['word'] * 26) + '.'}]
+        self.assertIn('P30: a sentence over 25 words', ' '.join(key_idea_script_errors({'points': story + worked + rambling}, evidence)))
+        dense = [{'id': f'P4{n}', 'uses_analogy': True, 'narration': ' '.join(['word'] * 18) + '.'} for n in range(1, 6)]
+        self.assertIn('sentences average 18 words', ' '.join(key_idea_script_errors({'points': dense}, {'curriculum': IDEA})))
+        self.assertIn('none over 25 words', script_task(IDEA))
+        from infofilm.curriculum import STUDENT_REVIEW_TASK
+        self.assertIn('a step that came too fast', STUDENT_REVIEW_TASK)
 
     def test_the_script_reviewer_is_a_student_not_a_judge(self):
         # User 2026-10-21: the reviewer reads as a student; it gets the takeaway, the analogy and the facts only.

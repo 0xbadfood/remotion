@@ -26,13 +26,22 @@ TASK = (
     "draws the same character) and the analogy's setting (describe it exactly too: its shape, material and colours, "
     "so every picture draws the same setting), uncluttered so short animations can play in it, on a dark plain "
     "background (deep navy or charcoal; the film's text is light and sits over the pictures) with the guide and "
-    "setting in bright, light colours. Then outline {fewest}-{most} beats in teaching order: open with the learner's own question, let the analogy "
+    "setting in bright, light colours. Choose {fewest_examples}-{most_examples} everyday examples: real moments from "
+    "a student's own life in India where this idea actually happens (a cricket ball in flight, a ceiling fan, a bus "
+    "braking, a pressure cooker, a phone screen). An example is not a second analogy: it is the real idea at work, "
+    "shown after the analogy has been mapped so the learner sees it everywhere. In physics or maths one example may "
+    "be worked with small round numbers, one easy step per beat (worked: true). Then outline {fewest}-{most} beats "
+    "in teaching order: open with the learner's own question, let the analogy "
     "play out step by step with room to breathe, reach the 'aha', only then map it onto the real thing with the "
-    "book's terms, say in one light beat where the analogy stops working, and close with a short recap. A beat "
-    "teaches one thing. Use numbers or equations in at most {equations} beats, exactly as the evidence gives them. "
+    "book's terms, give each example its own beat, say in one light beat where the analogy stops working, and close "
+    "with a short recap. Go slowly: a beat teaches one small step, a learner never meets two new things at once, and "
+    "after the 'aha' a beat may say the idea again in other words. Use numbers or equations in at most {equations} "
+    "beats, exactly as the evidence gives them (a worked example's small round numbers aside). "
     "Return {{takeaway:'1-2 plain sentences', book_terms:['at most {terms}'], "
     "analogy:{{name, picture:'one or two sentences', stops_working:'where it stops being true'}}, "
     "mapping:[{{analogy:'part of the picture', real:'what it stands for'}}], "
+    "examples:[{{id:'E1', situation:'the everyday moment', shows:'what it shows about the idea', beat:'B7', "
+    "worked:false}}], "
     "world:{{guide:'exact look of the guide character', setting:'the analogy setting', style:'drawing style'}}, "
     "beats:[{{id:'B1', teaches:'one thing', analogy_moment:'what happens in the analogy, or empty', "
     "real_link:'the real thing it maps to, or empty'}}]}}. "
@@ -42,7 +51,10 @@ TASK = (
     "rules, conventions, special cases or the rest of the book's statement), and do not make word choice or beat order "
     "a major issue: the script and a learner check that follow handle those.")
 
-FEWEST, MOST = 6, 14
+FEWEST, MOST = 6, 16
+# Students' feedback (2026-11-15): the book is too dense and quick; they want slower, simpler explanations with
+# examples. The analogy explains the idea; examples show the real idea happening in the learner's own life.
+EXAMPLES = (2, 3)
 # I4 v3 (2026-10-20/21) failed the plan twice in 4-5 rounds at 66-79: majors asked to add the sign convention and
 # frequency back from the book's statement, policed technical words and beat order, and flip-flopped. Those are
 # completeness and preference, which the user ruled out for key ideas; they stay as minor (advice) findings.
@@ -91,10 +103,34 @@ def errors(value, equations):
     for n, beat in enumerate(beats, 1):
         if not isinstance(beat, dict) or beat.get('id') != f'B{n}' or not str(beat.get('teaches', '')).strip():
             out.append(f'B{n}: needs id "B{n}" and what it teaches')
+    out += example_errors(value.get('examples'), [b.get('id') for b in beats if isinstance(b, dict)])
     with_analogy = [b for b in beats if isinstance(b, dict) and str(b.get('analogy_moment', '')).strip()]
     if len(with_analogy) < len(beats) / 2:
         out.append(f'only {len(with_analogy)} of {len(beats)} beats have an analogy_moment; let the analogy carry at '
                    'least half the film')
+    return out
+
+
+def example_errors(examples, beat_ids):
+    fewest, most = EXAMPLES
+    if not isinstance(examples, list) or not fewest <= len(examples) <= most:
+        return [f'examples: give {fewest}-{most} everyday examples of the real idea at work, each with its own beat']
+    out, used = [], set()
+    for n, ex in enumerate(examples, 1):
+        if not isinstance(ex, dict) or ex.get('id') != f'E{n}':
+            out.append(f'E{n}: needs id "E{n}"')
+            continue
+        if not isinstance(ex.get('situation'), str) or len(ex['situation'].split()) < 5:
+            out.append(f'E{n}: describe the everyday moment in situation (at least 5 words)')
+        if not isinstance(ex.get('shows'), str) or not ex['shows'].strip():
+            out.append(f'E{n}: say what it shows about the idea')
+        if ex.get('beat') not in beat_ids:
+            out.append(f'E{n}: beat must name the beat that tells it (one of {", ".join(map(str, beat_ids))})')
+        elif ex['beat'] in used:
+            out.append(f'E{n}: each example has its own beat; {ex["beat"]} already tells another')
+        used.add(ex.get('beat'))
+    if sum(1 for ex in examples if isinstance(ex, dict) and ex.get('worked') is True) > 1:
+        out.append('examples: at most one worked example')
     return out
 
 
@@ -116,7 +152,8 @@ def make_idea_plan(models, evidence, experimental=True):
     from .curriculum import KEY_IDEA_EQUATIONS
     idea = evidence['curriculum'].get('idea') or {}
     task = TASK.format(idea=idea.get('title', ''), understanding=idea.get('understanding', ''),
-                       why=idea.get('why', ''), fewest=FEWEST, most=MOST, equations=KEY_IDEA_EQUATIONS, terms=TERMS)
+                       why=idea.get('why', ''), fewest=FEWEST, most=MOST, equations=KEY_IDEA_EQUATIONS, terms=TERMS,
+                       fewest_examples=EXAMPLES[0], most_examples=EXAMPLES[1])
     context = {'evidence': {k: v for k, v in evidence.items() if k != 'idea_plan'}}
     from .linkwork_beats import PROPS_TASK, options as linkwork_options, props
     if linkwork_options(evidence):                  # physics and maths: build the world from exact, drawable props
